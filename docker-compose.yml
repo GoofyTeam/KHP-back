@@ -40,7 +40,6 @@ services:
         ports:
             - ${FORWARD_REDIS_PORT:-6379}:6379
         volumes:
-            # - ${REDIS_VOLUME_LOCAL:-./database/redis-data}:/data
             - "khp-redis:/data"
         networks:
             - khp-back

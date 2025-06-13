@@ -19,3 +19,5 @@ cs:
 	docker-compose exec khp-back vendor/bin/pint
 pint:
 	docker-compose exec khp-back vendor/bin/pint
+larastan:
+	docker-compose exec khp-back ./vendor/bin/phpstan analyse --memory-limit=2G
