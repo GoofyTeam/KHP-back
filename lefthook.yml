@@ -1,0 +1,20 @@
+pre-commit:
+  parallel: false
+  commands:
+    install-root-deps:
+      root: "."
+      run: |
+        if git diff --quiet HEAD -- package-lock.json package.json; then
+          echo "No changes in dependencies. Skipping npm install.";
+        else
+          npm install;
+        fi
+commit-msg:
+  commands:
+    verify-commit-msg:
+      run: ./verify-commit-msg.sh {1}
+
+pre-push:
+  commands:
+    install-hooks:
+      run: "echo 'Hooks lefthook installés'"
