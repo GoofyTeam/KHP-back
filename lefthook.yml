@@ -9,6 +9,7 @@ pre-commit:
         else
           npm install;
         fi
+        chmod +x verify-commit-msg.sh
 commit-msg:
   commands:
     verify-commit-msg:
