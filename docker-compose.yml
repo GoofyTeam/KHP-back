@@ -14,6 +14,7 @@ services:
             - khp-back
         depends_on:
             - khp-postgres
+            - khp-redis
 
     khp-postgres:
         image: "postgres:15"
