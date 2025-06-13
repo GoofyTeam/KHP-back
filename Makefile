@@ -1,4 +1,4 @@
-.PHONY: up down restart build exec migrate tests cs pint
+.PHONY: up down restart build exec migrate tests cs pint larastan install
 
 up:
 	docker-compose up -d
@@ -21,3 +21,6 @@ pint:
 	docker-compose exec khp-back vendor/bin/pint
 larastan:
 	docker-compose exec khp-back ./vendor/bin/phpstan analyse --memory-limit=2G
+install:
+	docker-compose exec khp-back composer install
+	docker-compose exec khp-back npm install
