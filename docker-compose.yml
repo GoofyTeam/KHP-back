@@ -1,0 +1,61 @@
+services:
+    khp-back:
+        container_name: khp-back
+        build:
+            context: ./
+            dockerfile: ./docker/php/Dockerfile.local
+        ports:
+            - ${APP_PORT:-8000}:8000
+            - ${VITE_PORT:-5173}:${VITE_PORT:-5173}
+        volumes:
+            - ./:/var/www/html
+            - ./vendor/:/var/www/html/vendor
+        networks:
+            - khp-back
+        depends_on:
+            - khp-postgres
+
+    khp-postgres:
+        image: "postgres:15"
+        container_name: khp-postgres
+        ports:
+            - "${FORWARD_DB_PORT:-5432}:5432"
+        environment:
+            POSTGRES_USER: "${DB_USERNAME:-khp}"
+            POSTGRES_PASSWORD: "${DB_PASSWORD:-password}"
+            POSTGRES_DB: "${DB_DATABASE:-khp_database}"
+        volumes:
+            - "khp-postgres:/var/lib/postgresql/data"
+        networks:
+            - khp-back
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "${DB_USERNAME:-khp}"]
+            retries: 3
+            timeout: 5s
+
+    khp-redis:
+        image: redis:alpine
+        container_name: khp-redis
+        ports:
+            - ${FORWARD_REDIS_PORT:-6379}:6379
+        volumes:
+            # - ${REDIS_VOLUME_LOCAL:-./database/redis-data}:/data
+            - "khp-redis:/data"
+        networks:
+            - khp-back
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+networks:
+    khp-back:
+        driver: bridge
+
+volumes:
+    khp-postgres:
+        driver: local
+    khp-redis:
+        driver: local
