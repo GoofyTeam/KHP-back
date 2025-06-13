@@ -1,0 +1,59 @@
+services:
+  khp-back:
+    container_name: khp-back
+    build:
+      context: ./
+      dockerfile: ./docker/php/Dockerfile.production
+    restart: always
+    ports:
+      - "443:443"
+      - "80:8000"
+    networks:
+      - khp-back
+    depends_on:
+      khp-postgres:
+        condition: service_healthy
+      khp-redis:
+        condition: service_healthy
+
+  khp-postgres:
+    image: "postgres:15"
+    container_name: khp-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: "${DB_USERNAME}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_DATABASE}"
+    volumes:
+      - "khp-postgres-data:/var/lib/postgresql/data"
+    networks:
+      - khp-back
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USERNAME}"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+  khp-redis:
+    image: redis:alpine
+    container_name: khp-redis
+    restart: always
+    volumes:
+      - "khp-redis-data:/data"
+    networks:
+      - khp-back
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+networks:
+  khp-back:
+    driver: bridge
+
+volumes:
+  khp-postgres-data:
+    driver: local
+  khp-redis-data:
+    driver: local
