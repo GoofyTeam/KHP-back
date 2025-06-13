@@ -1,0 +1,41 @@
+FROM dunglas/frankenphp:1.1-builder-php8.2.16 AS builder
+
+# Pour activer HTTPS en production
+ENV SERVER_NAME="https://"
+
+# Installer les dépendances système
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    git unzip libpq-dev supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer les extensions PHP nécessaires
+RUN install-php-extensions \
+    gd pcntl opcache pdo pdo_pgsql redis
+
+# Récupérer Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Copier composer.json et composer.lock d'abord pour utiliser le cache des couches
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader
+
+# Copier le reste du code
+COPY . .
+
+# Installer les dépendances, optimiser l'autoloader
+RUN composer install --no-dev --optimize-autoloader \
+    && php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+# Configuration de PHP pour la production
+COPY ./docker/php/php.ini.production /usr/local/etc/php/php.ini
+COPY ./docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 80 443
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

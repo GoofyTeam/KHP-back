@@ -1,0 +1,26 @@
+[PHP]
+zend.exception_ignore_args = on
+expose_php = off
+max_execution_time = 60
+max_input_vars = 1000
+upload_max_filesize = 64M
+post_max_size = 128M
+memory_limit = 256M
+error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+display_errors = off
+display_startup_errors = off
+log_errors = on
+error_log = /var/log/php/php-error.log
+default_charset = UTF-8
+
+[opcache]
+opcache.enable=1
+opcache.enable_cli=1
+opcache.jit_buffer_size=100M
+opcache.jit=1255
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+opcache.revalidate_freq=0
+opcache.save_comments=1

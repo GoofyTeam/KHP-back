@@ -26,3 +26,4 @@ Thumbs.db
 **/caddy
 frankenphp
 frankenphp-worker.php
+docker/certs/selfsigned.key

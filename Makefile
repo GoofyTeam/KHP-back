@@ -1,11 +1,14 @@
-.PHONY: up down restart build exec migrate tests cs pint larastan install
+.PHONY: up down restart build exec migrate tests cs pint larastan install up-prod
 
 up:
 	docker-compose up -d
+up-prod:
+	docker-compose -f docker-compose.prod.yml up -d
 down:
 	docker-compose down
 restart:
-	docker-compose restart
+	docker-compose down
+	docker-compose up -d
 build:
 	docker-compose build
 exec:
