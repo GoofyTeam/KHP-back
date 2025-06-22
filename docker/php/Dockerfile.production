@@ -34,7 +34,7 @@ RUN composer install --no-dev --optimize-autoloader \
 
 # Configuration de PHP pour la production
 COPY ./docker/php/php.ini.production /usr/local/etc/php/php.ini
-COPY ./docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./docker/etc/supervisor.d/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 80 443
 
