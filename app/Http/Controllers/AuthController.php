@@ -35,7 +35,7 @@ class AuthController extends Controller
             return new JsonResponse([
                 'message' => 'Authentication successful',
                 'user' => Auth::user(),
-                'remember' => $remember, // Utiliser $remember au lieu de $credentials['remember']
+                'remember' => $remember,
             ], 200);
         }
 
