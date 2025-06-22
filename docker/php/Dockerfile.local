@@ -43,6 +43,8 @@ RUN pecl install xdebug \
 
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
+RUN npm install
+
 RUN chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80 443
