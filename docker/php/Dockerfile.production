@@ -38,4 +38,8 @@ COPY ./docker/etc/supervisor.d/supervisord.prod.conf /etc/supervisor/conf.d/supe
 
 EXPOSE 80 443
 
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+COPY ./docker/php/entrypoint.prod.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -27,3 +27,6 @@ Thumbs.db
 frankenphp
 frankenphp-worker.php
 docker/certs/selfsigned.key
+_lighthouse_ide_helper.php
+programmatic-types.graphql
+schema-directives.graphql
