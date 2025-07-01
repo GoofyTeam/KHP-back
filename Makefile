@@ -1,4 +1,4 @@
-.PHONY: up down restart build exec migrate tests cs pint larastan install up-prod
+.PHONY: up down restart build exec migrate tests cs pint larastan install up-prod fresh
 
 up:
 	docker-compose up -d
@@ -27,3 +27,5 @@ larastan:
 install:
 	docker-compose exec khp-back composer install
 	docker-compose exec khp-back npm install
+fresh:
+	docker-compose exec khp-back php artisan migrate:fresh --seed
