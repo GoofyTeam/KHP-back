@@ -1,7 +1,3 @@
-"A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
-scalar DateTime
-    @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
-
 "Indicates what fields are available at the top level of a query operation."
 type Query @guard {
     "Find a single user by an identifying attribute."
@@ -20,12 +16,29 @@ type Query @guard {
         "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
         name: String @where(operator: "like")
     ): [User!]! @paginate(defaultCount: 10)
+
+    "Find a single company by an identifying attribute."
+    company(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by company name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Company @find
+
+    "List multiple companies."
+    companies(
+        "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
+        name: String @where(operator: "like")
+    ): [Company!]! @paginate(defaultCount: 10)
 }
 
 "Account of a person who uses this application."
 type User {
     "Unique primary key."
     id: ID!
+
+    "The company this user belongs to."
+    company: Company @belongsTo
 
     "Non-unique name."
     name: String!
@@ -40,5 +53,19 @@ type User {
     created_at: DateTime!
 
     "When the account was last updated."
+    updated_at: DateTime!
+}
+
+type Company {
+    "Unique primary key."
+    id: ID!
+
+    "Company name."
+    name: String!
+
+    "When the company was created."
+    created_at: DateTime!
+
+    "When the company was last updated."
     updated_at: DateTime!
 }
