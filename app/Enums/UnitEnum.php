@@ -140,6 +140,7 @@ enum UnitEnum: string
         foreach (self::labels() as $value => $mappedLabel) {
             $reverseMap[$mappedLabel][] = $value;
         }
+
         return isset($reverseMap[$label]) ? self::from($reverseMap[$label][0]) : null;
     }
 }
