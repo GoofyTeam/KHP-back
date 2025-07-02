@@ -135,7 +135,6 @@ enum UnitEnum: string
 
     public static function fromLabel(string $label): ?self
     {
-        $labels = array_flip(self::labels());
         $reverseMap = [];
         foreach (self::labels() as $value => $mappedLabel) {
             $reverseMap[$mappedLabel][] = $value;
