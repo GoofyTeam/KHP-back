@@ -82,7 +82,6 @@ enum UnitEnum: string
             self::DROP->value => 'Goutte',
             self::SPRIG->value => 'Brin',
             self::HANDFUL->value => 'Poignée',
-            self::CAN->value => 'Boîte',
             self::PACK->value => 'Paquet',
             self::BOTTLE->value => 'Bouteille',
             self::STICK->value => 'Bâton',
@@ -130,7 +129,7 @@ enum UnitEnum: string
 
     public static function values(): array
     {
-        return array_map(fn ($case) => $case->value, self::cases());
+        return array_map(fn($case) => $case->value, self::cases());
     }
 
     public static function fromLabel(string $label): ?self
