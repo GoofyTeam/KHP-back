@@ -118,6 +118,7 @@ enum UnitEnum: string
             self::THIRD->value => 'Tiers',
             self::EIGHTH->value => 'Huitième',
             self::WHOLE->value => 'Entier',
+            self::CAN->value => 'Canette',
             self::OTHER->value => 'Autre',
         ];
     }
