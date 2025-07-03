@@ -2,11 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\PreparationTypeEnum;
 use App\Enums\UnitEnum;
 use App\Models\Company;
-use App\Enums\PreparationTypeEnum;
 use Illuminate\Database\Eloquent\Factories\Factory;
-
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Preparation>

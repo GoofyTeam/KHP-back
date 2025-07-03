@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Enums\UnitEnum;
 use App\Enums\PreparationTypeEnum;
+use App\Enums\UnitEnum;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Preparation extends Model
 {
@@ -50,13 +50,14 @@ class Preparation extends Model
     /**
      * Scope a query to only include preparations owned by a specific company.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param \App\Models\Company $company
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \App\Models\Company  $company
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeForUserCompany($query)
     {
         $user = Auth::user();
+
         // Si votre User a bien un champ company_id
         return $query->where('company_id', $user->company_id);
     }

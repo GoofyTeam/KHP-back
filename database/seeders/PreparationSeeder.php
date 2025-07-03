@@ -6,7 +6,6 @@ use App\Enums\PreparationTypeEnum;
 use App\Models\Company;
 use App\Models\Preparation;
 use Illuminate\Database\Seeder;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class PreparationSeeder extends Seeder
 {
@@ -21,7 +20,7 @@ class PreparationSeeder extends Seeder
             ->count(40)
             ->sequence(
                 ...array_map(
-                    fn(string $type) => ['type' => $type],
+                    fn (string $type) => ['type' => $type],
                     PreparationTypeEnum::values()
                 )
             )
@@ -35,7 +34,7 @@ class PreparationSeeder extends Seeder
                 ->count(5)
                 ->sequence(
                     ...array_map(
-                        fn(string $type) => ['type' => $type],
+                        fn (string $type) => ['type' => $type],
                         PreparationTypeEnum::values()
                     )
                 )
