@@ -20,4 +20,15 @@ class Company extends Model
     {
         return $this->hasMany(User::class);
     }
+
+
+    /**
+     * Get the preparations associated with the company.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function preparations()
+    {
+        return $this->hasMany(Preparation::class);
+    }
 }
