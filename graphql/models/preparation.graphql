@@ -27,15 +27,11 @@ extend type Query @guard {
         name: String @where(operator: "like")
         type: String @where(operator: "like")
         unit: String @where(operator: "like")
-    ): [Preparation!]!
-        @scope(scopes: ["forUserCompany"])
-        @paginate(defaultCount: 10)
+    ): [Preparation!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
     "Trouve une preparation (et seulement si elle appartient à ma company)"
     preparation(
         id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
         name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
-    ): Preparation
-        @scope(scopes: ["forUserCompany"])
-        @find
+    ): Preparation @find(scopes: ["forCompany"])
 }
