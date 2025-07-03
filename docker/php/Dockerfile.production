@@ -6,12 +6,12 @@ ENV SERVER_NAME="https://"
 # Installer les dépendances système
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    git unzip libpq-dev supervisor \
+    git unzip librabbitmq-dev libpq-dev supervisor curl gnupg libicu-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Installer les extensions PHP nécessaires
 RUN install-php-extensions \
-    gd pcntl opcache pdo pdo_pgsql redis
+    gd pcntl opcache pdo pdo_pgsql redis intl
 
 # Récupérer Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
