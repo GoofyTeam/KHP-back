@@ -8,3 +8,9 @@ Route::get('/user', function (Request $request) {
         'user' => $request->user(),
     ]);
 })->name('user');
+
+Route::get('/preparation', function (Request $request) {
+    return response()->json([
+        'preparation' => $request->preparation(),
+    ]);
+})->name('preparation');
