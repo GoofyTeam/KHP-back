@@ -1,0 +1,29 @@
+type Company {
+    "Unique primary key."
+    id: ID!
+
+    "Company name."
+    name: String!
+
+    "When the company was created."
+    created_at: DateTime!
+
+    "When the company was last updated."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Find a single company by an identifying attribute."
+    company(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by company name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Company @find
+
+    "List multiple companies."
+    companies(
+        "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
+        name: String @where(operator: "like")
+    ): [Company!]! @paginate(defaultCount: 10)
+}

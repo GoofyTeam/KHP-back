@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
@@ -15,6 +15,8 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
+        $company = Company::where('name', 'GoofyTeam')->first();
+
         $users = [
             ['name' => 'Luca',    'email' => 'luca@example.com'],
             ['name' => 'Adrien',  'email' => 'adrien@example.com'],
@@ -25,12 +27,22 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
-            User::create([
-                'name' => $userData['name'],
-                'email' => $userData['email'],
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-            ]);
+            User::factory()
+                ->create([
+                    'name' => $userData['name'],
+                    'email' => $userData['email'],
+                    'company_id' => $company->id,
+                ]);
+        }
+
+        $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
+
+        foreach ($otherCompanies as $company) {
+            User::factory()
+                ->count(5)
+                ->create([
+                    'company_id' => $company->id,
+                ]);
         }
     }
 }
