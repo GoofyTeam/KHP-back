@@ -17,6 +17,7 @@ class Preparation extends Model
         'name',
         'unit',
         'type',
+        'company_id',
     ];
 
     /**

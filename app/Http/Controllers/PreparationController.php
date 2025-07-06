@@ -12,68 +12,79 @@ use Illuminate\Validation\Rules\Enum;
 
 class PreparationController extends Controller
 {
-    public function store(Request $request)
+    /**
+     * Create a new preparation
+     */
+    public function store(Request $request): JsonResponse
     {
         $user = $request->user();
 
         $validated = $request->validate([
             'name' => [
                 'required',
-                Rule::unique('preparations')->where(function ($query) use ($user) {
-                    return $query->where('company_id', $user->company_id);
-                }),
+                'string',
+                'max:255',
+                Rule::unique('preparations')->where('company_id', $user->company_id),
             ],
             'unit' => [
                 'required',
-                'enum' => ['required', new Enum(UnitEnum::class)],
+                new Enum(UnitEnum::class),
             ],
             'type' => [
                 'required',
-                'enum' => ['required', new Enum(PreparationTypeEnum::class)],
+                new Enum(PreparationTypeEnum::class),
             ],
+        ], [
+            'unit' => 'Le champ unit doit être l\'une des valeurs suivantes : '.implode(', ', UnitEnum::values()),
+            'type' => 'Le champ type doit être l\'une des valeurs suivantes : '.implode(', ', PreparationTypeEnum::values()),
         ]);
+
+        $validated['company_id'] = $user->company_id;
 
         $preparation = Preparation::create($validated);
 
-        return JsonResponse::create([
+        return response()->json([
             'message' => 'Preparation created successfully',
             'preparation' => $preparation,
         ], 201);
     }
 
-    public function update(Request $request): JsonResponse
+    /**
+     * Update an existing preparation
+     *
+     * @param  int  $id
+     */
+    public function update(Request $request, $id): JsonResponse
     {
         $user = $request->user();
 
+        $preparation = Preparation::where('id', $id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
         $validated = $request->validate([
-            'id' => [
-                'required',
-                'exists:preparations,id',
-                Rule::exists('preparations')->where(function ($query) use ($user) {
-                    return $query->where('company_id', $user->company_id);
-                }),
-            ],
             'name' => [
-                'optional',
-                Rule::unique('preparations')->where(function ($query) use ($user) {
-                    return $query->where('company_id', $user->company_id);
-                }),
+                'sometimes',
+                'string',
+                'max:255',
+                Rule::unique('preparations')->where('company_id', $user->company_id)->ignore($id),
             ],
             'unit' => [
-                'optional',
-                'enum' => ['required', new Enum(UnitEnum::class)],
+                'sometimes',
+                new Enum(UnitEnum::class),
             ],
             'type' => [
-                'optional',
-                'enum' => ['required', new Enum(PreparationTypeEnum::class)],
+                'sometimes',
+                new Enum(PreparationTypeEnum::class),
             ],
+        ], [
+            'unit' => 'Le champ unit doit être l\'une des valeurs suivantes : '.implode(', ', UnitEnum::values()),
+            'type' => 'Le champ type doit être l\'une des valeurs suivantes : '.implode(', ', PreparationTypeEnum::values()),
         ]);
 
-        $preparation = Preparation::findOrFail($validated['id']);
-        $preparation->fill($validated);
-        $preparation->save();
+        $preparation->update($validated);
 
-        return JsonResponse::create([
+        return response()->json([
             'message' => 'Preparation updated successfully',
             'preparation' => $preparation,
         ], 200);

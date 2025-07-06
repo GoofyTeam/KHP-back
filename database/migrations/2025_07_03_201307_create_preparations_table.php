@@ -19,12 +19,14 @@ return new class extends Migration
             $table->foreignIdFor(Company::class)
                 ->nullable(false)
                 ->constrained()
-                ->onDelete('cascade')
-                ->after('id');
-            $table->text('name')->unique();
+                ->onDelete('cascade');
+            $table->text('name');
             $table->enum('unit', UnitEnum::values())->nullable(false);
             $table->enum('type', PreparationTypeEnum::values())->nullable(false);
             $table->timestamps();
+
+            // Ajouter une contrainte d'unicité composite sur name + company_id
+            $table->unique(['name', 'company_id']);
         });
     }
 
