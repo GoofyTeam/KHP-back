@@ -1,0 +1,37 @@
+type Preparation {
+    "Unique primary key."
+    id: ID!
+
+    "Preparation name."
+    name: String!
+
+    "Unit of measurement for the preparation."
+    unit: String!
+
+    "Type of preparation (e.g., chemical, biological, physical)."
+    type: String!
+
+    "The company that produces this preparation."
+    company: Company! @belongsTo
+
+    "When the preparation was created."
+    created_at: DateTime!
+
+    "When the preparation was last updated."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les preparations de ma company uniquement"
+    preparations(
+        name: String @where(operator: "like")
+        type: String @where(operator: "like")
+        unit: String @where(operator: "like")
+    ): [Preparation!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Trouve une preparation (et seulement si elle appartient à ma company)"
+    preparation(
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Preparation @find(scopes: ["forCompany"])
+}
