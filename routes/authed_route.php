@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Controllers\PreparationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PreparationController;
 
 Route::get('/user', function (Request $request) {
     return response()->json([

@@ -1,14 +1,14 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Enums\PreparationTypeEnum;
+use App\Enums\UnitEnum;
+use App\Models\Preparation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use App\Enums\UnitEnum;
-use App\Enums\PreparationTypeEnum;
 use Illuminate\Validation\Rules\Enum;
-use App\Models\Preparation;
-
 
 class PreparationController extends Controller
 {
@@ -19,7 +19,7 @@ class PreparationController extends Controller
         $validated = $request->validate([
             'name' => [
                 'required',
-                Rule::unique('preparations')->where(function ($query) use ($request, $user) {
+                Rule::unique('preparations')->where(function ($query) use ($user) {
                     return $query->where('company_id', $user->company_id);
                 }),
             ],
@@ -55,7 +55,7 @@ class PreparationController extends Controller
             ],
             'name' => [
                 'optional',
-                Rule::unique('preparations')->where(function ($query) use ($request, $user) {
+                Rule::unique('preparations')->where(function ($query) use ($user) {
                     return $query->where('company_id', $user->company_id);
                 }),
             ],
