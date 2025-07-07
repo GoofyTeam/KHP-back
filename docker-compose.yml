@@ -31,7 +31,15 @@ services:
         networks:
             - khp-back
         healthcheck:
-            test: ["CMD", "pg_isready", "-U", "${DB_USERNAME:-khp}"]
+            test:
+                [
+                    "CMD",
+                    "pg_isready",
+                    "-U",
+                    "${DB_USERNAME:-khp}",
+                    "-d",
+                    "${DB_DATABASE:-khp_database}",
+                ]
             retries: 3
             timeout: 5s
 
