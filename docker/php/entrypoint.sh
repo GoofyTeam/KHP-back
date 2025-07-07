@@ -58,7 +58,7 @@ else
 fi
 
 # Génération de la clé APP_KEY si inexistante
-if ! grep -q "APP_KEY" "$WEB_ROOT/.env"; then
+if ! grep -q "APP_KEY=.\+" "$WEB_ROOT/.env"; then
   php "$WEB_ROOT/artisan" key:generate
   info "Generated application key"
 fi

@@ -1,27 +1,25 @@
-FROM dunglas/frankenphp:1.7-builder-php8.4
+FROM shinsenter/frankenphp:php8.4-alpine
 
 ENV SERVER_NAME="http://"
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Installation des dépendances avec apk (gestionnaire de paquets Alpine)
+RUN apk add --no-cache \
     git \
     unzip \
-    librabbitmq-dev \
-    libpq-dev \
+    rabbitmq-c-dev \
+    postgresql-dev \
     supervisor \
     curl \
     gnupg \
-    libicu-dev \
-    && rm -rf /var/lib/apt/lists/*
+    icu-dev
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get update \
-    && apt-get install -y nodejs \
-    && npm install -g npm@latest \
-    && rm -rf /var/lib/apt/lists/*
+# Installation de Node.js avec apk
+RUN apk add --no-cache nodejs npm \
+    && npm install -g npm@latest
 
 RUN node --version && npm --version
 
+# Installation des extensions PHP
 RUN install-php-extensions \
     gd \
     pcntl \
@@ -40,7 +38,9 @@ COPY . .
 COPY ./docker/php/php.ini /usr/local/etc/php/
 COPY ./docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-RUN pecl install xdebug \
+# Installation de Xdebug
+RUN apk add --no-cache $PHPIZE_DEPS linux-headers \
+    && pecl install xdebug \
     && docker-php-ext-enable xdebug
 
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
