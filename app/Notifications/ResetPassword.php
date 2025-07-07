@@ -14,11 +14,6 @@ class ResetPassword extends Notification
         $this->token = $token;
     }
 
-    public function via($notifiable)
-    {
-        return ['mail'];
-    }
-
     public function toMail($notifiable)
     {
         $url = url(route('password.reset', [
