@@ -15,4 +15,4 @@ Route::middleware('web')->group(function () {
         include base_path('routes/authed_route.php');
     });
 
- });
+});
