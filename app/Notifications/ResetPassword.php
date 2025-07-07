@@ -2,12 +2,13 @@
 
 namespace App\Notifications;
 
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class ResetPassword extends Notification
 {
     public $token;
+
     public function __construct($token)
     {
         $this->token = $token;
