@@ -86,6 +86,45 @@ else
   fatal "Database connection failed after $MAX_RETRIES attempts. Exiting..."
 fi
 
+
+# Initialisation de MinIO
+info "Initializing MinIO..."
+MINIO_HOST="${MINIO_HOST:-khp-minio}"
+MINIO_PORT="${MINIO_PORT:-9000}"
+MINIO_USER="${MINIO_ROOT_USER:-root}"
+MINIO_PASSWORD="${MINIO_ROOT_PASSWORD:-password}"
+MINIO_BUCKET="developp"
+
+# Attendre que MinIO soit disponible
+info "Waiting for MinIO to be ready..."
+MINIO_READY=0
+for i in $(seq 1 "$MAX_RETRIES"); do
+  if curl -s "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" > /dev/null; then
+    info "MinIO is ready."
+    MINIO_READY=1
+    break
+  else
+    warning "MinIO not ready. Retrying in $RETRY_DELAY seconds... (Attempt $i/$MAX_RETRIES)"
+    sleep "$RETRY_DELAY"
+  fi
+done
+
+if [[ "$MINIO_READY" -eq 1 ]]; then
+  # Configurer le client mc
+  mc alias set myminio http://${MINIO_HOST}:${MINIO_PORT} "${MINIO_USER}" "${MINIO_PASSWORD}"
+
+  # Créer le bucket s'il n'existe pas
+  if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
+    mc mb myminio/${MINIO_BUCKET}
+    info "Created MinIO bucket: ${MINIO_BUCKET}"
+  else
+    info "MinIO bucket ${MINIO_BUCKET} already exists."
+  fi
+else
+  warning "MinIO is not available. Skipping bucket creation."
+fi
+
+
 php "$WEB_ROOT/artisan" lighthouse:ide-helper
 
 supervisord -c "$SUPERVISOR_CONF"
