@@ -78,7 +78,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function sendResetLinkEmail(Request $request)
+    public function send_password_reset_email(Request $request)
     {
         $request->validate(['email' => 'required|email']);
 
@@ -87,14 +87,7 @@ class AuthController extends Controller
         );
 
         return $status === Password::RESET_LINK_SENT
-                    ? back()->with(['status' => __($status)])
-                    : back()->withErrors(['email' => __($status)]);
-    }
-
-    public function showResetForm(Request $request, $token = null)
-    {
-        return view('auth_passwords_reset')->with(
-            ['token' => $token, 'email' => $request->email]
-        );
+            ? back()->with(['status' => __($status)])
+            : back()->withErrors(['email' => __($status)]);
     }
 }
