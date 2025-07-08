@@ -1,31 +1,158 @@
-.PHONY: up down restart build exec migrate tests cs pint larastan install up-prod fresh
+# ================================================
+# KHP-Back - Makefile de développement
+# ================================================
 
+# Variables
+DC = docker-compose
+APP = khp-back
+ARTISAN = $(DC) exec $(APP) php artisan
+COMPOSER = $(DC) exec $(APP) composer
+NPM = $(DC) exec $(APP) npm
+VENDOR_BIN = $(DC) exec $(APP) vendor/bin
+
+# Définition des cibles qui ne sont pas des fichiers
+.PHONY: help up down restart build exec shell status logs \
+		migrate migrate-fresh migrate-status \
+		seed rollback test tests coverage \
+		cs pint larastan analyse \
+		install composer-update npm-update \
+		cache-clear optimize fresh reset-minio \
+		routes clean
+
+# Cible par défaut
+.DEFAULT_GOAL := help
+
+# Aide
+help:
+	@echo "KHP-Back - Commandes disponibles :"
+	@echo "--------------------------------"
+	@echo "Gestion des conteneurs :"
+	@echo "  up           : Démarrer les conteneurs"
+	@echo "  down         : Arrêter les conteneurs"
+	@echo "  restart      : Redémarrer les conteneurs"
+	@echo "  build        : Construire les images"
+	@echo "  exec, shell  : Ouvrir un shell dans le conteneur"
+	@echo "  status       : Vérifier l'état des conteneurs"
+	@echo "  logs         : Afficher les logs des conteneurs"
+	@echo "--------------------------------"
+	@echo "Base de données & Migrations :"
+	@echo "  migrate       : Exécuter les migrations"
+	@echo "  migrate-fresh : Rafraîchir la base de données"
+	@echo "  migrate-status: Vérifier le statut des migrations"
+	@echo "  seed          : Peupler la base de données"
+	@echo "  rollback      : Annuler la dernière migration"
+	@echo "--------------------------------"
+	@echo "Tests et Qualité de code :"
+	@echo "  test, tests  : Exécuter les tests"
+	@echo "  coverage     : Générer un rapport de couverture"
+	@echo "  cs, pint     : Corriger le style du code"
+	@echo "  larastan, analyse : Analyser le code statiquement"
+	@echo "--------------------------------"
+	@echo "Développement :"
+	@echo "  install      : Installer les dépendances"
+	@echo "  composer-update : Mettre à jour les dépendances PHP"
+	@echo "  npm-update   : Mettre à jour les dépendances JS"
+	@echo "  cache-clear  : Nettoyer les caches de l'application"
+	@echo "  optimize     : Optimiser l'application"
+	@echo "  fresh        : Réinitialiser la BDD et MinIO"
+	@echo "  reset-minio  : Réinitialiser le bucket MinIO"
+	@echo "  routes       : Lister les routes"
+
+# Gestion des conteneurs
 up:
-	docker-compose up -d
-up-prod:
-	docker-compose -f docker-compose.prod.yml up -d
-down:
-	docker-compose down
-restart:
-	docker-compose down
-	docker-compose up -d
-build:
-	docker-compose build
-exec:
-	docker-compose exec khp-back bash
-migrate:
-	docker-compose exec khp-back php artisan migrate
+	$(DC) up -d
+	@echo "Serveur disponible sur http://localhost:8000"
 
-tests:
-	docker-compose exec khp-back php artisan test
-cs:
-	docker-compose exec khp-back vendor/bin/pint
-pint:
-	docker-compose exec khp-back vendor/bin/pint
-larastan:
-	docker-compose exec khp-back ./vendor/bin/phpstan analyse --memory-limit=2G
+up-prod:
+	$(DC) -f docker-compose.prod.yml up -d
+
+down:
+	$(DC) down
+
+restart: down up
+
+build:
+	$(DC) build
+
+exec shell:
+	$(DC) exec $(APP) bash
+
+status:
+	$(DC) ps
+
+logs:
+	$(DC) logs -f
+
+# Base de données & Migrations
+migrate:
+	$(ARTISAN) migrate
+
+migrate-fresh:
+	$(ARTISAN) migrate:fresh
+
+migrate-status:
+	$(ARTISAN) migrate:status
+
+seed:
+	$(ARTISAN) db:seed
+
+rollback:
+	$(ARTISAN) migrate:rollback
+
+# Tests et Qualité de code
+test tests:
+	$(ARTISAN) test
+
+coverage:
+	$(DC) exec -e XDEBUG_MODE=coverage $(APP) php artisan test --coverage
+
+cs pint:
+	$(VENDOR_BIN)/pint
+
+larastan analyse:
+	$(VENDOR_BIN) phpstan analyse --memory-limit=2G
+
+# Développement
 install:
-	docker-compose exec khp-back composer install
-	docker-compose exec khp-back npm install
-fresh:
-	docker-compose exec khp-back php artisan migrate:fresh --seed
+	$(COMPOSER) install
+	$(NPM) install
+
+composer-update:
+	$(COMPOSER) update
+
+npm-update:
+	$(NPM) update
+
+cache-clear:
+	$(ARTISAN) cache:clear
+	$(ARTISAN) config:clear
+	$(ARTISAN) route:clear
+	$(ARTISAN) view:clear
+
+optimize:
+	$(ARTISAN) optimize
+
+routes:
+	$(ARTISAN) route:list
+
+# Réinitialisation complète
+fresh: reset-minio
+	$(ARTISAN) migrate:fresh --seed
+	@echo "🚀 Environnement frais et prêt !"
+
+# Réinitialise le bucket developp dans MinIO
+reset-minio:
+	$(DC) exec $(APP) bash -c '\
+		mc alias set myminio http://khp-minio:9000 root password && \
+		if mc ls myminio | grep -q developp; then \
+			echo "🗑️ Suppression du bucket developp..." && \
+			mc rb --force myminio/developp; \
+		fi && \
+		echo "🆕 Création du bucket developp..." && \
+		mc mb myminio/developp && \
+		echo "✅ Bucket developp réinitialisé avec succès."'
+
+# Nettoyage
+clean: down
+	$(DC) rm -f
+	@echo "🧹 Environnement nettoyé"

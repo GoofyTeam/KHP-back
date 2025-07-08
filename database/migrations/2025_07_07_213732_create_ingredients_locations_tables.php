@@ -27,13 +27,23 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ingredient_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->foreignId('location_id')->constrained()->onDelete('cascade')->nullable(false);
+            $table->boolean('use_default_image')->default(false)->nullable(false);
             $table->float('quantity')->default(0)->nullable(false);
+            $table->timestamps();
+        });
+
+        Schema::create('ingredient_images', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ingredient_id')->constrained()->onDelete('cascade')->nullable(false);
+            $table->foreignId('company_id')->constrained()->onDelete('cascade')->nullable(false);
+            $table->string('image_url')->nullable(false);
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('ingredient_images');
         Schema::dropIfExists('ingredient_location');
         Schema::dropIfExists('locations');
         Schema::dropIfExists('ingredients');
