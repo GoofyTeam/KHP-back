@@ -111,10 +111,10 @@ done
 
 if [[ "$MINIO_READY" -eq 1 ]]; then
   # Configurer le client mc
-  mc alias set myminio http://${MINIO_HOST}:${MINIO_PORT} ${MINIO_USER} ${MINIO_PASSWORD}
+  mc alias set myminio http://${MINIO_HOST}:${MINIO_PORT} "${MINIO_USER}" "${MINIO_PASSWORD}"
 
   # Créer le bucket s'il n'existe pas
-  if ! mc ls myminio | grep -q ${MINIO_BUCKET}; then
+  if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
     mc mb myminio/${MINIO_BUCKET}
     info "Created MinIO bucket: ${MINIO_BUCKET}"
   else
