@@ -2,80 +2,100 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
-use App\Models\IngredientImage;
-use App\Models\Location;
+use App\Services\ImageService;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 
 class IngredientSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    private ImageService $imageService;
+
+    private string $picsumBase = 'https://picsum.photos/200';
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+
     public function run(): void
     {
-        // Créer 30 ingrédients
-        $ingredients = Ingredient::factory()->count(30)->create();
+        $images = $this->fetchRandomImages(count: 15);
 
-        // Récupérer toutes les entreprises
-        $companies = Company::all();
+        $this->seedCompany('GoofyTeam', 15, $images);
 
-        // Créer des images pour chaque ingrédient
-        foreach ($ingredients as $ingredient) {
-            // Pour chaque entreprise, créer une image personnalisée
-            foreach ($companies as $company) {
-                // Générer une image aléatoire avec picsum.photos
-                // Utiliser différentes tailles pour variété (entre 200x200 et 500x500)
-                $width = rand(200, 500);
-                $height = rand(200, 500);
-                $image_url = "https://picsum.photos/$width/$height?random=".rand(1, 1000);
+        $this->seedOtherCompanies('GoofyTeam', 5, $images);
+    }
 
-                // Créer l'enregistrement dans la table ingredient_images
-                IngredientImage::create([
-                    'ingredient_id' => $ingredient->id,
-                    'company_id' => $company->id,
-                    'image_url' => $image_url,
-                ]);
-            }
+    private function fetchRandomImages(int $count): array
+    {
+        $uploads = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $response = Http::get($this->picsumBase);
+            $tempFile = $this->storeTemporaryFile($response);
+
+            $uploads[] = new UploadedFile(
+                $tempFile,
+                basename($tempFile),
+                $response->header('Content-Type'),
+                null,
+                true
+            );
         }
 
-        // Attribuer des ingrédients aux emplacements de GoofyTeam
-        $company = Company::where('name', 'GoofyTeam')->first();
-        $locations = Location::where('company_id', $company->id)->get();
+        return $uploads;
+    }
 
-        foreach ($locations as $location) {
-            // Ajouter 5-10 ingrédients à chaque emplacement avec des quantités aléatoires
-            $ingredientsForLocation = $ingredients->random(rand(5, 10));
+    private function storeTemporaryFile($response): string
+    {
+        $pathInfo = pathinfo(parse_url($response->effectiveUri(), PHP_URL_PATH));
+        $filename = $pathInfo['filename'].'.'.($pathInfo['extension'] ?? 'jpg');
+        $tempPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.$filename;
 
-            foreach ($ingredientsForLocation as $ingredient) {
-                $location->ingredients()->attach($ingredient->id, [
-                    'quantity' => rand(1, 100),
-                    'use_default_image' => (bool) rand(0, 1), // Ajouter l'option d'utiliser l'image par défaut ou non
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+        file_put_contents($tempPath, $response->body());
+
+        return $tempPath;
+    }
+
+    private function seedCompany(string $companyName, int $perLocation, array $images): void
+    {
+        $company = Company::where('name', $companyName)->firstOrFail();
+
+        foreach ($company->locations as $location) {
+            $this->createIngredients($company->id, $location->id, $perLocation, $images);
         }
+    }
 
-        // Attribuer quelques ingrédients aux emplacements des autres entreprises
-        $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
-        foreach ($otherCompanies as $company) {
-            $locations = Location::where('company_id', $company->id)->get();
+    private function seedOtherCompanies(string $excludeName, int $perLocation, array $images): void
+    {
+        Company::where('name', '!=', $excludeName)
+            ->get()
+            ->each(
+                fn ($company) => $company->locations->each(
+                    fn ($location) => $this->createIngredients($company->id, $location->id, $perLocation, $images)
+                )
+            );
+    }
 
-            foreach ($locations as $location) {
-                // Ajouter 3-5 ingrédients à chaque emplacement
-                $ingredientsForLocation = $ingredients->random(rand(3, 5));
+    private function createIngredients(int $companyId, int $locationId, int $count, array $images): void
+    {
+        for ($i = 0; $i < $count; $i++) {
+            $upload = $images[array_rand($images)];
 
-                foreach ($ingredientsForLocation as $ingredient) {
-                    $location->ingredients()->attach($ingredient->id, [
-                        'quantity' => rand(1, 50),
-                        'use_default_image' => (bool) rand(0, 1), // Ajouter l'option d'utiliser l'image par défaut ou non
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
+            $ingredient = Ingredient::factory()->create([
+                'company_id' => $companyId,
+                'image_url' => $this->imageService->store($upload, 'ingredients'),
+            ]);
+
+            // on ajoute une catégorie aléatoire
+            $category = Category::inRandomOrder()->first();
+            $ingredient->categories()->attach($category->id);
+
+            $ingredient->locations()->attach($locationId);
         }
     }
 }

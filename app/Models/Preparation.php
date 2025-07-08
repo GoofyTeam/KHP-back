@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\PreparationTypeEnum;
-use App\Enums\UnitEnum;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +27,6 @@ class Preparation extends Model
     protected function casts(): array
     {
         return [
-            'unit' => UnitEnum::class,
             'type' => PreparationTypeEnum::class,
         ];
     }

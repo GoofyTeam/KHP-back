@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             UserSeeder::class,
             PreparationSeeder::class,
+            CategorySeeder::class,
             LocationSeeder::class,
             IngredientSeeder::class,
         ]);

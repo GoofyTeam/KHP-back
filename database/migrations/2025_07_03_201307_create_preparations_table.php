@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\PreparationTypeEnum;
-use App\Enums\UnitEnum;
 use App\Models\Company;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -20,8 +19,8 @@ return new class extends Migration
                 ->nullable(false)
                 ->constrained()
                 ->onDelete('cascade');
-            $table->text('name');
-            $table->enum('unit', UnitEnum::values())->nullable(false);
+            $table->string('name')->nullable(false);
+            $table->string('unit')->nullable(false);
             $table->enum('type', PreparationTypeEnum::values())->nullable(false);
             $table->timestamps();
 

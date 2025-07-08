@@ -42,17 +42,22 @@ class Company extends Model
     }
 
     /**
-     * Get all ingredients associated with the company through locations.
+     * Get the ingredients associated with the company.
      *
-     * @return \Illuminate\Support\Collection
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function ingredients()
     {
-        return $this->locations()
-            ->with('ingredients')
-            ->get()
-            ->pluck('ingredients')
-            ->flatten()
-            ->unique('id');
+        return $this->hasMany(Ingredient::class);
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($company) {
+            $company->locations()->createMany([
+                ['name' => 'Congélateur'],
+                ['name' => 'Réfrigérateur'],
+            ]);
+        });
     }
 }

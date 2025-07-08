@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\PreparationTypeEnum;
-use App\Enums\UnitEnum;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,7 +20,17 @@ class PreparationFactory extends Factory
     {
         return [
             'name' => fake()->unique()->word(),
-            'unit' => fake()->randomElement(UnitEnum::values()),
+            'unit' => fake()->randomElement([
+                'g',
+                'kg',
+                'ml',
+                'l',
+                'cuillère à café',
+                'cuillère à soupe',
+                'pincée',
+                'tasse',
+                'pièce',
+            ]),
             'type' => fake()->randomElement(PreparationTypeEnum::values()),
             'company_id' => Company::factory(),
         ];
