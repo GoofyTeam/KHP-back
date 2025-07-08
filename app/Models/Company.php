@@ -30,4 +30,29 @@ class Company extends Model
     {
         return $this->hasMany(Preparation::class);
     }
+
+    /**
+     * Get the locations associated with the company.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function locations()
+    {
+        return $this->hasMany(Location::class);
+    }
+
+    /**
+     * Get all ingredients associated with the company through locations.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function ingredients()
+    {
+        return $this->locations()
+            ->with('ingredients')
+            ->get()
+            ->pluck('ingredients')
+            ->flatten()
+            ->unique('id');
+    }
 }

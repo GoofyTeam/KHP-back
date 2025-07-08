@@ -1,0 +1,46 @@
+type Location {
+    "Unique primary key."
+    id: ID!
+
+    "Location name."
+    name: String!
+
+    "The company this location belongs to."
+    company: Company! @belongsTo
+
+    "Ingredients stored in this location."
+    ingredients: [Ingredient!]! @belongsToMany
+
+    "When the location was created."
+    created_at: DateTime!
+
+    "When the location was last updated."
+    updated_at: DateTime!
+}
+
+type IngredientLocation {
+    "The ingredient stored in the location."
+    ingredient: Ingredient!
+
+    "The location where the ingredient is stored."
+    location: Location!
+
+    "The quantity of the ingredient in this location."
+    quantity: Float!
+}
+
+extend type Query @guard {
+    "Find a single location by an identifying attribute."
+    location(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by location name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Location @find(scopes: ["forCompany"])
+
+    "Liste les emplacements (limité aux emplacements de ma company)"
+    locations(
+        "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
+        name: String @where(operator: "like")
+    ): [Location!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+}

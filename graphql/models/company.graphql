@@ -5,7 +5,15 @@ type Company {
     "Company name."
     name: String!
 
-    preparation: Preparation! @hasMany
+    "Preparations associated with this company."
+    preparations: [Preparation!]! @hasMany
+
+    "Locations associated with this company."
+    locations: [Location!]! @hasMany
+
+    "Ingredients associated with this company through locations."
+    ingredients: [Ingredient!]!
+        @field(resolver: "App\\GraphQL\\Queries\\CompanyIngredients@resolve")
 
     "When the company was created."
     created_at: DateTime!
