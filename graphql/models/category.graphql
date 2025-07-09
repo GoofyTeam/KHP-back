@@ -1,0 +1,26 @@
+type Category {
+    "Unique primary key."
+    id: ID!
+
+    "Category name."
+    name: String!
+
+    "When the Category was created."
+    created_at: DateTime!
+
+    "When the Category was last updated."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "List categories for the current company."
+    categories: [Category!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Find a single Category (only if it belongs to the current company)."
+    Category(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by Category name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Category @find
+}

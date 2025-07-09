@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PreparationTypeEnum;
-use App\Enums\UnitEnum;
 use App\Models\Preparation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,14 +27,14 @@ class PreparationController extends Controller
             ],
             'unit' => [
                 'required',
-                new Enum(UnitEnum::class),
+                'string',
+                'max:255',
             ],
             'type' => [
                 'required',
                 new Enum(PreparationTypeEnum::class),
             ],
         ], [
-            'unit' => 'Le champ unit doit être l\'une des valeurs suivantes : '.implode(', ', UnitEnum::values()),
             'type' => 'Le champ type doit être l\'une des valeurs suivantes : '.implode(', ', PreparationTypeEnum::values()),
         ]);
 
@@ -71,14 +70,14 @@ class PreparationController extends Controller
             ],
             'unit' => [
                 'sometimes',
-                new Enum(UnitEnum::class),
+                'string',
+                'max:255',
             ],
             'type' => [
                 'sometimes',
                 new Enum(PreparationTypeEnum::class),
             ],
         ], [
-            'unit' => 'Le champ unit doit être l\'une des valeurs suivantes : '.implode(', ', UnitEnum::values()),
             'type' => 'Le champ type doit être l\'une des valeurs suivantes : '.implode(', ', PreparationTypeEnum::values()),
         ]);
 

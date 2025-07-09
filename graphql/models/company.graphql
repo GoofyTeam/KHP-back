@@ -5,7 +5,10 @@ type Company {
     "Company name."
     name: String!
 
-    preparation: Preparation! @hasMany
+    "Preparations associated with this company."
+    preparations: [Preparation!]! @hasMany
+
+    categories: [Category!]! @hasMany
 
     "When the company was created."
     created_at: DateTime!

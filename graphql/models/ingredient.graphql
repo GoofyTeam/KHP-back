@@ -1,0 +1,48 @@
+type Ingredient {
+    "Unique primary key."
+    id: ID!
+
+    "Ingredient name."
+    name: String!
+
+    "Unit of measurement for the ingredient."
+    unit: String!
+
+    "Locations where this ingredient is stored."
+    locations: [Location!]! @belongsToMany
+
+    "The company that owns this ingredient."
+    company: Company! @belongsTo
+
+    categories: [Category!]! @belongsToMany
+
+    image_url: String
+        @field(resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@imageUrl")
+
+    "When the ingredient was created."
+    created_at: DateTime!
+
+    "When the ingredient was last updated."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "List ingredients for the current company."
+    ingredients(
+        "Filter by ingredient name. Accepts SQL LIKE wildcards `%` and `_`."
+        name: String @where(operator: "like")
+        "Filter by unit of measurement. Accepts SQL LIKE wildcards `%` and `_`."
+        unit: String @where(operator: "like")
+
+        locationId: ID @scope(name: "locationId")
+        locationName: String @scope(name: "locationName")
+    ): [Ingredient!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Find a single ingredient (only if it belongs to the current company)."
+    ingredient(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by ingredient name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Ingredient @find(scopes: ["forCompany"])
+}

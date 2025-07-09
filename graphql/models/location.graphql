@@ -1,0 +1,35 @@
+type Location {
+    "Unique primary key."
+    id: ID!
+
+    "Location name."
+    name: String!
+
+    "Location company."
+    company: Company! @belongsTo
+
+    "When the location was created."
+    created_at: DateTime!
+
+    "When the location was last updated."
+    updated_at: DateTime!
+
+    "Ingredients stored in this location."
+    ingredients: [Ingredient!]! @belongsToMany
+}
+
+extend type Query @guard {
+    "List locations for the current company."
+    locations(
+        "Filter by location name. Accepts SQL LIKE wildcards `%` and `_`."
+        name: String @where(operator: "like")
+    ): [Location!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Find a single location (only if it belongs to the current company)."
+    location(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by location name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Location @find(scopes: ["forCompany"])
+}

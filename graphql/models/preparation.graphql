@@ -9,7 +9,7 @@ type Preparation {
     unit: String!
 
     "Type of preparation (e.g., chemical, biological, physical)."
-    type: String!
+    type: PreparationTypeEnum!
 
     "The company that produces this preparation."
     company: Company! @belongsTo

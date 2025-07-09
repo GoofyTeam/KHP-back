@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Enums\PreparationTypeEnum;
+use GraphQL\Type\Definition\PhpEnumType;
 use Illuminate\Support\ServiceProvider;
+use Nuwave\Lighthouse\Schema\TypeRegistry;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        /** @var TypeRegistry $typeRegistry */
+        $typeRegistry = $this->app->make(TypeRegistry::class);
+
+        // This will expose a GraphQL enum called "PreparationTypeEnum"
+        $typeRegistry->register(new PhpEnumType(PreparationTypeEnum::class));
     }
 }
