@@ -38,8 +38,7 @@ class ImageService
 
     /**
      * Delete an image from the s3 bucket.
-     *
-     * @return void
+     * This method checks if the image exists before attempting to delete it.
      */
     public function delete(string $path): bool
     {

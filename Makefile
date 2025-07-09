@@ -110,7 +110,7 @@ cs pint:
 	$(VENDOR_BIN)/pint
 
 larastan analyse:
-	$(VENDOR_BIN) phpstan analyse --memory-limit=2G
+	$(VENDOR_BIN)/phpstan analyse --memory-limit=2G
 
 # Développement
 install:
