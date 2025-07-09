@@ -12,6 +12,10 @@ class Ingredient extends Model
     /** @use HasFactory<\Database\Factories\IngredientFactory> */
     use HasFactory;
 
+    protected $guarded = [
+        'id',
+    ];
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

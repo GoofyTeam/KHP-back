@@ -9,7 +9,9 @@ class Company extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $guarded = [
+        'id',
+    ];
 
     /**
      * Get the users associated with the company.
@@ -49,6 +51,16 @@ class Company extends Model
     public function ingredients()
     {
         return $this->hasMany(Ingredient::class);
+    }
+
+    /**
+     * Get the categories associated with the company.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function categories()
+    {
+        return $this->hasMany(Category::class);
     }
 
     protected static function booted()

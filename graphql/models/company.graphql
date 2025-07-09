@@ -8,6 +8,8 @@ type Company {
     "Preparations associated with this company."
     preparations: [Preparation!]! @hasMany
 
+    categories: [Category!]! @hasMany
+
     "When the company was created."
     created_at: DateTime!
 

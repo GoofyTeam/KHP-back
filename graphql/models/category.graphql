@@ -14,7 +14,7 @@ type Category {
 
 extend type Query @guard {
     "List categories for the current company."
-    categories: [Category!]! @paginate(defaultCount: 10)
+    categories: [Category!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
     "Find a single Category (only if it belongs to the current company)."
     Category(

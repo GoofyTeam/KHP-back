@@ -12,11 +12,8 @@ class Preparation extends Model
     /** @use HasFactory<\Database\Factories\PreparationFactory> */
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'unit',
-        'type',
-        'company_id',
+    protected $guarded = [
+        'id',
     ];
 
     /**

@@ -10,15 +10,18 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique()->nullable(false);
+            $table->string('name')->nullable(false);
+            $table->foreignId('company_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->timestamps();
+
+            $table->unique(['company_id', 'name']);
         });
 
         Schema::create('ingredients', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable(false);
             $table->foreignId('company_id')->constrained()->onDelete('cascade')->nullable(false);
-            $table->string('image_url')->nullable(false);
+            $table->string('image_url')->nullable(true);
             $table->string('unit')->nullable(false);
             $table->timestamps();
 
