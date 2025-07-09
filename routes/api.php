@@ -8,7 +8,8 @@ Route::middleware('web')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/register', [AuthController::class, 'register'])->name('register');
 
-    Route::post('/password/email', [AuthController::class, 'send_password_reset_email'])->name('password_email');
+    Route::post('/email_token', [AuthController::class, 'send_email_token'])->name('email_token');
+    Route::post('/password_reset', [AuthController::class, 'reset_password'])->name('password_reset');
 
     Route::middleware('auth')->group(function () {
         include base_path('routes/authed_route.php');
