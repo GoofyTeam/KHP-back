@@ -51,5 +51,12 @@ return new class extends Migration
         });
     }
 
-    public function down(): void {}
+    public function down(): void
+    {
+        Schema::dropIfExists('ingredient_location');
+        Schema::dropIfExists('locations');
+        Schema::dropIfExists('category_ingredient');
+        Schema::dropIfExists('ingredients');
+        Schema::dropIfExists('categories');
+    }
 };
