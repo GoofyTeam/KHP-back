@@ -10,6 +10,8 @@ type Company {
 
     categories: [Category!]! @hasMany
 
+    locations: [Location!]! @hasMany
+
     "When the company was created."
     created_at: DateTime!
 
