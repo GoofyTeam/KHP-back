@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property-read \Illuminate\Database\Eloquent\Relations\Pivot $pivot
+ */
 class Location extends Model
 {
     /** @use HasFactory<\Database\Factories\LocationFactory> */
@@ -23,6 +26,16 @@ class Location extends Model
     public function ingredients(): BelongsToMany
     {
         return $this->belongsToMany(Ingredient::class);
+    }
+
+    public function getQuantityAttribute(): float
+    {
+        /**
+         * @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot
+         */
+        $pivot = $this->pivot;
+
+        return $pivot->quantity;
     }
 
     public function scopeForCompany($query)
