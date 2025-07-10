@@ -9,8 +9,6 @@ class OpenFoodFactsService
 {
     protected string $baseUrl;
 
-    protected string $userAgent;
-
     public function __construct()
     {
         $this->baseUrl = config('openfoodfacts.base_url');
