@@ -19,7 +19,6 @@ class OpenFoodFactsResolver
      * Résolveur pour search en fonction du code-barres ou des mots-clés pour openfoodfacts.
      *
      * @param  mixed  $_
-     * @return array|null
      */
     public function search($_, array $args): ?OpenFoodFactsDTO
     {
