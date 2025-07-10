@@ -17,4 +17,19 @@ class IngredientResolver
 
         return url('/api/image-proxy/'.$ingredient->image_url);
     }
+
+    public function quantityByLocation(Ingredient $ingredient): array
+    {
+        $quantities = [];
+
+        /** @var \App\Models\Location $location */
+        foreach ($ingredient->locations as $location) {
+            $quantities[] = [
+                'quantity' => $location->getQuantityAttribute(),
+                'location' => $location,
+            ];
+        }
+
+        return $quantities;
+    }
 }

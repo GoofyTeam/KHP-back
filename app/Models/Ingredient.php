@@ -23,7 +23,9 @@ class Ingredient extends Model
 
     public function locations(): BelongsToMany
     {
-        return $this->belongsToMany(Location::class);
+        return $this->belongsToMany(Location::class)
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 
     public function categories(): BelongsToMany
