@@ -1,0 +1,16 @@
+type Query {
+    """
+    Recherche un produit par code-barres ou par mots-clés.
+    Si 'barcode' est fourni, la recherche se fait par code-barres.
+    Sinon, la recherche se fait par mots-clés.
+    """
+    search(
+        barcode: String
+        keyword: String
+        page: Int = 1
+        pageSize: Int = 20
+    ): JSON
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\OpenFoodFactsResolver@search"
+        )
+}

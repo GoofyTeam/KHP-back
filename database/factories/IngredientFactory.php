@@ -157,6 +157,8 @@ class IngredientFactory extends Factory
                 'boîte',
                 'sachet',
             ]),
+            'base_quantity' => $this->faker->numberBetween(1, 1000),
+            'barcode' => $this->faker->unique()->ean13(),
         ];
     }
 }

@@ -33,6 +33,8 @@ class IngredientController extends Controller
             'quantities' => 'required|array|min:1',
             'quantities.*.quantity' => 'required|numeric|min:0',
             'quantities.*.location_id' => 'required|exists:locations,id',
+            'barcode' => 'nullable|string|max:255',
+            'base_quantity' => 'nullable|numeric|min:0',
         ]);
 
         $categories = collect($request->input('categories'))->map(function ($categoryName) use ($user) {
