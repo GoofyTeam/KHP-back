@@ -89,6 +89,7 @@ class IngredientSeeder extends Seeder
             $ingredient = Ingredient::factory()->create([
                 'company_id' => $companyId,
                 'image_url' => $this->imageService->store($upload, 'ingredients'),
+                'quantity' => rand(1, 100),
             ]);
 
             // on ajoute une catégorie aléatoire
