@@ -92,7 +92,6 @@ class IngredientSeeder extends Seeder
                 'quantity' => rand(1, 100),
             ]);
 
-            // on ajoute une catégorie aléatoire
             $category = Category::inRandomOrder()->first();
             $ingredient->categories()->attach($category->id);
 

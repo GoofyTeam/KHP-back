@@ -2,6 +2,8 @@
 scalar DateTime
     @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
 
+scalar JSON @scalar(class: "App\\GraphQL\\Scalars\\JsonScalar")
+
 type Query
 
 #import models/*.graphql
