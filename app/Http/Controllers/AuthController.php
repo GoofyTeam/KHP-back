@@ -87,7 +87,6 @@ class AuthController extends Controller
         $status = Password::sendResetLink(
             $request->only('email')
         );
-        dd($status);
 
         return $status === Password::RESET_LINK_SENT
             ? back()->with(['status' => __($status)])
@@ -100,6 +99,7 @@ class AuthController extends Controller
             'email' => 'required|email',
             'token' => 'required',
             'password' => 'required|confirmed|min:8',
+            'password_confirmation' => 'required|min:8',
         ]);
 
         $status = Password::reset(
