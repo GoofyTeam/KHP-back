@@ -14,7 +14,7 @@ class IngredientSeeder extends Seeder
 {
     private ImageService $imageService;
 
-    private string $picsumBase = 'https://picsum.photos/200';
+    private string $picsumUrl = 'https://picsum.photos/200/200.jpg';
 
     public function __construct(ImageService $imageService)
     {
@@ -23,10 +23,8 @@ class IngredientSeeder extends Seeder
 
     public function run(): void
     {
-        $images = $this->fetchRandomImages(count: 15);
-
+        $images = $this->fetchRandomImages(15);
         $this->seedCompany('GoofyTeam', 15, $images);
-
         $this->seedOtherCompanies('GoofyTeam', 5, $images);
     }
 
@@ -35,13 +33,15 @@ class IngredientSeeder extends Seeder
         $uploads = [];
 
         for ($i = 0; $i < $count; $i++) {
-            $response = Http::get($this->picsumBase);
+
+            $response = Http::get($this->picsumUrl.'?random='.uniqid());
+
             $tempFile = $this->storeTemporaryFile($response);
 
             $uploads[] = new UploadedFile(
                 $tempFile,
                 basename($tempFile),
-                $response->header('Content-Type'),
+                'image/jpeg',
                 null,
                 true
             );
@@ -52,31 +52,29 @@ class IngredientSeeder extends Seeder
 
     private function storeTemporaryFile($response): string
     {
-        $pathInfo = pathinfo(parse_url($response->effectiveUri(), PHP_URL_PATH));
-        $filename = $pathInfo['filename'].'.'.($pathInfo['extension'] ?? 'jpg');
+        $filename = uniqid('picsum_').'.jpg';
         $tempPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.$filename;
-
         file_put_contents($tempPath, $response->body());
 
         return $tempPath;
     }
 
-    private function seedCompany(string $companyName, int $perLocation, array $images): void
+    private function seedCompany(string $name, int $perLocation, array $images): void
     {
-        $company = Company::where('name', $companyName)->firstOrFail();
+        $company = Company::where('name', $name)->firstOrFail();
 
-        foreach ($company->locations as $location) {
-            $this->createIngredients($company->id, $location->id, $perLocation, $images);
+        foreach ($company->locations as $loc) {
+            $this->createIngredients($company->id, $loc->id, $perLocation, $images);
         }
     }
 
-    private function seedOtherCompanies(string $excludeName, int $perLocation, array $images): void
+    private function seedOtherCompanies(string $exclude, int $perLocation, array $images): void
     {
-        Company::where('name', '!=', $excludeName)
+        Company::where('name', '!=', $exclude)
             ->get()
             ->each(
                 fn ($company) => $company->locations->each(
-                    fn ($location) => $this->createIngredients($company->id, $location->id, $perLocation, $images)
+                    fn ($loc) => $this->createIngredients($company->id, $loc->id, $perLocation, $images)
                 )
             );
     }
@@ -85,15 +83,12 @@ class IngredientSeeder extends Seeder
     {
         for ($i = 0; $i < $count; $i++) {
             $upload = $images[array_rand($images)];
-
             $ingredient = Ingredient::factory()->create([
                 'company_id' => $companyId,
                 'image_url' => $this->imageService->store($upload, 'ingredients'),
             ]);
-
-            $category = Category::inRandomOrder()->first();
-            $ingredient->categories()->attach($category->id);
-
+            $cat = Category::inRandomOrder()->first();
+            $ingredient->categories()->attach($cat->id);
             $ingredient->locations()->attach($locationId);
         }
     }
