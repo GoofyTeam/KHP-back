@@ -17,7 +17,7 @@ VENDOR_BIN = $(DC) exec $(APP) vendor/bin
 		cs pint larastan analyse \
 		install composer-update npm-update \
 		cache-clear optimize fresh reset-minio \
-		routes clean
+		routes clean erd
 
 # Cible par défaut
 .DEFAULT_GOAL := help
@@ -156,3 +156,7 @@ reset-minio:
 clean: down
 	$(DC) rm -f
 	@echo "🧹 Environnement nettoyé"
+
+erd:
+	$(ARTISAN) erd:generate
+    @echo "ERD diagram generated at localhost:8000/laravel-erd"
