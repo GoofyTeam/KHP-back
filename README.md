@@ -82,6 +82,7 @@ _Une API robuste et scalable avec authentification, GraphQL et architecture cont
 | `make tests`            | Lancer tous les tests            |
 | `make cs` / `make pint` | Formater le code                 |
 | `make larastan`         | Analyse statique du code         |
+| `make erd`              | Générer le diagramme ERD         |
 
 ---
 
@@ -115,6 +116,7 @@ _Une API robuste et scalable avec authentification, GraphQL et architecture cont
 Le projet utilise plusieurs outils pour maintenir la qualité :
 
 -   **Laravel Pint** : Formatage automatique du code PHP
+-   **Laravel Erd** : Génération de diagrammes ERD
 -   **PHPStan + Larastan** : Analyse statique
 -   **Lefthook** : Hooks Git pre-commit
 -   **PHPUnit** : Tests automatisés
