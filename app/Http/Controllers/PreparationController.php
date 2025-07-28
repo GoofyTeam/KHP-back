@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PreparationTypeEnum;
 use App\Models\Preparation;
+use App\Models\PreparationEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Enum;
 
 class PreparationController extends Controller
 {
@@ -30,21 +29,35 @@ class PreparationController extends Controller
                 'string',
                 'max:255',
             ],
-            'type' => [
+            'entities' => [
                 'required',
-                new Enum(PreparationTypeEnum::class),
+                'array',
+                'min:2',
             ],
-        ], [
-            'type' => 'Le champ type doit être l\'une des valeurs suivantes : '.implode(', ', PreparationTypeEnum::values()),
+            'entities.*.id' => ['required', 'integer'],
+            'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
         ]);
 
         $validated['company_id'] = $user->company_id;
 
         $preparation = Preparation::create($validated);
 
+        // Création des entités liées
+        foreach ($validated['entities'] as $entity) {
+            $entityClass = $entity['type'] === 'ingredient'
+                ? \App\Models\Ingredient::class
+                : \App\Models\Preparation::class;
+
+            PreparationEntity::create([
+                'preparation_id' => $preparation->id,
+                'entity_id' => $entity['id'],
+                'entity_type' => $entityClass,
+            ]);
+        }
+
         return response()->json([
             'message' => 'Preparation created successfully',
-            'preparation' => $preparation,
+            'preparation' => $preparation->load('entities.entity'),
         ], 201);
     }
 
@@ -73,19 +86,39 @@ class PreparationController extends Controller
                 'string',
                 'max:255',
             ],
-            'type' => [
+            'entities' => [
                 'sometimes',
-                new Enum(PreparationTypeEnum::class),
+                'array',
+                'min:2',
             ],
-        ], [
-            'type' => 'Le champ type doit être l\'une des valeurs suivantes : '.implode(', ', PreparationTypeEnum::values()),
+            'entities.*.id' => ['required_with:entities', 'integer'],
+            'entities.*.type' => ['required_with:entities', 'string', 'in:ingredient,preparation'],
         ]);
 
         $preparation->update($validated);
 
+        // Si on veut mettre à jour les entités liées
+        if (isset($validated['entities'])) {
+            // On supprime les anciennes
+            $preparation->entities()->delete();
+
+            // On recrée les nouvelles
+            foreach ($validated['entities'] as $entity) {
+                $entityClass = $entity['type'] === 'ingredient'
+                    ? \App\Models\Ingredient::class
+                    : \App\Models\Preparation::class;
+
+                PreparationEntity::create([
+                    'preparation_id' => $preparation->id,
+                    'entity_id' => $entity['id'],
+                    'entity_type' => $entityClass,
+                ]);
+            }
+        }
+
         return response()->json([
             'message' => 'Preparation updated successfully',
-            'preparation' => $preparation,
+            'preparation' => $preparation->load('entities.entity'),
         ], 200);
     }
 }

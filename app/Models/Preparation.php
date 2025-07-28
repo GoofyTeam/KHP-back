@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\PreparationTypeEnum;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,18 +16,6 @@ class Preparation extends Model
     ];
 
     /**
-     * The attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'type' => PreparationTypeEnum::class,
-        ];
-    }
-
-    /**
      * Get the company that owns the preparation.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
@@ -38,8 +25,23 @@ class Preparation extends Model
         return $this->belongsTo(Company::class);
     }
 
+    /**
+     * Get entities related to the preparation.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function entities()
+    {
+        return $this->hasMany(PreparationEntity::class);
+    }
+
     public function scopeForCompany(Builder $q): Builder
     {
         return $q->where('company_id', auth()->user()->company_id);
+    }
+
+    public function preparationEntities()
+    {
+        return $this->morphMany(PreparationEntity::class, 'entity');
     }
 }
