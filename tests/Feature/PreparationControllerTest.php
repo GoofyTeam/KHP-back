@@ -13,17 +13,9 @@ use Tests\TestCase;
 /**
  * Class PreparationControllerTest
  *
- * Cette suite de tests couvre les scénarios de création et de mise à jour
- * d'une préparation avec ses entités liées (ingrédients et/ou autres préparations).
- *
- * Use cases testés :
- * - Validation minimale à la création (au moins 2 entités requises)
- * - Création avec 2 ingrédients
- * - Création avec 2 préparations
- * - Création mixte (1 ingrédient + 1 préparation)
- * - Création avec plus de 2 entités
- * - Mise à jour sans fournir d'entités (ne doit pas effacer les liaisons existantes)
- * - Mise à jour des entités lorsque fournies (remplacement complet des liens)
+ * Cette suite de tests couvre les scénarios de création, mise à jour
+ * (avec entities_to_add / entities_to_remove) et destruction
+ * d'une préparation et de ses liaisons (ingrédients ou préparations).
  */
 class PreparationControllerTest extends TestCase
 {
@@ -31,34 +23,27 @@ class PreparationControllerTest extends TestCase
 
     /**
      * Scénario : création échoue avec une seule entité.
-     *
-     * Attendu : validation 422 (au moins 2 entités requises en création).
      */
     public function test_it_fails_to_create_with_single_entity(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id]);
 
         $payload = [
-            'name' => 'Too Few Entities',
+            'name' => 'Solo Entity',
             'unit' => 'g',
-            'entities' => [[
-                'id' => $ingredient->id,
-                'type' => 'ingredient',
-            ]],
+            'entities' => [['id' => $ing->id, 'type' => 'ingredient']],
         ];
 
-        $response = $this->actingAs($user)->postJson('/api/preparations', $payload);
-
-        $response->assertStatus(422)
+        $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(422)
             ->assertJsonValidationErrors('entities');
     }
 
     /**
-     * Scénario : création réussie avec deux ingrédients.
-     *
-     * Attendu : status 201 et deux liens ingredient/preparation créés.
+     * Scénario : création avec deux ingrédients.
      */
     public function test_it_creates_with_two_ingredients(): void
     {
@@ -68,7 +53,7 @@ class PreparationControllerTest extends TestCase
         $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
 
         $payload = [
-            'name' => 'Dual Ingredient Prep',
+            'name' => 'Dual Ingredient',
             'unit' => 'kg',
             'entities' => [
                 ['id' => $ing1->id, 'type' => 'ingredient'],
@@ -76,19 +61,22 @@ class PreparationControllerTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($user)->postJson('/api/preparations', $payload);
+        $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(201);
 
-        $response->assertStatus(201);
-        $entities = $response->json('preparation.entities');
-        $this->assertCount(2, $entities);
-        $this->assertDatabaseHas('preparation_entities', ['entity_id' => $ing1->id, 'entity_type' => Ingredient::class]);
-        $this->assertDatabaseHas('preparation_entities', ['entity_id' => $ing2->id, 'entity_type' => Ingredient::class]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $ing1->id,
+            'entity_type' => Ingredient::class,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $ing2->id,
+            'entity_type' => Ingredient::class,
+        ]);
     }
 
     /**
-     * Scénario : création réussie avec deux préparations.
-     *
-     * Attendu : status 201 et deux liens preparation/preparation créés.
+     * Scénario : création avec deux préparations.
      */
     public function test_it_creates_with_two_preparations(): void
     {
@@ -98,7 +86,7 @@ class PreparationControllerTest extends TestCase
         $pre2 = Preparation::factory()->create(['company_id' => $company->id]);
 
         $payload = [
-            'name' => 'Dual Prep Prep',
+            'name' => 'Dual Preparation',
             'unit' => 'L',
             'entities' => [
                 ['id' => $pre1->id, 'type' => 'preparation'],
@@ -106,19 +94,22 @@ class PreparationControllerTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($user)->postJson('/api/preparations', $payload);
+        $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(201);
 
-        $response->assertStatus(201);
-        $entities = $response->json('preparation.entities');
-        $this->assertCount(2, $entities);
-        $this->assertDatabaseHas('preparation_entities', ['entity_id' => $pre1->id, 'entity_type' => Preparation::class]);
-        $this->assertDatabaseHas('preparation_entities', ['entity_id' => $pre2->id, 'entity_type' => Preparation::class]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $pre1->id,
+            'entity_type' => Preparation::class,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $pre2->id,
+            'entity_type' => Preparation::class,
+        ]);
     }
 
     /**
-     * Scénario : création mixte avec un ingrédient et une préparation.
-     *
-     * Attendu : status 201 et liens créés pour chaque type.
+     * Scénario : création mixte (1 ingrédient + 1 préparation).
      */
     public function test_it_creates_with_mixed_entities(): void
     {
@@ -128,107 +119,275 @@ class PreparationControllerTest extends TestCase
         $pre = Preparation::factory()->create(['company_id' => $company->id]);
 
         $payload = [
-            'name' => 'Mixed Entities Prep',
-            'unit' => 'kg',
+            'name' => 'Mixed',
+            'unit' => 'g',
             'entities' => [
                 ['id' => $ing->id, 'type' => 'ingredient'],
                 ['id' => $pre->id, 'type' => 'preparation'],
             ],
         ];
 
-        $response = $this->actingAs($user)->postJson('/api/preparations', $payload);
+        $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(201);
 
-        $response->assertStatus(201);
-        $entities = $response->json('preparation.entities');
-        $this->assertTrue(collect($entities)->contains(fn ($e) => $e['entity_type'] === Ingredient::class && $e['entity_id'] === $ing->id));
-        $this->assertTrue(collect($entities)->contains(fn ($e) => $e['entity_type'] === Preparation::class && $e['entity_id'] === $pre->id));
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $pre->id,
+            'entity_type' => Preparation::class,
+        ]);
     }
 
     /**
-     * Scénario : création avec plus de deux entités.
-     *
-     * Attendu : status 201 et nombre total d'entités retourné égal au nombre fourni.
-     */
-    public function test_it_creates_with_multiple_entities(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
-        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
-        $pre = Preparation::factory()->create(['company_id' => $company->id]);
-
-        $payload = [
-            'name' => 'Multi Entities Prep',
-            'unit' => 'g',
-            'entities' => [
-                ['id' => $ing1->id, 'type' => 'ingredient'],
-                ['id' => $ing2->id, 'type' => 'ingredient'],
-                ['id' => $pre->id,  'type' => 'preparation'],
-            ],
-        ];
-
-        $response = $this->actingAs($user)->postJson('/api/preparations', $payload);
-
-        $response->assertStatus(201);
-        $entities = $response->json('preparation.entities');
-        $this->assertCount(3, $entities);
-    }
-
-    /**
-     * Scénario : mise à jour sans fournir d'entités.
-     *
-     * Attendu : status 200, modification des champs autorisés
-     * et les entités précédemment liées restent intactes.
+     * Scénario : mise à jour sans clés d'entités.
      */
     public function test_it_updates_without_entities(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $prep = Preparation::factory()->create(['company_id' => $company->id]);
-        // Liaisons initiales
+
+        // Liaison initiale
         $ing = Ingredient::factory()->create(['company_id' => $company->id]);
-        PreparationEntity::create(['preparation_id' => $prep->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
 
-        $payload = ['name' => 'Updated Name Only'];
-        $response = $this->actingAs($user)->putJson("/api/preparations/{$prep->id}", $payload);
+        $payload = ['name' => 'New Name'];
 
-        $response->assertStatus(200);
-        $this->assertDatabaseHas('preparations', ['id' => $prep->id, 'name' => 'Updated Name Only']);
-        $this->assertDatabaseHas('preparation_entities', ['preparation_id' => $prep->id, 'entity_id' => $ing->id]);
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('preparations', [
+            'id' => $prep->id,
+            'name' => 'New Name',
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing->id,
+        ]);
     }
 
     /**
-     * Scénario : mise à jour des entités lorsqu'elles sont fournies.
-     *
-     * Attendu : status 200, les anciennes liaisons sont supprimées
-     * et remplacées par celles envoyées dans la requête.
+     * Scénario : suppression d’une entité via entities_to_remove.
      */
-    public function test_it_updates_entities_when_provided(): void
+    public function test_it_removes_entities_on_update(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $prep = Preparation::factory()->create(['company_id' => $company->id]);
-        // Anciennes liaisons
-        $oldIng = Ingredient::factory()->create(['company_id' => $company->id]);
-        $oldPrep = Preparation::factory()->create(['company_id' => $company->id]);
-        PreparationEntity::create(['preparation_id' => $prep->id, 'entity_id' => $oldIng->id, 'entity_type' => Ingredient::class]);
-        PreparationEntity::create(['preparation_id' => $prep->id, 'entity_id' => $oldPrep->id, 'entity_type' => Preparation::class]);
 
-        // Nouvelles liaisons
-        $newIng = Ingredient::factory()->create(['company_id' => $company->id]);
-        $newPrep = Preparation::factory()->create(['company_id' => $company->id]);
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing1->id,
+            'entity_type' => Ingredient::class,
+        ]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing2->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
         $payload = [
-            'entities' => [
-                ['id' => $newIng->id, 'type' => 'ingredient'],
-                ['id' => $newPrep->id, 'type' => 'preparation'],
+            'entities_to_remove' => [
+                ['id' => $ing2->id, 'type' => 'ingredient'],
             ],
         ];
 
-        $response = $this->actingAs($user)->putJson("/api/preparations/{$prep->id}", $payload);
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
 
-        $response->assertStatus(200);
-        $this->assertDatabaseMissing('preparation_entities', ['entity_id' => $oldIng->id]);
-        $this->assertDatabaseHas('preparation_entities', ['entity_id' => $newIng->id, 'entity_type' => Ingredient::class]);
-        $this->assertDatabaseHas('preparation_entities', ['entity_id' => $newPrep->id, 'entity_type' => Preparation::class]);
+        $this->assertDatabaseMissing('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing2->id,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing1->id,
+        ]);
+    }
+
+    /**
+     * Scénario : ajout d’une entité via entities_to_add.
+     */
+    public function test_it_adds_entities_on_update(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $oldIng = Ingredient::factory()->create(['company_id' => $company->id]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $oldIng->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        $newIng = Ingredient::factory()->create(['company_id' => $company->id]);
+        $payload = [
+            'entities_to_add' => [
+                ['id' => $newIng->id, 'type' => 'ingredient'],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $oldIng->id,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $newIng->id,
+            'entity_type' => Ingredient::class,
+        ]);
+    }
+
+    /**
+     * Scénario : suppression et ajout simultanés.
+     */
+    public function test_it_adds_and_removes_entities_on_update(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing1->id,
+            'entity_type' => Ingredient::class,
+        ]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing2->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        $ing3 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $payload = [
+            'entities_to_remove' => [
+                ['id' => $ing2->id, 'type' => 'ingredient'],
+            ],
+            'entities_to_add' => [
+                ['id' => $ing3->id, 'type' => 'ingredient'],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        $this->assertDatabaseMissing('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing2->id,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing1->id,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing3->id,
+        ]);
+    }
+
+    /**
+     * Scénario : entities_to_remove présent mais vide -> ne fait rien.
+     */
+    public function test_it_does_not_remove_anything_when_remove_list_empty(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $ing = Ingredient::factory()->create(['company_id' => $company->id]);
+        PreparationEntity::create([
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        $payload = ['entities_to_remove' => []];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        // L'entité existante doit toujours être présente
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $prep->id,
+            'entity_id' => $ing->id,
+        ]);
+    }
+
+    /**
+     * Scénario : suppression d'une préparation.
+     */
+    public function test_it_deletes_a_preparation(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/preparations/{$prep->id}")
+            ->assertStatus(204);
+
+        $this->assertDatabaseMissing('preparations', [
+            'id' => $prep->id,
+        ]);
+        $this->assertDatabaseMissing('preparation_entities', [
+            'preparation_id' => $prep->id,
+        ]);
+    }
+
+    /**
+     * Scénario : suppression d'une préparation non existante.
+     */
+    public function test_it_fails_to_delete_non_existent_preparation(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $badId = 9999;
+
+        $this->actingAs($user)
+            ->deleteJson("/api/preparations/{$badId}")
+            ->assertStatus(404)
+            ->assertJsonStructure(['message']);
+    }
+
+    /**
+     * Scénario : suppression d'une préparation hors société.
+     */
+    public function test_it_fails_to_delete_preparation_not_belonging_to_company(): void
+    {
+        $company1 = Company::factory()->create();
+        $company2 = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company1->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company2->id]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/preparations/{$prep->id}")
+            ->assertStatus(404)
+            ->assertJsonStructure(['message']);
+
+        // La préparation reste en base
+        $this->assertDatabaseHas('preparations', [
+            'id' => $prep->id,
+            'company_id' => $company2->id,
+        ]);
     }
 }

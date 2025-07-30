@@ -18,6 +18,9 @@ Route::post('/preparations', [PreparationController::class, 'store'])
 Route::put('/preparations/{id}', [PreparationController::class, 'update'])
     ->name('preparations.update');
 
+Route::delete('/preparations/{id}', [PreparationController::class, 'destroy'])
+    ->name('preparations.destroy');
+
 Route::post('/ingredients', [IngredientController::class, 'store'])
     ->name('ingredients.store');
 
