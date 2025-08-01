@@ -2,21 +2,23 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Company;
-use App\Models\Location;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\LocationType;
-use Illuminate\Foundation\Testing\WithFaker;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
 
 class LocationControllerTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
     protected $user;
+
     protected $company;
+
     protected $locationType;
 
     protected function setUp(): void
@@ -26,15 +28,15 @@ class LocationControllerTest extends TestCase
         // Créer une entreprise et un utilisateur pour les tests
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create([
-            'company_id' => $this->company->id
+            'company_id' => $this->company->id,
         ]);
 
         // Créer un type de localisation pour les tests
-        $defaultName = 'Type par défaut ' . uniqid();
+        $defaultName = 'Type par défaut '.uniqid();
         $this->locationType = LocationType::factory()->create([
             'name' => $defaultName,
             'company_id' => $this->company->id,
-            'is_default' => true
+            'is_default' => true,
         ]);
     }
 
@@ -46,11 +48,11 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $locationName = 'Frigo principal ' . uniqid();
+        $locationName = 'Frigo principal '.uniqid();
 
         $response = $this->postJson('/api/location', [
             'name' => $locationName,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         $response->assertStatus(201)
@@ -61,7 +63,7 @@ class LocationControllerTest extends TestCase
         $this->assertDatabaseHas('locations', [
             'name' => $locationName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
     }
 
@@ -73,19 +75,19 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $locationName = 'Frigo cuisine ' . uniqid();
+        $locationName = 'Frigo cuisine '.uniqid();
 
         // Créer d'abord un emplacement
         Location::factory()->create([
             'name' => $locationName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         // Essayer de créer un emplacement avec le même nom
         $response = $this->postJson('/api/location', [
             'name' => $locationName,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         $response->assertStatus(422)
@@ -100,19 +102,19 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $otherTypeName = 'Type autre entreprise ' . uniqid();
-        $locationName = 'Nouvel emplacement ' . uniqid();
+        $otherTypeName = 'Type autre entreprise '.uniqid();
+        $locationName = 'Nouvel emplacement '.uniqid();
 
         // Créer un type pour une autre entreprise
         $otherCompany = Company::factory()->create();
         $otherType = LocationType::factory()->create([
             'name' => $otherTypeName,
-            'company_id' => $otherCompany->id
+            'company_id' => $otherCompany->id,
         ]);
 
         $response = $this->postJson('/api/location', [
             'name' => $locationName,
-            'location_type_id' => $otherType->id
+            'location_type_id' => $otherType->id,
         ]);
 
         $response->assertStatus(404);
@@ -126,26 +128,26 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $originalName = 'Réserve initiale ' . uniqid();
-        $newName = 'Réserve modifiée ' . uniqid();
-        $newTypeName = 'Réserve ' . uniqid();
+        $originalName = 'Réserve initiale '.uniqid();
+        $newName = 'Réserve modifiée '.uniqid();
+        $newTypeName = 'Réserve '.uniqid();
 
         $location = Location::factory()->create([
             'name' => $originalName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         // Créer un nouveau type pour la mise à jour
         $newType = LocationType::factory()->create([
             'name' => $newTypeName,
             'company_id' => $this->company->id,
-            'is_default' => false
+            'is_default' => false,
         ]);
 
         $response = $this->putJson("/api/location/{$location->id}", [
             'name' => $newName,
-            'location_type_id' => $newType->id
+            'location_type_id' => $newType->id,
         ]);
 
         $response->assertStatus(200)
@@ -155,7 +157,7 @@ class LocationControllerTest extends TestCase
         $this->assertDatabaseHas('locations', [
             'id' => $location->id,
             'name' => $newName,
-            'location_type_id' => $newType->id
+            'location_type_id' => $newType->id,
         ]);
     }
 
@@ -167,17 +169,17 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $originalName = 'Frigo 1 ' . uniqid();
-        $newName = 'Frigo principal ' . uniqid();
+        $originalName = 'Frigo 1 '.uniqid();
+        $newName = 'Frigo principal '.uniqid();
 
         $location = Location::factory()->create([
             'name' => $originalName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         $response = $this->putJson("/api/location/{$location->id}", [
-            'name' => $newName
+            'name' => $newName,
         ]);
 
         $response->assertStatus(200)
@@ -192,19 +194,19 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $locationName = 'Emplacement temporaire ' . uniqid();
+        $locationName = 'Emplacement temporaire '.uniqid();
 
         $location = Location::factory()->create([
             'name' => $locationName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         $response = $this->deleteJson("/api/location/{$location->id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('locations', [
-            'id' => $location->id
+            'id' => $location->id,
         ]);
     }
 
@@ -216,20 +218,20 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $locationName = 'Emplacement avec produits ' . uniqid();
-        $ingredientName = 'Tomate ' . uniqid();
+        $locationName = 'Emplacement avec produits '.uniqid();
+        $ingredientName = 'Tomate '.uniqid();
 
         $location = Location::factory()->create([
             'name' => $locationName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         // Créer un ingrédient associé à cet emplacement
         $ingredient = Ingredient::factory()->create([
             'name' => $ingredientName,
             'company_id' => $this->company->id,
-            'unit' => 'kg'
+            'unit' => 'kg',
         ]);
 
         $location->ingredients()->attach($ingredient->id);
@@ -238,7 +240,7 @@ class LocationControllerTest extends TestCase
 
         $response->assertStatus(409);
         $this->assertDatabaseHas('locations', [
-            'id' => $location->id
+            'id' => $location->id,
         ]);
     }
 
@@ -250,25 +252,25 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $locationName = 'Emplacement à reclasser ' . uniqid();
-        $newTypeName = 'Cave ' . uniqid();
+        $locationName = 'Emplacement à reclasser '.uniqid();
+        $newTypeName = 'Cave '.uniqid();
 
         $location = Location::factory()->create([
             'name' => $locationName,
             'company_id' => $this->company->id,
-            'location_type_id' => $this->locationType->id
+            'location_type_id' => $this->locationType->id,
         ]);
 
         // Créer un nouveau type pour l'assignation
         $newType = LocationType::factory()->create([
             'name' => $newTypeName,
             'company_id' => $this->company->id,
-            'is_default' => false
+            'is_default' => false,
         ]);
 
         $response = $this->postJson('/api/location/assign-type', [
             'location_id' => $location->id,
-            'location_type_id' => $newType->id
+            'location_type_id' => $newType->id,
         ]);
 
         $response->assertStatus(200)
@@ -276,7 +278,7 @@ class LocationControllerTest extends TestCase
 
         $this->assertDatabaseHas('locations', [
             'id' => $location->id,
-            'location_type_id' => $newType->id
+            'location_type_id' => $newType->id,
         ]);
     }
 
@@ -288,25 +290,25 @@ class LocationControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $otherTypeName = 'Type autre entreprise ' . uniqid();
-        $otherLocationName = 'Emplacement autre entreprise ' . uniqid();
+        $otherTypeName = 'Type autre entreprise '.uniqid();
+        $otherLocationName = 'Emplacement autre entreprise '.uniqid();
 
         // Créer une autre entreprise avec son propre emplacement
         $otherCompany = Company::factory()->create();
         $otherType = LocationType::factory()->create([
             'name' => $otherTypeName,
-            'company_id' => $otherCompany->id
+            'company_id' => $otherCompany->id,
         ]);
 
         $otherLocation = Location::factory()->create([
             'name' => $otherLocationName,
             'company_id' => $otherCompany->id,
-            'location_type_id' => $otherType->id
+            'location_type_id' => $otherType->id,
         ]);
 
         // Essayer d'accéder à l'emplacement de l'autre entreprise
         $response = $this->putJson("/api/location/{$otherLocation->id}", [
-            'name' => 'Emplacement modifié'
+            'name' => 'Emplacement modifié',
         ]);
 
         $response->assertStatus(404);

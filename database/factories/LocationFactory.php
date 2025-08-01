@@ -27,7 +27,7 @@ class LocationFactory extends Factory
         $counter++;
 
         return [
-            'name' => $this->faker->unique()->word . '-' . $counter, // Garantir l'unicité
+            'name' => $this->faker->unique()->word.'-'.$counter, // Garantir l'unicité
             'company_id' => Company::factory(),
             'location_type_id' => LocationType::factory(),
             'created_at' => now(),

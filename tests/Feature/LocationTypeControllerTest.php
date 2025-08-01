@@ -2,19 +2,20 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Company;
 use App\Models\Location;
 use App\Models\LocationType;
-use Illuminate\Foundation\Testing\WithFaker;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
 
 class LocationTypeControllerTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
     protected $user;
+
     protected $company;
 
     protected function setUp(): void
@@ -24,7 +25,7 @@ class LocationTypeControllerTest extends TestCase
         // Créer une entreprise et un utilisateur pour les tests
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create([
-            'company_id' => $this->company->id
+            'company_id' => $this->company->id,
         ]);
     }
 
@@ -36,10 +37,10 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $typeName = 'Réserve sèche ' . uniqid();
+        $typeName = 'Réserve sèche '.uniqid();
 
         $response = $this->postJson('/api/location-types', [
-            'name' => $typeName
+            'name' => $typeName,
         ]);
 
         $response->assertStatus(201)
@@ -49,7 +50,7 @@ class LocationTypeControllerTest extends TestCase
 
         $this->assertDatabaseHas('location_types', [
             'name' => $typeName,
-            'company_id' => $this->company->id
+            'company_id' => $this->company->id,
         ]);
     }
 
@@ -61,17 +62,17 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $typeName = 'Cave à vin ' . uniqid();
+        $typeName = 'Cave à vin '.uniqid();
 
         // Créer d'abord un type
         LocationType::factory()->create([
             'name' => $typeName,
-            'company_id' => $this->company->id
+            'company_id' => $this->company->id,
         ]);
 
         // Essayer de créer un type avec le même nom
         $response = $this->postJson('/api/location-types', [
-            'name' => $typeName
+            'name' => $typeName,
         ]);
 
         $response->assertStatus(422)
@@ -86,17 +87,17 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $originalName = 'Réserve ' . uniqid();
-        $newName = 'Réserve principale ' . uniqid();
+        $originalName = 'Réserve '.uniqid();
+        $newName = 'Réserve principale '.uniqid();
 
         $locationType = LocationType::factory()->create([
             'name' => $originalName,
             'company_id' => $this->company->id,
-            'is_default' => false
+            'is_default' => false,
         ]);
 
         $response = $this->putJson("/api/location-types/{$locationType->id}", [
-            'name' => $newName
+            'name' => $newName,
         ]);
 
         $response->assertStatus(200)
@@ -104,7 +105,7 @@ class LocationTypeControllerTest extends TestCase
 
         $this->assertDatabaseHas('location_types', [
             'id' => $locationType->id,
-            'name' => $newName
+            'name' => $newName,
         ]);
     }
 
@@ -116,17 +117,17 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $defaultName = 'Congélateur ' . uniqid();
-        $newName = 'Super Congélateur ' . uniqid();
+        $defaultName = 'Congélateur '.uniqid();
+        $newName = 'Super Congélateur '.uniqid();
 
         $defaultType = LocationType::factory()->create([
             'name' => $defaultName,
             'company_id' => $this->company->id,
-            'is_default' => true
+            'is_default' => true,
         ]);
 
         $response = $this->putJson("/api/location-types/{$defaultType->id}", [
-            'name' => $newName
+            'name' => $newName,
         ]);
 
         $response->assertStatus(422)
@@ -141,19 +142,19 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $typeName = 'Type temporaire ' . uniqid();
+        $typeName = 'Type temporaire '.uniqid();
 
         $locationType = LocationType::factory()->create([
             'name' => $typeName,
             'company_id' => $this->company->id,
-            'is_default' => false
+            'is_default' => false,
         ]);
 
         $response = $this->deleteJson("/api/location-types/{$locationType->id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('location_types', [
-            'id' => $locationType->id
+            'id' => $locationType->id,
         ]);
     }
 
@@ -165,19 +166,19 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $defaultName = 'Réfrigérateur ' . uniqid();
+        $defaultName = 'Réfrigérateur '.uniqid();
 
         $defaultType = LocationType::factory()->create([
             'name' => $defaultName,
             'company_id' => $this->company->id,
-            'is_default' => true
+            'is_default' => true,
         ]);
 
         $response = $this->deleteJson("/api/location-types/{$defaultType->id}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('location_types', [
-            'id' => $defaultType->id
+            'id' => $defaultType->id,
         ]);
     }
 
@@ -189,27 +190,27 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $typeName = 'Réserve utilisée ' . uniqid();
-        $locationName = 'Emplacement test ' . uniqid();
+        $typeName = 'Réserve utilisée '.uniqid();
+        $locationName = 'Emplacement test '.uniqid();
 
         $locationType = LocationType::factory()->create([
             'name' => $typeName,
             'company_id' => $this->company->id,
-            'is_default' => false
+            'is_default' => false,
         ]);
 
         // Créer un emplacement qui utilise ce type
         Location::factory()->create([
             'name' => $locationName,
             'company_id' => $this->company->id,
-            'location_type_id' => $locationType->id
+            'location_type_id' => $locationType->id,
         ]);
 
         $response = $this->deleteJson("/api/location-types/{$locationType->id}");
 
         $response->assertStatus(409);
         $this->assertDatabaseHas('location_types', [
-            'id' => $locationType->id
+            'id' => $locationType->id,
         ]);
     }
 
@@ -221,18 +222,18 @@ class LocationTypeControllerTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $otherTypeName = 'Type autre entreprise ' . uniqid();
+        $otherTypeName = 'Type autre entreprise '.uniqid();
 
         // Créer une autre entreprise avec son propre type
         $otherCompany = Company::factory()->create();
         $otherType = LocationType::factory()->create([
             'name' => $otherTypeName,
-            'company_id' => $otherCompany->id
+            'company_id' => $otherCompany->id,
         ]);
 
         // Essayer d'accéder au type de l'autre entreprise
         $response = $this->putJson("/api/location-types/{$otherType->id}", [
-            'name' => 'Type modifié'
+            'name' => 'Type modifié',
         ]);
 
         $response->assertStatus(404);

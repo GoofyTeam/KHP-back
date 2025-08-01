@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Location;
 use App\Models\LocationType;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -22,21 +22,22 @@ class LocationController extends Controller
      * Cette fonction permet de créer un nouvel emplacement associé à la compagnie
      * de l'utilisateur connecté et avec un type de localisation spécifié.
      *
-     * @param Request $request La requête contenant les données du nouvel emplacement
+     * @param  Request  $request  La requête contenant les données du nouvel emplacement
      * @return JsonResponse La réponse avec l'emplacement créé
+     *
      * @throws ValidationException Si les données sont invalides
      */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:locations,name,NULL,id,company_id,' . Auth::user()->company_id,
+            'name' => 'required|string|max:255|unique:locations,name,NULL,id,company_id,'.Auth::user()->company_id,
             'location_type_id' => 'required|integer|exists:location_types,id',
         ]);
 
         // Vérifier que le type appartient à la compagnie
         $locationType = LocationType::forCompany()->findOrFail($validated['location_type_id']);
 
-        $location = new Location();
+        $location = new Location;
         $location->name = $validated['name'];
         $location->company_id = Auth::user()->company_id;
         $location->location_type_id = $locationType->id;
@@ -44,7 +45,7 @@ class LocationController extends Controller
 
         return response()->json([
             'message' => 'Emplacement créé avec succès',
-            'data' => $location
+            'data' => $location,
         ], 201);
     }
 
@@ -58,9 +59,10 @@ class LocationController extends Controller
      *
      * Cette fonction permet de modifier le nom et/ou le type d'un emplacement existant.
      *
-     * @param Request $request La requête contenant les données à modifier
-     * @param int $id L'identifiant de l'emplacement à modifier
+     * @param  Request  $request  La requête contenant les données à modifier
+     * @param  int  $id  L'identifiant de l'emplacement à modifier
      * @return JsonResponse La réponse avec l'emplacement mis à jour
+     *
      * @throws ValidationException Si les données sont invalides
      */
     public function update(Request $request, int $id): JsonResponse
@@ -68,7 +70,7 @@ class LocationController extends Controller
         $location = Location::forCompany()->findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255|unique:locations,name,' . $location->id . ',id,company_id,' . Auth::user()->company_id,
+            'name' => 'sometimes|required|string|max:255|unique:locations,name,'.$location->id.',id,company_id,'.Auth::user()->company_id,
             'location_type_id' => 'sometimes|required|integer|exists:location_types,id',
         ]);
 
@@ -86,7 +88,7 @@ class LocationController extends Controller
 
         return response()->json([
             'message' => 'Emplacement mis à jour avec succès',
-            'data' => $location
+            'data' => $location,
         ]);
     }
 
@@ -100,7 +102,7 @@ class LocationController extends Controller
      *
      * Cette fonction permet de supprimer un emplacement s'il n'est pas utilisé par des ingrédients.
      *
-     * @param int $id L'identifiant de l'emplacement à supprimer
+     * @param  int  $id  L'identifiant de l'emplacement à supprimer
      * @return JsonResponse Message de confirmation ou d'erreur
      */
     public function destroy(int $id): JsonResponse
@@ -110,16 +112,17 @@ class LocationController extends Controller
         // Vérifier si des ingrédients utilisent cet emplacement
         if ($location->ingredients()->count() > 0) {
             return response()->json([
-                'message' => 'Cet emplacement contient des ingrédients et ne peut pas être supprimé.'
+                'message' => 'Cet emplacement contient des ingrédients et ne peut pas être supprimé.',
             ], 409);
         }
 
         $location->delete();
 
         return response()->json([
-            'message' => 'Emplacement supprimé avec succès'
+            'message' => 'Emplacement supprimé avec succès',
         ]);
     }
+
     /**
      * Cas métier : Association d'un emplacement à un type de localisation
      *
@@ -132,8 +135,9 @@ class LocationController extends Controller
      * Cette fonction permet d'associer un emplacement existant à un type de localisation.
      * Les deux entités doivent appartenir à la compagnie de l'utilisateur connecté.
      *
-     * @param Request $request La requête contenant les identifiants
+     * @param  Request  $request  La requête contenant les identifiants
      * @return JsonResponse La réponse avec le résultat de l'opération
+     *
      * @throws ValidationException Si les données sont invalides
      */
     public function assignType(Request $request): JsonResponse
@@ -155,7 +159,7 @@ class LocationController extends Controller
 
         return response()->json([
             'message' => "L'emplacement '{$location->name}' a été associé au type '{$locationType->name}'",
-            'data' => $location
+            'data' => $location,
         ]);
     }
 }

@@ -26,7 +26,7 @@ class LocationTypeFactory extends Factory
         $counter++;
 
         return [
-            'name' => $this->faker->unique()->word . '-' . $counter, // Utilisation d'un compteur pour garantir l'unicité
+            'name' => $this->faker->unique()->word.'-'.$counter, // Utilisation d'un compteur pour garantir l'unicité
             'company_id' => Company::factory(),
             'is_default' => false,
             'created_at' => now(),
@@ -36,8 +36,6 @@ class LocationTypeFactory extends Factory
 
     /**
      * Indicate that the location type is a default one.
-     *
-     * @return Factory
      */
     public function default(): Factory
     {
@@ -47,7 +45,7 @@ class LocationTypeFactory extends Factory
 
         return $this->state(function (array $attributes) use (&$defaultCounter, $defaultTypes) {
             return [
-                'name' => $defaultTypes[$defaultCounter++] . '-' . uniqid(),
+                'name' => $defaultTypes[$defaultCounter++].'-'.uniqid(),
                 'is_default' => true,
             ];
         });

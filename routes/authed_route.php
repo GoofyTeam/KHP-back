@@ -1,12 +1,12 @@
 <?php
 
+use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\LocationTypeController;
+use App\Http\Controllers\PreparationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Controllers\LocationController;
-use App\Http\Controllers\IngredientController;
-use App\Http\Controllers\PreparationController;
-use App\Http\Controllers\LocationTypeController;
 
 // Route utilisateur
 Route::get('/user', function (Request $request) {

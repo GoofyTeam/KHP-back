@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
@@ -83,12 +83,12 @@ class Company extends Model
             // Créer les localisations par défaut associées aux types
             $company->locations()->create([
                 'name' => 'Congélateur',
-                'location_type_id' => $locationTypes[0]->id
+                'location_type_id' => $locationTypes[0]->id,
             ]);
 
             $company->locations()->create([
                 'name' => 'Réfrigérateur',
-                'location_type_id' => $locationTypes[1]->id
+                'location_type_id' => $locationTypes[1]->id,
             ]);
         });
     }
