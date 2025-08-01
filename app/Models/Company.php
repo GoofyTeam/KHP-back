@@ -63,12 +63,32 @@ class Company extends Model
         return $this->hasMany(Category::class);
     }
 
+    public function locationTypes()
+    {
+        return $this->hasMany(LocationType::class);
+    }
+
     protected static function booted()
     {
         static::created(function ($company) {
-            $company->locations()->createMany([
-                ['name' => 'Congélateur'],
-                ['name' => 'Réfrigérateur'],
+            // Créer les types de localisation par défaut
+            $defaultTypes = [
+                ['name' => 'Congélateur', 'is_default' => true],
+                ['name' => 'Réfrigérateur', 'is_default' => true],
+                ['name' => 'Autre', 'is_default' => true],
+            ];
+
+            $locationTypes = $company->locationTypes()->createMany($defaultTypes);
+
+            // Créer les localisations par défaut associées aux types
+            $company->locations()->create([
+                'name' => 'Congélateur',
+                'location_type_id' => $locationTypes[0]->id,
+            ]);
+
+            $company->locations()->create([
+                'name' => 'Réfrigérateur',
+                'location_type_id' => $locationTypes[1]->id,
             ]);
         });
     }

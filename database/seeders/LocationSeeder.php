@@ -15,33 +15,47 @@ class LocationSeeder extends Seeder
     {
         $company = Company::where('name', 'GoofyTeam')->first();
 
-        // Créer des emplacements pour GoofyTeam
-        $locations = [
-            'Chambre froide principale',
-            'Congélateur cuisine',
-            'Réserve sèche',
-            'Bar',
-            'Cave à vin',
-            'Étagère condiments',
-            'Placard pâtisserie',
-            'Réfrigérateur préparations',
+        // Récupérer les types de localisation de GoofyTeam
+        $locationTypes = $company->locationTypes()->get()->keyBy('name');
+
+        // Définir la map entre le nom de la location et son type
+        $locationTypeMap = [
+            'Chambre froide principale' => 'Réfrigérateur',
+            'Congélateur cuisine' => 'Congélateur',
+            'Réserve sèche' => 'Autre',
+            'Bar' => 'Autre',
+            'Cave à vin' => 'Autre',
+            'Étagère condiments' => 'Autre',
+            'Placard pâtisserie' => 'Autre',
+            'Réfrigérateur préparations' => 'Réfrigérateur',
         ];
 
-        foreach ($locations as $locationName) {
+        // Créer des emplacements pour GoofyTeam avec leurs types
+        foreach ($locationTypeMap as $locationName => $typeName) {
             Location::factory()->create([
                 'name' => $locationName,
                 'company_id' => $company->id,
+                'location_type_id' => $locationTypes[$typeName]->id,
             ]);
         }
 
         // Créer quelques emplacements pour les autres entreprises
         $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
         foreach ($otherCompanies as $company) {
-            Location::factory()
-                ->count(3)
-                ->create([
+            // Récupérer les types de localisation de cette entreprise
+            $companyLocationTypes = $company->locationTypes()->get()->keyBy('name');
+
+            // Créer des emplacements avec des types aléatoires
+            $typeNames = ['Congélateur', 'Réfrigérateur', 'Autre'];
+
+            for ($i = 0; $i < 3; $i++) {
+                $randomTypeName = $typeNames[array_rand($typeNames)];
+
+                Location::factory()->create([
                     'company_id' => $company->id,
+                    'location_type_id' => $companyLocationTypes[$randomTypeName]->id,
                 ]);
+            }
         }
     }
 }
