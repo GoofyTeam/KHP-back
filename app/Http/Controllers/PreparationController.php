@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Ingredient;
 use App\Models\Preparation;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use App\Models\PreparationEntity;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * PreparationController
@@ -179,8 +179,6 @@ class PreparationController extends Controller
         return response()->json(null, 204);
     }
 
-
-
     /**
      * Prepare une préparation.
      *
@@ -193,8 +191,6 @@ class PreparationController extends Controller
      * Échec : HTTP 404 si la préparation n'existe pas ou n'appartient pas à la société de l'utilisateur.
      *
      * @param  int  $id
-     * @param  Request  $request
-     * @return JsonResponse
      */
     public function prepare(Request $request, $id): JsonResponse
     {
@@ -209,9 +205,7 @@ class PreparationController extends Controller
          * - chaque emplacement doit exister et appartenir à la même société
          * - la quantité doit être un nombre positif
          * - Un tableau d'ingredients et/ou de préparations avec leur ID et la quantité à préparer (qui leur sera déduite donc faut vérifier que la quantité est suffisante dans l'un des stocks)
-         *
          */
-
         $validated = $request->validate([
             'locations' => ['required', 'array'],
             'locations.*.id' => ['required', 'integer', 'exists:locations,id'],
@@ -220,7 +214,7 @@ class PreparationController extends Controller
             'ingredients.*.id' => ['required_with:ingredients', 'integer', 'exists:ingredients,id'],
             'ingredients.*.quantity' => ['required_with:ingredients', 'numeric', 'min:0'],
             'preparations' => ['sometimes', 'array'],
-            'preparations.*.id' => ['required_with:preparations', 'integer', 'exists:preparations,id']
+            'preparations.*.id' => ['required_with:preparations', 'integer', 'exists:preparations,id'],
         ]);
     }
 }
