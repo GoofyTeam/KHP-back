@@ -12,6 +12,9 @@ type Company {
 
     locations: [Location!]! @hasMany
 
+    "Types de localisation associés à cette entreprise."
+    locationTypes: [LocationType!]! @hasMany
+
     "When the company was created."
     created_at: DateTime!
 
@@ -32,5 +35,24 @@ extend type Query @guard {
     companies(
         "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
         name: String @where(operator: "like")
+        "Options de tri des résultats."
+        orderBy: [CompanyOrderByOrderByClause!] @orderBy
     ): [Company!]! @paginate(defaultCount: 10)
+}
+
+"Options de tri pour les entreprises."
+input CompanyOrderByOrderByClause {
+    "Champ sur lequel effectuer le tri."
+    field: CompanyOrderByField!
+
+    "Direction du tri."
+    order: SortOrder!
+}
+
+"Champs disponibles pour le tri des entreprises."
+enum CompanyOrderByField {
+    ID @enum(value: "id")
+    NAME @enum(value: "name")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
 }

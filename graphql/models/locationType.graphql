@@ -1,0 +1,61 @@
+"Type de localisation pour organiser les emplacements de stockage"
+type LocationType {
+    "Identifiant unique."
+    id: ID!
+
+    "Nom du type de localisation."
+    name: String!
+
+    "Indique si c'est un type par défaut (non modifiable)."
+    is_default: Boolean!
+
+    "L'entreprise à laquelle appartient ce type."
+    company: Company! @belongsTo
+
+    "Emplacements utilisant ce type de localisation."
+    locations: [Location!]! @hasMany
+
+    "Date de création du type."
+    created_at: DateTime!
+
+    "Date de dernière mise à jour du type."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les types de localisation pour l'entreprise actuelle."
+    locationTypes(
+        "Filtre par nom. Accepte les caractères génériques SQL LIKE `%` et `_`."
+        name: String @where(operator: "like")
+        "Filtre pour afficher uniquement les types par défaut."
+        is_default: Boolean @eq
+        "Options de tri des résultats."
+        orderBy: [LocationTypeOrderByOrderByClause!] @orderBy
+    ): [LocationType!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Trouve un type de localisation spécifique (seulement s'il appartient à l'entreprise actuelle)."
+    locationType(
+        "Recherche par identifiant."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Recherche par nom du type."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): LocationType @find(scopes: ["forCompany"])
+}
+
+"Options de tri pour les types de localisation."
+input LocationTypeOrderByOrderByClause {
+    "Champ sur lequel effectuer le tri."
+    field: LocationTypeOrderByField!
+
+    "Direction du tri."
+    order: SortOrder!
+}
+
+"Champs disponibles pour le tri des types de localisation."
+enum LocationTypeOrderByField {
+    ID @enum(value: "id")
+    NAME @enum(value: "name")
+    IS_DEFAULT @enum(value: "is_default")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}
