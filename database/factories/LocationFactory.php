@@ -3,13 +3,19 @@
 namespace Database\Factories;
 
 use App\Models\Company;
+use App\Models\Location;
+use App\Models\LocationType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Location>
- */
 class LocationFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = Location::class;
+
     /**
      * Define the model's default state.
      *
@@ -17,22 +23,15 @@ class LocationFactory extends Factory
      */
     public function definition(): array
     {
-        $locationTypes = [
-            'Chambre froide',
-            'Réserve',
-            'Placard',
-            'Étagère',
-            'Congélateur',
-            'Cuisine',
-            'Bar',
-            'Cave',
-            'Garde-manger',
-            'Salle de préparation',
-        ];
+        static $counter = 0;
+        $counter++;
 
         return [
-            'name' => $this->faker->randomElement($locationTypes).' '.$this->faker->randomLetter(),
+            'name' => $this->faker->unique()->word . '-' . $counter, // Garantir l'unicité
             'company_id' => Company::factory(),
+            'location_type_id' => LocationType::factory(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 }

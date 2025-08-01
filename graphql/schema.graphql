@@ -6,4 +6,10 @@ scalar JSON @scalar(class: "App\\GraphQL\\Scalars\\JsonScalar")
 
 type Query
 
+"Direction du tri."
+enum SortOrder {
+    ASC
+    DESC
+}
+
 #import models/*.graphql

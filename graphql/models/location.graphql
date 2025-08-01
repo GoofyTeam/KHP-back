@@ -8,6 +8,9 @@ type Location {
     "Location company."
     company: Company! @belongsTo
 
+    "Type de localisation (Congélateur, Réfrigérateur, etc.)"
+    locationType: LocationType @belongsTo
+
     "When the location was created."
     created_at: DateTime!
 
@@ -23,6 +26,10 @@ extend type Query @guard {
     locations(
         "Filter by location name. Accepts SQL LIKE wildcards `%` and `_`."
         name: String @where(operator: "like")
+        "Filter by location type ID."
+        locationTypeId: ID @where(key: "location_type_id")
+        "Options de tri des résultats."
+        orderBy: [LocationOrderByOrderByClause!] @orderBy
     ): [Location!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
     "Find a single location (only if it belongs to the current company)."
@@ -32,4 +39,21 @@ extend type Query @guard {
         "Search by location name."
         name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
     ): Location @find(scopes: ["forCompany"])
+}
+
+"Options de tri pour les emplacements."
+input LocationOrderByOrderByClause {
+    "Champ sur lequel effectuer le tri."
+    field: LocationOrderByField!
+
+    "Direction du tri."
+    order: SortOrder!
+}
+
+"Champs disponibles pour le tri des emplacements."
+enum LocationOrderByField {
+    ID @enum(value: "id")
+    NAME @enum(value: "name")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
 }
