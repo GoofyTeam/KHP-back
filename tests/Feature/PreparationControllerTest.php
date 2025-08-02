@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Ingredient;
+use App\Models\Location;
+use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Models\User;
@@ -14,8 +16,9 @@ use Tests\TestCase;
  * Class PreparationControllerTest
  *
  * Cette suite de tests couvre les scénarios de création, mise à jour
- * (avec entities_to_add / entities_to_remove) et destruction
- * d'une préparation et de ses liaisons (ingrédients ou préparations).
+ * (avec entities_to_add / entities_to_remove), destruction
+ * d'une préparation et la préparation elle-même avec prélèvement
+ * de composants depuis plusieurs emplacements.
  */
 class PreparationControllerTest extends TestCase
 {
@@ -175,7 +178,7 @@ class PreparationControllerTest extends TestCase
     }
 
     /**
-     * Scénario : suppression d’une entité via entities_to_remove.
+     * Scénario : suppression d'une entité via entities_to_remove.
      */
     public function test_it_removes_entities_on_update(): void
     {
@@ -217,7 +220,7 @@ class PreparationControllerTest extends TestCase
     }
 
     /**
-     * Scénario : ajout d’une entité via entities_to_add.
+     * Scénario : ajout d'une entité via entities_to_add.
      */
     public function test_it_adds_entities_on_update(): void
     {
@@ -305,6 +308,39 @@ class PreparationControllerTest extends TestCase
     }
 
     /**
+     * Scénario : mise à jour des quantités par emplacement.
+     */
+    public function test_it_updates_quantities_by_location(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+        $location = Location::factory()->create(['company_id' => $company->id]);
+
+        // Quantité initiale
+        $prep->locations()->attach($location->id, ['quantity' => 5.0]);
+
+        $payload = [
+            'quantities' => [
+                [
+                    'location_id' => $location->id,
+                    'quantity' => 10.0,
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $prep->id,
+            'location_id' => $location->id,
+            'quantity' => 10.0,
+        ]);
+    }
+
+    /**
      * Scénario : entities_to_remove présent mais vide -> ne fait rien.
      */
     public function test_it_does_not_remove_anything_when_remove_list_empty(): void
@@ -388,6 +424,539 @@ class PreparationControllerTest extends TestCase
         $this->assertDatabaseHas('preparations', [
             'id' => $prep->id,
             'company_id' => $company2->id,
+        ]);
+    }
+
+    /**
+     * Scénario : préparation réussie avec un seul emplacement source.
+     */
+    public function test_it_prepares_successfully_with_single_source(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer des ingrédients
+        $ing1 = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Farine',
+            'unit' => 'kg',
+        ]);
+
+        $ing2 = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Sucre',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements
+        $location1 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve',
+        ]);
+
+        $location2 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter du stock aux ingrédients
+        $ing1->locations()->attach($location1->id, ['quantity' => 10.0]);
+        $ing2->locations()->attach($location1->id, ['quantity' => 8.0]);
+
+        // Créer une préparation
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Pâte à gâteau',
+            'unit' => 'kg',
+        ]);
+
+        // Lier les ingrédients à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing1->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing2->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Effectuer la préparation
+        $payload = [
+            'quantity' => 2.5,
+            'location_id' => $location2->id,
+            'components' => [
+                [
+                    'entity_id' => $ing1->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 3.0,
+                    'sources' => [
+                        [
+                            'location_id' => $location1->id,
+                            'quantity' => 3.0,
+                        ],
+                    ],
+                ],
+                [
+                    'entity_id' => $ing2->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 2.0,
+                    'sources' => [
+                        [
+                            'location_id' => $location1->id,
+                            'quantity' => 2.0,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(200);
+
+        // Vérifier que les stocks ont été réduits
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing1->id,
+            'location_id' => $location1->id,
+            'quantity' => 7.0, // 10.0 - 3.0
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing2->id,
+            'location_id' => $location1->id,
+            'quantity' => 6.0, // 8.0 - 2.0
+        ]);
+
+        // Vérifier que la préparation a été ajoutée à l'emplacement destination
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $location2->id,
+            'quantity' => 2.5,
+        ]);
+    }
+
+    /**
+     * Scénario : préparation avec plusieurs emplacements sources.
+     */
+    public function test_it_prepares_with_multiple_sources(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer un ingrédient
+        $ing = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Farine',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements
+        $location1 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve 1',
+        ]);
+
+        $location2 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve 2',
+        ]);
+
+        $destination = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter du stock à l'ingrédient dans différents emplacements
+        $ing->locations()->attach($location1->id, ['quantity' => 5.0]);
+        $ing->locations()->attach($location2->id, ['quantity' => 3.0]);
+
+        // Créer une préparation
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Simple preparation',
+            'unit' => 'kg',
+        ]);
+
+        // Lier l'ingrédient à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Effectuer la préparation avec prélèvement depuis plusieurs emplacements
+        $payload = [
+            'quantity' => 2.0,
+            'location_id' => $destination->id,
+            'components' => [
+                [
+                    'entity_id' => $ing->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 6.0,
+                    'sources' => [
+                        [
+                            'location_id' => $location1->id,
+                            'quantity' => 4.0,
+                        ],
+                        [
+                            'location_id' => $location2->id,
+                            'quantity' => 2.0,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(200);
+
+        // Vérifier que les stocks ont été réduits aux bons emplacements
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing->id,
+            'location_id' => $location1->id,
+            'quantity' => 1.0, // 5.0 - 4.0
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing->id,
+            'location_id' => $location2->id,
+            'quantity' => 1.0, // 3.0 - 2.0
+        ]);
+
+        // Vérifier que la préparation a été ajoutée
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $destination->id,
+            'quantity' => 2.0,
+        ]);
+    }
+
+    /**
+     * Scénario : échec de préparation avec stock insuffisant.
+     */
+    public function test_it_fails_to_prepare_with_insufficient_stock(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer un ingrédient
+        $ing = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Farine',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements
+        $location1 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve',
+        ]);
+
+        $location2 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter un stock limité
+        $ing->locations()->attach($location1->id, ['quantity' => 2.0]);
+
+        // Créer une préparation
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Simple preparation',
+            'unit' => 'kg',
+        ]);
+
+        // Lier l'ingrédient à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Tenter une préparation qui demande plus que le stock disponible
+        $payload = [
+            'quantity' => 1.0,
+            'location_id' => $location2->id,
+            'components' => [
+                [
+                    'entity_id' => $ing->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 3.0, // Plus que les 2.0 disponibles
+                    'sources' => [
+                        [
+                            'location_id' => $location1->id,
+                            'quantity' => 3.0,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(400)
+            ->assertJsonFragment(['message' => "Stock insuffisant pour 'Farine' à l'emplacement 'Réserve' (disponible: 2, requis: 3)"]);
+
+        // Vérifier que le stock n'a pas été modifié (rollback réussi)
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing->id,
+            'location_id' => $location1->id,
+            'quantity' => 2.0, // Inchangé
+        ]);
+    }
+
+    /**
+     * Scénario : échec de préparation avec un congélateur.
+     */
+    public function test_it_fails_when_using_freezer_location(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer un type d'emplacement congélateur
+        $freezerType = LocationType::firstOrCreate([
+            'name' => 'Congélateur',
+        ]);
+
+        // Créer un ingrédient
+        $ing = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Viande',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements dont un congélateur
+        $freezer = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Congélateur principal',
+            'location_type_id' => $freezerType->id,
+        ]);
+
+        $kitchen = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter du stock dans le congélateur
+        $ing->locations()->attach($freezer->id, ['quantity' => 5.0]);
+
+        // Créer une préparation
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Préparation de viande',
+            'unit' => 'kg',
+        ]);
+
+        // Lier l'ingrédient à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Tenter une préparation qui utilise un emplacement congélateur
+        $payload = [
+            'quantity' => 1.0,
+            'location_id' => $kitchen->id,
+            'components' => [
+                [
+                    'entity_id' => $ing->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 2.0,
+                    'sources' => [
+                        [
+                            'location_id' => $freezer->id,
+                            'quantity' => 2.0,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(400)
+            ->assertJsonFragment(['message' => "Impossible d'utiliser un emplacement de type congélateur ('Congélateur principal') pour le composant 'Viande'"]);
+
+        // Vérifier que le stock n'a pas été modifié
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing->id,
+            'location_id' => $freezer->id,
+            'quantity' => 5.0, // Inchangé
+        ]);
+    }
+
+    /**
+     * Scénario : échec lorsque la somme des sources ne correspond pas à la quantité requise.
+     */
+    public function test_it_fails_when_source_sum_does_not_match_required_quantity(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer un ingrédient
+        $ing = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Farine',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements
+        $location1 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve 1',
+        ]);
+
+        $location2 = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve 2',
+        ]);
+
+        $destination = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter du stock
+        $ing->locations()->attach($location1->id, ['quantity' => 5.0]);
+        $ing->locations()->attach($location2->id, ['quantity' => 3.0]);
+
+        // Créer une préparation
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Simple preparation',
+            'unit' => 'kg',
+        ]);
+
+        // Lier l'ingrédient à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Effectuer une préparation avec des sources dont la somme ne correspond pas
+        $payload = [
+            'quantity' => 2.0,
+            'location_id' => $destination->id,
+            'components' => [
+                [
+                    'entity_id' => $ing->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 6.0,
+                    'sources' => [
+                        [
+                            'location_id' => $location1->id,
+                            'quantity' => 3.0,
+                        ],
+                        [
+                            'location_id' => $location2->id,
+                            'quantity' => 2.0,
+                        ],
+                        // Total 5.0 alors que quantity est 6.0
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(400)
+            ->assertJsonFragment(['message' => "La somme des quantités des sources (5) ne correspond pas à la quantité requise (6) pour 'Farine'"]);
+
+        // Vérifier que les stocks n'ont pas été modifiés
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing->id,
+            'location_id' => $location1->id,
+            'quantity' => 5.0,
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ing->id,
+            'location_id' => $location2->id,
+            'quantity' => 3.0,
+        ]);
+    }
+
+    /**
+     * Scénario : préparation avec cumul de quantité existante.
+     */
+    public function test_it_adds_to_existing_quantity(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer un ingrédient
+        $ing = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Farine',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements
+        $source = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve',
+        ]);
+
+        $destination = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter du stock
+        $ing->locations()->attach($source->id, ['quantity' => 10.0]);
+
+        // Créer une préparation
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Simple preparation',
+            'unit' => 'kg',
+        ]);
+
+        // Lier l'ingrédient à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Ajouter une quantité initiale de la préparation
+        $preparation->locations()->attach($destination->id, ['quantity' => 1.5]);
+
+        // Effectuer la préparation
+        $payload = [
+            'quantity' => 2.5,
+            'location_id' => $destination->id,
+            'components' => [
+                [
+                    'entity_id' => $ing->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 3.0,
+                    'sources' => [
+                        [
+                            'location_id' => $source->id,
+                            'quantity' => 3.0,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(200);
+
+        // Vérifier que la quantité a été cumulée
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $destination->id,
+            'quantity' => 4.0, // 1.5 + 2.5
         ]);
     }
 }

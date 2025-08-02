@@ -20,6 +20,7 @@ Route::prefix('preparations')->name('preparations.')->group(function () {
     Route::post('/', [PreparationController::class, 'store'])->name('store');
     Route::put('/{id}', [PreparationController::class, 'update'])->name('update');
     Route::delete('/{id}', [PreparationController::class, 'destroy'])->name('destroy');
+    Route::post('/{id}/prepare', [PreparationController::class, 'prepare'])->name('prepare');
 });
 
 // Groupe de routes pour les ingrédients

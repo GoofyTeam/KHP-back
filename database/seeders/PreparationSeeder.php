@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use Illuminate\Database\Seeder;
@@ -27,7 +28,11 @@ class PreparationSeeder extends Seeder
         // Récupère quelques ingrédients de la société
         $ingredients = Ingredient::where('company_id', $company->id)->inRandomOrder()->take(20)->get();
 
+        // Récupère les emplacements de la société
+        $locations = Location::where('company_id', $company->id)->get();
+
         // Pour chaque préparation, lie 2 à 4 ingrédients ET éventuellement une nouvelle préparation
+        // Et ajoute des quantités pour 1 à 3 emplacements
         foreach ($preparations as $preparation) {
             // Ajoute des ingrédients
             $usedIngredients = $ingredients->random(rand(2, 4));
@@ -60,6 +65,21 @@ class PreparationSeeder extends Seeder
                     ]);
                 }
             }
+
+            // Ajoute des quantités pour 1 à 3 emplacements aléatoires
+            if ($locations->count() > 0) {
+                $usedLocations = $locations->random(min($locations->count(), rand(1, 3)));
+                $locationData = [];
+
+                foreach ($usedLocations as $location) {
+                    $locationData[$location->id] = [
+                        'quantity' => rand(1, 20) + (rand(0, 100) / 100), // Génère un nombre entre 1.00 et 20.99
+                    ];
+                }
+
+                // Attache les emplacements avec leurs quantités
+                $preparation->locations()->attach($locationData);
+            }
         }
 
         // Pour les autres sociétés
@@ -72,8 +92,10 @@ class PreparationSeeder extends Seeder
                     'company_id' => $company->id,
                 ]);
             $ingredients = Ingredient::where('company_id', $company->id)->inRandomOrder()->take(10)->get();
+            $locations = Location::where('company_id', $company->id)->get();
 
             foreach ($preparations as $preparation) {
+                // Ajoute des ingrédients
                 $usedIngredients = $ingredients->random(rand(2, 3));
                 foreach ($usedIngredients as $ingredient) {
                     PreparationEntity::create([
@@ -81,6 +103,21 @@ class PreparationSeeder extends Seeder
                         'entity_id' => $ingredient->id,
                         'entity_type' => Ingredient::class,
                     ]);
+                }
+
+                // Ajoute des quantités pour 1 à 2 emplacements aléatoires
+                if ($locations->count() > 0) {
+                    $usedLocations = $locations->random(min($locations->count(), rand(1, 2)));
+                    $locationData = [];
+
+                    foreach ($usedLocations as $location) {
+                        $locationData[$location->id] = [
+                            'quantity' => rand(1, 10) + (rand(0, 100) / 100), // Génère un nombre entre 1.00 et 10.99
+                        ];
+                    }
+
+                    // Attache les emplacements avec leurs quantités
+                    $preparation->locations()->attach($locationData);
                 }
             }
         }
