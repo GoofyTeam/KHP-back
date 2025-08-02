@@ -298,8 +298,13 @@ class PreparationController extends Controller
                         ->wherePivot('location_id', $source['location_id'])
                         ->first();
 
-                    if (! $locationEntity || $locationEntity->pivot->quantity < $source['quantity']) {
-                        $stockDispo = $locationEntity ? $locationEntity->pivot->quantity : 0;
+                    /**
+                     * @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot
+                     */
+                    $pivot = $locationEntity->pivot;
+
+                    if (! $locationEntity || $pivot->quantity < $source['quantity']) {
+                        $stockDispo = $locationEntity ? $pivot->quantity : 0;
                         $entityName = $entity->name ?? "ID: {$component['entity_id']}";
                         throw new \Exception("Stock insuffisant pour '{$entityName}' à l'emplacement '{$sourceLocation->name}' (disponible: {$stockDispo}, requis: {$source['quantity']})");
                     }
@@ -307,7 +312,7 @@ class PreparationController extends Controller
                     // Réduire la quantité du composant à cet emplacement
                     $entity->locations()->updateExistingPivot(
                         $source['location_id'],
-                        ['quantity' => $locationEntity->pivot->quantity - $source['quantity']]
+                        ['quantity' => $pivot->quantity - $source['quantity']]
                     );
                 }
             }
@@ -319,7 +324,11 @@ class PreparationController extends Controller
                 ->first();
 
             if ($locationPrep) {
-                $existingQuantity = $locationPrep->pivot->quantity;
+                /**
+                 * @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot
+                 */
+                $pivot = $locationPrep->pivot;
+                $existingQuantity = $pivot->quantity;
             }
 
             // Mettre à jour ou ajouter la quantité
