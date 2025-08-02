@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Company;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,17 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('preparations', function (Blueprint $table) {
+        Schema::create('preparation_entities', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Company::class)
+
+            $table->foreignId('preparation_id')
                 ->nullable(false)
-                ->constrained()
+                ->constrained('preparations')
                 ->onDelete('cascade');
-            $table->string('name')->nullable(false);
-            $table->string('unit')->nullable(false);
+
+            $table->unsignedBigInteger('entity_id')->nullable(false);
+
+            $table->string('entity_type')->nullable(false);
+
             $table->timestamps();
 
-            $table->unique(['name', 'company_id']);
+            $table->unique(['preparation_id', 'entity_id', 'entity_type'], 'unique_preparation_relation');
         });
     }
 
@@ -31,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('preparations');
+        Schema::dropIfExists('preparation_entities');
     }
 };

@@ -48,6 +48,11 @@ class Location extends Model
         return $this->belongsToMany(Ingredient::class);
     }
 
+    public function preparations(): BelongsToMany
+    {
+        return $this->belongsToMany(Preparation::class);
+    }
+
     public function getQuantityAttribute(): float
     {
         /**

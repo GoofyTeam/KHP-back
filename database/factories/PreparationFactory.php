@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\PreparationTypeEnum;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -31,7 +30,6 @@ class PreparationFactory extends Factory
                 'tasse',
                 'pièce',
             ]),
-            'type' => fake()->randomElement(PreparationTypeEnum::values()),
             'company_id' => Company::factory(),
         ];
     }

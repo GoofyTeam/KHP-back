@@ -8,9 +8,6 @@ type Preparation {
     "Unit of measurement for the preparation."
     unit: String!
 
-    "Type of preparation (e.g., chemical, biological, physical)."
-    type: PreparationTypeEnum!
-
     "The company that produces this preparation."
     company: Company! @belongsTo
 
@@ -25,7 +22,6 @@ extend type Query @guard {
     "Liste les preparations de ma company uniquement"
     preparations(
         name: String @where(operator: "like")
-        type: String @where(operator: "like")
         unit: String @where(operator: "like")
     ): [Preparation!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
