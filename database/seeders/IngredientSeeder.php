@@ -83,13 +83,18 @@ class IngredientSeeder extends Seeder
     {
         for ($i = 0; $i < $count; $i++) {
             $upload = $images[array_rand($images)];
+
             $ingredient = Ingredient::factory()->create([
                 'company_id' => $companyId,
                 'image_url' => $this->imageService->store($upload, 'ingredients'),
             ]);
+
             $cat = Category::inRandomOrder()->first();
             $ingredient->categories()->attach($cat->id);
-            $ingredient->locations()->attach($locationId);
+
+            $ingredient->locations()->attach($locationId, [
+                'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 chance d'être out of stock, sinon entre 0.50 et 15.99
+            ]);
         }
     }
 }
