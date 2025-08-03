@@ -55,4 +55,9 @@ class Ingredient extends Model
             $q->where('name', 'like', "%{$locationName}%");
         });
     }
+
+    public function preparationEntities()
+    {
+        return $this->morphMany(PreparationEntity::class, 'entity');
+    }
 }

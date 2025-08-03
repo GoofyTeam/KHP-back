@@ -1,0 +1,7 @@
+type PreparationEntity {
+    id: ID!
+    entity: PreparationEntityItem! @morphTo
+    preparation: Preparation! @belongsTo
+}
+
+union PreparationEntityItem = Ingredient | Preparation
