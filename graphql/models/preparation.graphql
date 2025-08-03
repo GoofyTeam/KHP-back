@@ -11,11 +11,28 @@ type Preparation {
     "The company that produces this preparation."
     company: Company! @belongsTo
 
+    entities: [PreparationEntity!]! @hasMany
+
+    locations: [Location!]! @belongsToMany
+
+    quantities: [PreparationQuantity!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@quantityByLocation"
+        )
+
     "When the preparation was created."
     created_at: DateTime!
 
     "When the preparation was last updated."
     updated_at: DateTime!
+}
+
+type PreparationQuantity {
+    "Le stock de la préparation."
+    quantity: Float!
+
+    "La localisation de ce stock."
+    location: Location!
 }
 
 extend type Query @guard {
