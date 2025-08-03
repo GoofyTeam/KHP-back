@@ -80,7 +80,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function send_email_token(Request $request)
+    public function sendEmailToken(Request $request)
     {
         $request->validate(['email' => 'required|email']);
 
@@ -93,7 +93,7 @@ class AuthController extends Controller
             : back()->withErrors(['email' => __($status)]);
     }
 
-    public function reset_password(Request $request)
+    public function resetPassword(Request $request)
     {
         $request->validate([
             'email' => 'required|email',
@@ -107,10 +107,9 @@ class AuthController extends Controller
             function ($user, $password) {
                 $user->forceFill([
                     'password' => Hash::make($password),
-                    'remember_token' => Str::random(60),
                 ])->save();
 
-                event(new PasswordReset($user));
+                //event(new PasswordReset($user));
             }
         );
 
