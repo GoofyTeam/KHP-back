@@ -31,8 +31,9 @@ type Ingredient {
 extend type Query @guard {
     "List ingredients for the current company."
     ingredients(
-        "Filter by ingredient name. Accepts SQL LIKE wildcards `%` and `_`."
-        name: String @where(operator: "like")
+        "Filter by a search term. Accepts SQL LIKE wildcards `%` and `_`."
+        search: String @scope(name: "search")
+
         "Filter by unit of measurement. Accepts SQL LIKE wildcards `%` and `_`."
         unit: String @where(operator: "like")
 

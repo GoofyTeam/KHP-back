@@ -25,8 +25,8 @@ type LocationType {
 extend type Query @guard {
     "Liste les types de localisation pour l'entreprise actuelle."
     locationTypes(
-        "Filtre par nom. Accepte les caractères génériques SQL LIKE `%` et `_`."
-        name: String @where(operator: "like")
+        "Recherche par nom, insensible aux accents et à la casse. Accepte les caractères génériques SQL LIKE `%` et `_`."
+        search: String @scope(name: "search")
         "Filtre pour afficher uniquement les types par défaut."
         is_default: Boolean @eq
         "Options de tri des résultats."

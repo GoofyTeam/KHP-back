@@ -38,7 +38,10 @@ type PreparationQuantity {
 extend type Query @guard {
     "Liste les preparations de ma company uniquement"
     preparations(
-        name: String @where(operator: "like")
+        "Recherche par nom, insensible aux accents et à la casse. Accepte les caractères génériques SQL LIKE `%` et `_`."
+        search: String @scope(name: "search")
+
+        "Filtre par unité de mesure avec opérateur LIKE."
         unit: String @where(operator: "like")
     ): [Preparation!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 

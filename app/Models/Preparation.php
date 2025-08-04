@@ -41,6 +41,20 @@ class Preparation extends Model
         return $q->where('company_id', auth()->user()->company_id);
     }
 
+    /**
+     * Search preparations by name, ignoring accents and case.
+     *
+     * @param  string  $search
+     */
+    public function scopeSearch(Builder $query, $search): Builder
+    {
+        if ($search) {
+            return $query->whereRaw('unaccent(name) ILIKE unaccent(?)', ["%{$search}%"]);
+        }
+
+        return $query;
+    }
+
     public function preparationEntities()
     {
         return $this->morphMany(PreparationEntity::class, 'entity');
