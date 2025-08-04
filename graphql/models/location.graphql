@@ -24,8 +24,8 @@ type Location {
 extend type Query @guard {
     "List locations for the current company."
     locations(
-        "Filter by location name. Accepts SQL LIKE wildcards `%` and `_`."
-        name: String @where(operator: "like")
+        "Recherche par nom, insensible aux accents et à la casse. Accepte les caractères génériques SQL LIKE `%` et `_`."
+        search: String @scope(name: "search")
         "Filter by location type ID."
         locationTypeId: ID @where(key: "location_type_id")
         "Options de tri des résultats."

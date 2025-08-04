@@ -39,4 +39,20 @@ class LocationType extends Model
     {
         return $query->where('company_id', auth()->user()->company_id);
     }
+
+    /**
+     * Search location types by name, ignoring accents and case.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $search
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeSearch($query, $search)
+    {
+        if ($search) {
+            return $query->whereRaw('unaccent(name) ILIKE unaccent(?)', ["%{$search}%"]);
+        }
+
+        return $query;
+    }
 }

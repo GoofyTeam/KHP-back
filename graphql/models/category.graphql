@@ -14,7 +14,10 @@ type Category {
 
 extend type Query @guard {
     "List categories for the current company."
-    categories: [Category!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+    categories(
+        "Search by category name. Accepts SQL LIKE wildcards `%` and `_`."
+        search: String @scope(name: "search")
+    ): [Category!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
     "Find a single Category (only if it belongs to the current company)."
     Category(
