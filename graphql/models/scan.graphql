@@ -19,33 +19,10 @@ type Query {
 Représente un produit alimentaire issu d'OpenFoodFacts
 """
 type OpenFoodFactsProduct {
-    """
-    Code-barres du produit
-    """
     barcode: String
-
-    """
-    Nom du produit
-    """
     product_name: String
-
-    """
-    Quantité de base du produit
-    """
     base_quantity: Float
-
-    """
-    Unité de mesure (g, ml, etc.)
-    """
     unit: String
-
-    """
-    Catégories du produit
-    """
     categories: [String]
-
-    """
-    URL de l'image du produit
-    """
     imageUrl: String
 }
