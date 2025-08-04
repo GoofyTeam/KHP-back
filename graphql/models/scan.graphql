@@ -25,4 +25,5 @@ type OpenFoodFactsProduct {
     unit: String
     categories: [String]
     imageUrl: String
+    is_already_in_database: Boolean
 }
