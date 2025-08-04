@@ -9,8 +9,20 @@ type Query {
         keyword: String
         page: Int = 1
         pageSize: Int = 20
-    ): JSON
+    ): OpenFoodFactsProduct
         @field(
             resolver: "App\\GraphQL\\Resolvers\\OpenFoodFactsResolver@search"
         )
+}
+
+"""
+Représente un produit alimentaire issu d'OpenFoodFacts
+"""
+type OpenFoodFactsProduct {
+    barcode: String
+    product_name: String
+    base_quantity: Float
+    unit: String
+    categories: [String]
+    imageUrl: String
 }
