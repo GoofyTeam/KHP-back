@@ -14,8 +14,7 @@ message=$(tr -d '\n' < "$MSG_PATH")
 
 # Regex pour valider le format :
 # [KHP-<num>] <type>[ (scope)]: description
-commit_regex='^\[KHP-[0-9]+\] (feat|fix|chore|ci)(\((front|back|global)\))?: .+$'
-
+commit_regex='^\[KHP-[0-9]+\] (feat|fix|chore|ci)(\(([a-zA-Z0-9_-]+)\))?: .+$'
 # Test du format
 if echo "$message" | grep -E -q "$commit_regex"; then
   # OK

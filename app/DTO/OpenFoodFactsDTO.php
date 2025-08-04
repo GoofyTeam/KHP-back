@@ -8,13 +8,15 @@ class OpenFoodFactsDTO
 
     public string $product_name;
 
-    public int $base_quantity;
+    public float $base_quantity;
 
     public string $unit;
 
     public array $categories;
 
     public string $imageUrl;
+
+    public bool $is_already_in_database = false;
 
     /**
      * Initialise le DTO avec les données brutes de l'API Open Food Facts.
@@ -31,11 +33,11 @@ class OpenFoodFactsDTO
             ?? '';
 
         if (isset($product['product_quantity'])) {
-            $this->base_quantity = (int) $product['product_quantity'];
+            $this->base_quantity = (float) $product['product_quantity'];
         } elseif (! empty($product['quantity'])) {
 
             if (preg_match('/^(\d+)/', $product['quantity'], $m)) {
-                $this->base_quantity = (int) $m[1];
+                $this->base_quantity = (float) $m[1];
             } else {
                 $this->base_quantity = 0;
             }
@@ -53,5 +55,9 @@ class OpenFoodFactsDTO
         $this->imageUrl = $product['image_front_url']
             ?? $product['image_url']
             ?? '';
+
+        if (isset($product['is_already_in_database'])) {
+            $this->is_already_in_database = (bool) $product['is_already_in_database'];
+        }
     }
 }
