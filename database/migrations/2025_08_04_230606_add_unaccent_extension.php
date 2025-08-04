@@ -10,7 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent');
+        // Vérifier si nous utilisons PostgreSQL
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent');
+        }
     }
 
     /**
@@ -18,6 +21,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('DROP EXTENSION IF EXISTS unaccent');
+        // Vérifier si nous utilisons PostgreSQL
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('DROP EXTENSION IF EXISTS unaccent');
+        }
     }
 };
