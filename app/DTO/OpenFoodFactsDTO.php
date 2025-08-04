@@ -16,6 +16,8 @@ class OpenFoodFactsDTO
 
     public string $imageUrl;
 
+    public bool $is_already_in_database = false;
+
     /**
      * Initialise le DTO avec les données brutes de l'API Open Food Facts.
      * Gère le cas où les données sont dans ['product'] ou à la racine.
@@ -53,5 +55,9 @@ class OpenFoodFactsDTO
         $this->imageUrl = $product['image_front_url']
             ?? $product['image_url']
             ?? '';
+
+        if (isset($product['is_already_in_database'])) {
+            $this->is_already_in_database = (bool) $product['is_already_in_database'];
+        }
     }
 }
