@@ -39,6 +39,7 @@ class OpenFoodFactsResolver
                     'product_quantity_unit' => $ingredient->unit,
                     'categories' => $ingredient->categories->pluck('name')->implode(','),
                     'image_front_url' => $ingredient->image_url ? url('/api/image-proxy/'.$ingredient->image_url) : null,
+                    'is_already_in_database' => true,
                 ]);
             }
 
