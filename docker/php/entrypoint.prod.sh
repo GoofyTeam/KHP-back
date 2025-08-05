@@ -36,7 +36,7 @@ if [[ -f "$WEB_ROOT/composer.json" ]]; then
 
     cd "$WEB_ROOT" || exit
 
-    composer install --no-interaction --no-progress --no-suggest --optimize-autoloader -no-dev
+    composer install --no-interaction --no-progress --no-suggest --optimize-autoloader --no-dev
 
     info "Composer dependencies installed"
   else
@@ -47,7 +47,7 @@ else
 fi
 
 # Génération de la clé APP_KEY si inexistante
-if ! grep -q "APP_KEY" "$WEB_ROOT/.env"; then
+if ! grep -q "APP_KEY=.\+" "$WEB_ROOT/.env"; then
   php "$WEB_ROOT/artisan" key:generate
   info "Generated application key"
 fi
@@ -73,6 +73,35 @@ if [[ "$DB_READY" -eq 1 ]]; then
   info "Database migrations completed successfully."
 else
   fatal "Database connection failed after $MAX_RETRIES attempts. Exiting..."
+fi
+
+# Attendre que MinIO soit disponible
+info "Waiting for MinIO to be ready..."
+MINIO_READY=0
+for i in $(seq 1 "$MAX_RETRIES"); do
+  if curl -s "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" > /dev/null; then
+    info "MinIO is ready."
+    MINIO_READY=1
+    break
+  else
+    warning "MinIO not ready. Retrying in $RETRY_DELAY seconds... (Attempt $i/$MAX_RETRIES)"
+    sleep "$RETRY_DELAY"
+  fi
+done
+
+if [[ "$MINIO_READY" -eq 1 ]]; then
+  # Configurer le client mc
+  mc alias set myminio http://${MINIO_HOST}:${MINIO_PORT} "${MINIO_USER}" "${MINIO_PASSWORD}"
+
+  # Créer le bucket s'il n'existe pas
+  if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
+    mc mb myminio/${MINIO_BUCKET}
+    info "Created MinIO bucket: ${MINIO_BUCKET}"
+  else
+    info "MinIO bucket ${MINIO_BUCKET} already exists."
+  fi
+else
+  warning "MinIO is not available. Skipping bucket creation."
 fi
 
 supervisord -c "$SUPERVISOR_CONF"
