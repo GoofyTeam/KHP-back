@@ -25,8 +25,17 @@ trait HasStockMovements
      * @param  float  $quantityAfter  Quantité après le mouvement
      * @return StockMovement|null Le mouvement créé ou null si pas de différence significative
      */
-    public function recordStockMovement(Location $location, float $quantityBefore, float $quantityAfter)
+    public function recordStockMovement(Location $location, float $quantityBefore, float $quantityAfter): ?StockMovement
     {
+
+        // Validation: Les quantités ne doivent pas être négatives
+        if ($quantityBefore < 0 || $quantityAfter < 0) {
+            return null;
+        }
+        // Validation: L'emplacement doit appartenir à la même société que l'entité trackable
+        if ($location->company_id !== $this->company_id) {
+            return null;
+        }
         // S'assurer que les quantités sont des nombres
         $quantityBefore = (float) $quantityBefore;
         $quantityAfter = (float) $quantityAfter;
@@ -44,7 +53,8 @@ trait HasStockMovements
 
         $type = $difference > 0 ? 'addition' : 'withdrawal';
 
-        return $this->stockMovements()->create([
+        /** @var StockMovement */
+        $stockMovement = $this->stockMovements()->create([
             'location_id' => $location->id,
             'company_id' => $this->company_id,
             'user_id' => auth()->id(),
@@ -53,5 +63,7 @@ trait HasStockMovements
             'quantity_before' => $quantityBefore,
             'quantity_after' => $quantityAfter,
         ]);
+
+        return $stockMovement;
     }
 }
