@@ -55,6 +55,23 @@ class Preparation extends Model
         return $query;
     }
 
+    public function scopeCategoryId($query, $categoryId)
+    {
+        return $query->whereHas('categories', function ($q) use ($categoryId) {
+            $q->where('id', $categoryId);
+        });
+    }
+
+    /**
+     * Filtre les préparations par identifiant d'emplacement
+     */
+    public function scopeLocationId($query, $locationId)
+    {
+        return $query->whereHas('locations', function ($q) use ($locationId) {
+            $q->where('id', $locationId);
+        });
+    }
+
     public function preparationEntities()
     {
         return $this->morphMany(PreparationEntity::class, 'entity');
@@ -64,6 +81,12 @@ class Preparation extends Model
     {
         return $this->belongsToMany(Location::class)
             ->withPivot('quantity')
+            ->withTimestamps();
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_preparation')
             ->withTimestamps();
     }
 }

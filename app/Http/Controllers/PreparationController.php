@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\LocationType;
@@ -31,6 +32,8 @@ class PreparationController extends Controller
      * - 'entities' : obligatoire, tableau, au moins 2 éléments.
      *     • entities.*.id : entier requis.
      *     • entities.*.type : doit être 'ingredient' ou 'preparation'.
+     * - 'categories' : obligatoire, tableau, au moins 1 élément.
+     *     • categories.* : chaîne de caractères, max 255.
      * - La préparation est automatiquement liée à la société de l'utilisateur.
      * - Pour chaque entité fournie, un enregistrement PreparationEntity est créé.
      *
@@ -54,6 +57,8 @@ class PreparationController extends Controller
             'entities' => ['required', 'array', 'min:2'],
             'entities.*.id' => ['required', 'integer'],
             'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
+            'categories' => ['required', 'array', 'min:1'],
+            'categories.*' => ['string', 'max:255'],
         ]);
 
         // Liaison à la société de l'utilisateur
@@ -70,9 +75,19 @@ class PreparationController extends Controller
             ]);
         }
 
+        // Traitement des catégories
+        $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
+            $formattedName = ucfirst($categoryName);
+
+            return Category::firstOrCreate(['name' => $formattedName, 'company_id' => $user->company_id]);
+        });
+
+        // Association des catégories à la préparation
+        $preparation->categories()->attach($categories->pluck('id'));
+
         return response()->json([
             'message' => 'Préparation créée avec succès',
-            'preparation' => $preparation->load('entities.entity'),
+            'preparation' => $preparation->load('entities.entity', 'categories'),
         ], 201);
     }
 
@@ -82,6 +97,7 @@ class PreparationController extends Controller
      * On attend maintenant deux tableaux optionnels et un tableau de quantités :
      * - 'entities_to_add'    : array d'entités à créer si elles n'existent pas encore
      * - 'entities_to_remove' : array d'entités à supprimer
+     * - 'categories'         : array de catégories à associer (remplace les existantes)
      * - 'quantities'         : array de quantités par emplacement
      *
      * Règles métier pour update() :
@@ -121,6 +137,8 @@ class PreparationController extends Controller
             'quantities' => ['sometimes', 'array'],
             'quantities.*.quantity' => ['required_with:quantities', 'numeric', 'min:0'],
             'quantities.*.location_id' => ['required_with:quantities', 'exists:locations,id'],
+            'categories' => ['sometimes', 'array'],
+            'categories.*' => ['string', 'max:255'],
         ]);
 
         // Mise à jour des champs standard
@@ -157,6 +175,18 @@ class PreparationController extends Controller
             }
         }
 
+        // Mise à jour des catégories
+        if (isset($validated['categories'])) {
+            $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
+                return Category::firstOrCreate([
+                    'name' => ucfirst($categoryName),
+                    'company_id' => $user->company_id,
+                ]);
+            });
+
+            $preparation->categories()->sync($categories->pluck('id'));
+        }
+
         // Gestion des quantités par emplacement
         if (! empty($validated['quantities'] ?? [])) {
             foreach ($validated['quantities'] as $quantityData) {
@@ -171,7 +201,7 @@ class PreparationController extends Controller
 
         return response()->json([
             'message' => 'Préparation mise à jour avec succès',
-            'preparation' => $preparation->load('entities.entity', 'locations'),
+            'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
         ], 200);
     }
 
@@ -342,7 +372,7 @@ class PreparationController extends Controller
 
             return response()->json([
                 'message' => "Préparation de {$validated['quantity']} {$preparation->unit} de {$preparation->name} effectuée avec succès",
-                'preparation' => $preparation->load('entities.entity', 'locations'),
+                'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();

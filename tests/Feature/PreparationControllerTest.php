@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -37,12 +38,38 @@ class PreparationControllerTest extends TestCase
             'name' => 'Solo Entity',
             'unit' => 'g',
             'entities' => [['id' => $ing->id, 'type' => 'ingredient']],
+            'categories' => ['Dessert'],
         ];
 
         $this->actingAs($user)
             ->postJson('/api/preparations', $payload)
             ->assertStatus(422)
             ->assertJsonValidationErrors('entities');
+    }
+
+    /**
+     * Scénario : création échoue sans catégories.
+     */
+    public function test_it_fails_to_create_without_categories(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'No Categories',
+            'unit' => 'g',
+            'entities' => [
+                ['id' => $ing1->id, 'type' => 'ingredient'],
+                ['id' => $ing2->id, 'type' => 'ingredient'],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('categories');
     }
 
     /**
@@ -62,6 +89,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
             ],
+            'categories' => ['Dessert'],
         ];
 
         $this->actingAs($user)
@@ -75,6 +103,58 @@ class PreparationControllerTest extends TestCase
         $this->assertDatabaseHas('preparation_entities', [
             'entity_id' => $ing2->id,
             'entity_type' => Ingredient::class,
+        ]);
+    }
+
+    /**
+     * Scénario : création avec deux ingrédients et des catégories.
+     */
+    public function test_it_creates_with_two_ingredients_and_category(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'Dual Ingredient',
+            'unit' => 'kg',
+            'entities' => [
+                ['id' => $ing1->id, 'type' => 'ingredient'],
+                ['id' => $ing2->id, 'type' => 'ingredient'],
+            ],
+            'categories' => ['Dessert', 'Pâtisserie'],
+        ];
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(201);
+
+        $preparationId = $response->json('preparation.id');
+
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $ing1->id,
+            'entity_type' => Ingredient::class,
+        ]);
+        $this->assertDatabaseHas('preparation_entities', [
+            'entity_id' => $ing2->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Vérifier que les catégories ont été créées et associées
+        $dessertCategory = Category::where('name', 'Dessert')->where('company_id', $company->id)->first();
+        $patisserieCategory = Category::where('name', 'Pâtisserie')->where('company_id', $company->id)->first();
+
+        $this->assertNotNull($dessertCategory);
+        $this->assertNotNull($patisserieCategory);
+
+        $this->assertDatabaseHas('category_preparation', [
+            'category_id' => $dessertCategory->id,
+            'preparation_id' => $preparationId,
+        ]);
+        $this->assertDatabaseHas('category_preparation', [
+            'category_id' => $patisserieCategory->id,
+            'preparation_id' => $preparationId,
         ]);
     }
 
@@ -95,9 +175,10 @@ class PreparationControllerTest extends TestCase
                 ['id' => $pre1->id, 'type' => 'preparation'],
                 ['id' => $pre2->id, 'type' => 'preparation'],
             ],
+            'categories' => ['Boisson'],
         ];
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->postJson('/api/preparations', $payload)
             ->assertStatus(201);
 
@@ -108,6 +189,12 @@ class PreparationControllerTest extends TestCase
         $this->assertDatabaseHas('preparation_entities', [
             'entity_id' => $pre2->id,
             'entity_type' => Preparation::class,
+        ]);
+
+        // Vérifier que la catégorie a été créée
+        $this->assertDatabaseHas('categories', [
+            'name' => 'Boisson',
+            'company_id' => $company->id,
         ]);
     }
 
@@ -128,6 +215,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing->id, 'type' => 'ingredient'],
                 ['id' => $pre->id, 'type' => 'preparation'],
             ],
+            'categories' => ['Mixte'],
         ];
 
         $this->actingAs($user)
@@ -174,6 +262,56 @@ class PreparationControllerTest extends TestCase
         $this->assertDatabaseHas('preparation_entities', [
             'preparation_id' => $prep->id,
             'entity_id' => $ing->id,
+        ]);
+    }
+
+    /**
+     * Scénario : mise à jour des catégories d'une préparation.
+     */
+    public function test_it_updates_categories(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer une catégorie existante
+        $oldCategory = Category::factory()->create([
+            'name' => 'OldCategory',
+            'company_id' => $company->id,
+        ]);
+
+        // Créer une préparation avec la catégorie existante
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+        $prep->categories()->attach($oldCategory->id);
+
+        // Mise à jour avec de nouvelles catégories
+        $payload = [
+            'categories' => ['NewCategory1', 'NewCategory2'],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        // Vérifier que les anciennes catégories ont été remplacées
+        $this->assertDatabaseMissing('category_preparation', [
+            'category_id' => $oldCategory->id,
+            'preparation_id' => $prep->id,
+        ]);
+
+        // Vérifier que les nouvelles catégories ont été ajoutées
+        $newCategory1 = Category::where('name', 'NewCategory1')->where('company_id', $company->id)->first();
+        $newCategory2 = Category::where('name', 'NewCategory2')->where('company_id', $company->id)->first();
+
+        $this->assertNotNull($newCategory1);
+        $this->assertNotNull($newCategory2);
+
+        $this->assertDatabaseHas('category_preparation', [
+            'category_id' => $newCategory1->id,
+            'preparation_id' => $prep->id,
+        ]);
+        $this->assertDatabaseHas('category_preparation', [
+            'category_id' => $newCategory2->id,
+            'preparation_id' => $prep->id,
         ]);
     }
 
@@ -425,6 +563,87 @@ class PreparationControllerTest extends TestCase
             'id' => $prep->id,
             'company_id' => $company2->id,
         ]);
+    }
+
+    /**
+     * Scénario : préparation avec vérification des catégories dans la réponse.
+     */
+    public function test_prepare_response_includes_categories(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // Créer un ingrédient
+        $ing = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Farine',
+            'unit' => 'kg',
+        ]);
+
+        // Créer des emplacements
+        $source = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Réserve',
+        ]);
+
+        $destination = Location::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Cuisine',
+        ]);
+
+        // Ajouter du stock
+        $ing->locations()->attach($source->id, ['quantity' => 10.0]);
+
+        // Créer une catégorie
+        $category = Category::factory()->create([
+            'name' => 'TestCategory',
+            'company_id' => $company->id,
+        ]);
+
+        // Créer une préparation avec une catégorie
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Simple preparation',
+            'unit' => 'kg',
+        ]);
+
+        // Associer la catégorie à la préparation
+        $preparation->categories()->attach($category->id);
+
+        // Lier l'ingrédient à la préparation
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ing->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        // Effectuer la préparation
+        $payload = [
+            'quantity' => 2.5,
+            'location_id' => $destination->id,
+            'components' => [
+                [
+                    'entity_id' => $ing->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 3.0,
+                    'sources' => [
+                        [
+                            'location_id' => $source->id,
+                            'quantity' => 3.0,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(200);
+
+        // Vérifier que les catégories sont incluses dans la réponse
+        $this->assertArrayHasKey('categories', $response->json('preparation'));
+        $this->assertCount(1, $response->json('preparation.categories'));
+        $this->assertEquals('TestCategory', $response->json('preparation.categories.0.name'));
     }
 
     /**

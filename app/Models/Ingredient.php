@@ -62,13 +62,10 @@ class Ingredient extends Model
         });
     }
 
-    /**
-     * Filter ingredients by a location’s name (LIKE %…%).
-     */
-    public function scopeLocationName($query, $locationName)
+    public function scopeCategoryId($query, $categoryId)
     {
-        return $query->whereHas('locations', function ($q) use ($locationName) {
-            $q->where('name', 'like', "%{$locationName}%");
+        return $query->whereHas('categories', function ($q) use ($categoryId) {
+            $q->where('id', $categoryId);
         });
     }
 

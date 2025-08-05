@@ -5,6 +5,15 @@ type Category {
     "Category name."
     name: String!
 
+    "Ingredients in this category."
+    ingredients: [Ingredient!]! @belongsToMany
+
+    "Preparations in this category."
+    preparations: [Preparation!]! @belongsToMany
+
+    "The company that owns this category."
+    company: Company! @belongsTo
+
     "When the Category was created."
     created_at: DateTime!
 

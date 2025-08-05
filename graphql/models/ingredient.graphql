@@ -38,7 +38,7 @@ extend type Query @guard {
         unit: String @where(operator: "like")
 
         locationId: ID @scope(name: "locationId")
-        locationName: String @scope(name: "locationName")
+        categoryId: ID @scope(name: "categoryId")
     ): [Ingredient!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
     "Find a single ingredient (only if it belongs to the current company)."
