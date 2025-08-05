@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
 use App\Models\Category;
+use App\Models\Company;
 use App\Models\Ingredient;
 use App\Services\ImageService;
 use Illuminate\Database\Seeder;
@@ -34,7 +34,7 @@ class IngredientSeeder extends Seeder
 
         for ($i = 0; $i < $count; $i++) {
 
-            $response = Http::get($this->picsumUrl . '?random=' . uniqid());
+            $response = Http::get($this->picsumUrl.'?random='.uniqid());
 
             $tempFile = $this->storeTemporaryFile($response);
 
@@ -52,8 +52,8 @@ class IngredientSeeder extends Seeder
 
     private function storeTemporaryFile($response): string
     {
-        $filename = uniqid('picsum_') . '.jpg';
-        $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
+        $filename = uniqid('picsum_').'.jpg';
+        $tempPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.$filename;
         file_put_contents($tempPath, $response->body());
 
         return $tempPath;
@@ -73,8 +73,8 @@ class IngredientSeeder extends Seeder
         Company::where('name', '!=', $exclude)
             ->get()
             ->each(
-                fn($company) => $company->locations->each(
-                    fn($loc) => $this->createIngredients($company->id, $loc->id, $perLocation, $images)
+                fn ($company) => $company->locations->each(
+                    fn ($loc) => $this->createIngredients($company->id, $loc->id, $perLocation, $images)
                 )
             );
     }
