@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -80,6 +81,12 @@ class PreparationSeeder extends Seeder
                 // Attache les emplacements avec leurs quantités
                 $preparation->locations()->attach($locationData);
             }
+
+            // Attache une catégorie aléatoire à la préparation
+            $cat = Category::where('company_id', $company->id)->inRandomOrder()->first();
+            if ($cat) {
+                $preparation->categories()->attach($cat->id);
+            }
         }
 
         // Pour les autres sociétés
@@ -118,6 +125,12 @@ class PreparationSeeder extends Seeder
 
                     // Attache les emplacements avec leurs quantités
                     $preparation->locations()->attach($locationData);
+                }
+
+                // Attache une catégorie aléatoire à la préparation
+                $cat = Category::where('company_id', $company->id)->inRandomOrder()->first();
+                if ($cat) {
+                    $preparation->categories()->attach($cat->id);
                 }
             }
         }

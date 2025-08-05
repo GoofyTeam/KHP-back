@@ -21,6 +21,12 @@ class Category extends Model
             ->withTimestamps();
     }
 
+    public function preparations(): BelongsToMany
+    {
+        return $this->belongsToMany(Preparation::class, 'category_preparation')
+            ->withTimestamps();
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);

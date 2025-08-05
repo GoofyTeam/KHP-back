@@ -15,6 +15,9 @@ type Preparation {
 
     locations: [Location!]! @belongsToMany
 
+    "The categories associated with this preparation."
+    categories: [Category!]! @belongsToMany
+
     quantities: [PreparationQuantity!]!
         @field(
             resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@quantityByLocation"
@@ -43,6 +46,12 @@ extend type Query @guard {
 
         "Filtre par unité de mesure avec opérateur LIKE."
         unit: String @where(operator: "like")
+
+        "Filtre par catégorie"
+        categoryId: ID @scope(name: "categoryId")
+
+        "Filtre par identifiant d'emplacement"
+        locationId: ID @scope(name: "locationId")
     ): [Preparation!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
 
     "Trouve une preparation (et seulement si elle appartient à ma company)"
