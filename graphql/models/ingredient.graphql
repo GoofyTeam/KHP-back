@@ -21,6 +21,9 @@ type Ingredient {
     image_url: String
         @field(resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@imageUrl")
 
+    "Historique des mouvements de stock pour cet ingrédient"
+    stockMovements: [StockMovement!]! @morphMany
+
     "When the ingredient was created."
     created_at: DateTime!
 

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('preparation_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->foreignId('location_id')->constrained()->onDelete('cascade')->nullable(false);
-            $table->float('quantity')->default(0)->nullable(false);
+            $table->decimal('quantity', 8, 2)->default(0)->nullable(false);
             $table->timestamps();
         });
     }

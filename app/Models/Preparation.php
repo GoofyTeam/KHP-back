@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasStockMovements;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Preparation extends Model
 {
     /** @use HasFactory<\Database\Factories\PreparationFactory> */
-    use HasFactory;
+    use HasFactory, HasStockMovements;
 
     protected $guarded = [
         'id',
@@ -80,6 +81,7 @@ class Preparation extends Model
     public function locations(): BelongsToMany
     {
         return $this->belongsToMany(Location::class)
+            ->using(LocationPreparation::class)
             ->withPivot('quantity')
             ->withTimestamps();
     }
