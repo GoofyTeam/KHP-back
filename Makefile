@@ -17,7 +17,8 @@ VENDOR_BIN = $(DC) exec $(APP) vendor/bin
 		cs pint larastan analyse \
 		install composer-update npm-update \
 		cache-clear optimize fresh reset-minio \
-		routes clean erd
+		routes clean erd \
+        buildkhp-back-image
 
 # Cible par défaut
 .DEFAULT_GOAL := help
@@ -73,6 +74,9 @@ restart: down up
 
 build:
 	$(DC) build
+
+buildkhp-back-image:
+    docker build --no-cache -t khp-back-builded:v0.0.1 -f docker/php/Dockerfile.production .
 
 exec shell:
 	$(DC) exec $(APP) bash

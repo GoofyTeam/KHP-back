@@ -1,0 +1,182 @@
+services:
+  khp-back:
+    container_name: khp-back
+    image: khp-back-builded:v0.0.1
+    ports:
+      - ${APP_PORT:-8000}:8000
+      - ${VITE_PORT:-5173}:${VITE_PORT:-5173}
+    environment:
+      APP_NAME: "${APP_NAME:-KHP}"
+      APP_ENV: "${APP_ENV:-local}"
+      APP_KEY: "${APP_KEY:-base64:lfFRKg00f2Z0sZDCC746YII1BS4WS9IuzTDtNxE/Uh4=}"
+      APP_DEBUG: "${APP_DEBUG:-true}"
+      APP_URL: "${APP_URL:-http://localhost:8000}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
+      ###########
+      APP_LOCALE: "${APP_LOCALE:-fr}"
+      APP_FALLBACK_LOCALE: "${APP_FALLBACK_LOCALE:-fr}"
+      APP_FAKER_LOCALE: "${APP_FAKER_LOCALE:-fr_FR}"
+      ###########
+      APP_MAINTENANCE_DRIVER: "${APP_MAINTENANCE_DRIVER:-file}"
+      ###########
+      PHP_CLI_SERVER_WORKERS: "${PHP_CLI_SERVER_WORKERS:-4}"
+      ###########
+      BCRYPT_ROUNDS: "${BCRYPT_ROUNDS:-12}"
+      ###########
+      LOG_CHANNEL: "${LOG_CHANNEL:-stack}"
+      LOG_STACK: "${LOG_STACK:-single}"
+      LOG_DEPRECATIONS_CHANNEL: "${LOG_DEPRECATIONS_CHANNEL:-null}"
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
+      ###########
+      DB_CONNECTION: "${DB_CONNECTION:-pgsql}"
+      DB_HOST: "${DB_HOST:-khp-postgres}"
+      DB_PORT: "${DB_PORT:-5432}"
+      DB_DATABASE: "${DB_DATABASE:-khp_database}"
+      DB_USERNAME: "${DB_USERNAME:-khp}"
+      DB_PASSWORD: "${DB_PASSWORD:-password}"
+      ###########
+      SESSION_DRIVER: "${SESSION_DRIVER:-file}"
+      SESSION_SAME_SITE: "${SESSION_SAME_SITE:-none}"
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-true}"
+      SESSION_LIFETIME: "${SESSION_LIFETIME:-120}"
+      ###########
+      BROADCAST_CONNECTION: "${BROADCAST_CONNECTION:-log}"
+      FILESYSTEM_DISK: "${FILESYSTEM_DISK:-s3}"
+      QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
+      ###########
+      CACHE_STORE: "${CACHE_STORE:-database}"
+      ###########
+      MEMCACHED_HOST: "${MEMCACHED_HOST:-127.0.0.1}"
+      ###########
+      REDIS_CLIENT: "${REDIS_CLIENT:-phpredis}"
+      REDIS_HOST: "${REDIS_HOST:-khp-redis}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-null}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      ###########
+      MAIL_MAILER: "${MAIL_MAILER:-smtp}"
+      MAIL_HOST: "${MAIL_HOST:-khp-mailpit}"
+      MAIL_PORT: "${MAIL_PORT:-1025}"
+      MAIL_ENCRYPTION: "${MAIL_ENCRYPTION:-null}"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@khp.fr}"
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-${APP_NAME:-KHP}}"
+      ###########
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-root}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-password}"
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-us-east-1}"
+      AWS_BUCKET: "${AWS_BUCKET:-developp}"
+      AWS_ENDPOINT: "${AWS_ENDPOINT:-http://khp-minio:9000}"
+      AWS_USE_PATH_STYLE_ENDPOINT: "${AWS_USE_PATH_STYLE_ENDPOINT:-true}"
+      MINIO_HOST: "${MINIO_HOST:-khp-minio}"
+      MINIO_PORT: "${MINIO_PORT:-9000}"
+      MINIO_USER: "${MINIO_ROOT_USER:-root}"
+      MINIO_PASSWORD: "${MINIO_PASSWORD:-password}"
+      MINIO_BUCKET: "${MINIO_BUCKET:-developp}"
+      ###########
+      VITE_APP_NAME: "${VITE_APP_NAME:-${APP_NAME:-KHP}}"
+      ###########
+      OCTANE_SERVER: "${OCTANE_SERVER:-frankenphp}"
+      ###########
+      SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1}"
+    #volumes:
+    #- ./:/var/www/html
+    #- ./vendor/:/var/www/html/vendor
+    networks:
+      - khp-back
+    depends_on:
+      - khp-postgres
+      - khp-redis
+      - khp-mailpit
+      - khp-minio
+
+  khp-postgres:
+    image: "postgres:15"
+    container_name: khp-postgres
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:-khp}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-password}"
+      POSTGRES_DB: "${DB_DATABASE:-khp_database}"
+    volumes:
+      - "khp-postgres:/var/lib/postgresql/data"
+    networks:
+      - khp-back
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${DB_USERNAME:-khp}",
+          "-d",
+          "${DB_DATABASE:-khp_database}",
+        ]
+      retries: 3
+      timeout: 5s
+
+  khp-redis:
+    image: redis:alpine
+    container_name: khp-redis
+    ports:
+      - ${FORWARD_REDIS_PORT:-6379}:6379
+    volumes:
+      - "khp-redis:/data"
+    networks:
+      - khp-back
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      retries: 3
+      timeout: 5s
+
+  khp-mailpit:
+    container_name: khp-mailpit
+    image: axllent/mailpit
+    volumes:
+      - khp-mailpit:/data
+    networks:
+      - khp-back
+    ports:
+      - 8025:8025
+      - 1025:1025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  khp-minio:
+    image: minio/minio
+    container_name: khp-minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-root}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-password}"
+    volumes:
+      - khp-minio:/data
+    networks:
+      - khp-back
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ls", "myminio"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  khp-back:
+    driver: bridge
+
+volumes:
+  khp-postgres:
+    driver: local
+  khp-redis:
+    driver: local
+  khp-mailpit:
+    driver: local
+  khp-minio:
+    driver: local

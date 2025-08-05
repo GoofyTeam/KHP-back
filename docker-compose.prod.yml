@@ -4,56 +4,109 @@ services:
     build:
       context: ./
       dockerfile: ./docker/php/Dockerfile.production
-    restart: always
     ports:
-      - "443:443"
-      - "80:8000"
+      - ${APP_PORT:-8000}:8000
+      - ${VITE_PORT:-5173}:${VITE_PORT:-5173}
+    volumes:
+      - ./:/var/www/html
+      - ./vendor/:/var/www/html/vendor
     networks:
       - khp-back
     depends_on:
-      khp-postgres:
-        condition: service_healthy
-      khp-redis:
-        condition: service_healthy
+      - khp-postgres
+      - khp-redis
+      - khp-mailpit
+      - khp-minio
 
   khp-postgres:
     image: "postgres:15"
     container_name: khp-postgres
-    restart: always
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: "${DB_USERNAME}"
-      POSTGRES_PASSWORD: "${DB_PASSWORD}"
-      POSTGRES_DB: "${DB_DATABASE}"
+      POSTGRES_USER: "${DB_USERNAME:-khp}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-password}"
+      POSTGRES_DB: "${DB_DATABASE:-khp_database}"
     volumes:
-      - "khp-postgres-data:/var/lib/postgresql/data"
+      - "khp-postgres:/var/lib/postgresql/data"
     networks:
       - khp-back
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${DB_USERNAME}"]
-      interval: 10s
-      retries: 5
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${DB_USERNAME:-khp}",
+          "-d",
+          "${DB_DATABASE:-khp_database}",
+        ]
+      retries: 3
       timeout: 5s
 
   khp-redis:
     image: redis:alpine
     container_name: khp-redis
-    restart: always
+    ports:
+      - ${FORWARD_REDIS_PORT:-6379}:6379
     volumes:
-      - "khp-redis-data:/data"
+      - "khp-redis:/data"
     networks:
       - khp-back
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      retries: 5
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      retries: 3
       timeout: 5s
+
+  khp-mailpit:
+    container_name: khp-mailpit
+    image: axllent/mailpit
+    volumes:
+      - khp-mailpit:/data
+    networks:
+      - khp-back
+    ports:
+      - 8025:8025
+      - 1025:1025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  khp-minio:
+    image: minio/minio
+    container_name: khp-minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-root}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-password}"
+    volumes:
+      - khp-minio:/data
+    networks:
+      - khp-back
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ls", "myminio"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 networks:
   khp-back:
     driver: bridge
 
 volumes:
-  khp-postgres-data:
+  khp-postgres:
     driver: local
-  khp-redis-data:
+  khp-redis:
+    driver: local
+  khp-mailpit:
+    driver: local
+  khp-minio:
     driver: local

@@ -1,0 +1,44 @@
+name: Deploy KHP backend preversion
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+      - name: Extract branch name
+        id: extract_branch
+        shell: bash
+        run: |
+          # Pour un push, GITHUB_REF vaut refs/heads/<branche>
+          # Pour une PR, GITHUB_HEAD_REF vaut le nom de la branche source
+          echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}">> $GITHUB_OUTPUT
+      - uses: docker/metadata-action@v5
+        id: metadata
+        with:
+          images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=${{ steps.extract_branch.outputs.branch }},prefix=alpha-
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: int128/kaniko-action@v1
+        with:
+          context: .
+          file: docker/php/Dockerfile.production
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache: true
+          cache-repository: ghcr.io/${{ github.repository }}/cache
