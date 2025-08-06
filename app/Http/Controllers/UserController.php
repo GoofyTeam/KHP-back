@@ -15,7 +15,7 @@ class UserController extends Controller
 
         $validatedData = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,'. $user->id,
+            'email' => 'sometimes|email|unique:users,email,'.$user->id,
         ]);
 
         $user->update($validatedData);
@@ -33,7 +33,7 @@ class UserController extends Controller
             'new_password' => 'required|string|min:8|confirmed',
         ]);
 
-        if (!Hash::check($validatedData['current_password'], $user->password)) {
+        if (! Hash::check($validatedData['current_password'], $user->password)) {
             return response()->json(['message' => 'Current password is incorrect'], 401);
         }
 
@@ -42,5 +42,4 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Password updated successfully']);
     }
-
 }
