@@ -15,7 +15,8 @@ Route::get('/user', function (Request $request) {
         'user' => $request->user(),
     ]);
 })->name('user');
-Route::put('/user/update/{id}', [UserController::class, 'update']);
+Route::put('/user/update/info/{id}', [UserController::class, 'updateInfo']);
+Route::put('/user/update/password/{id}', [UserController::class, 'updatePassword']);
 
 // Groupe de routes pour les préparations
 Route::prefix('preparations')->name('preparations.')->group(function () {
