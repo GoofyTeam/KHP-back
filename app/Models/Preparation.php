@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasSearchScope;
 use App\Traits\HasStockMovements;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Database\Eloquent\Builder;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Preparation extends Model
 {
     /** @use HasFactory<\Database\Factories\PreparationFactory> */
-    use HasFactory, HasStockMovements;
+    use HasFactory, HasSearchScope, HasStockMovements;
 
     protected $guarded = [
         'id',
@@ -41,20 +42,6 @@ class Preparation extends Model
     public function scopeForCompany(Builder $q): Builder
     {
         return $q->where('company_id', auth()->user()->company_id);
-    }
-
-    /**
-     * Search preparations by name, ignoring accents and case.
-     *
-     * @param  string  $search
-     */
-    public function scopeSearch(Builder $query, $search): Builder
-    {
-        if ($search) {
-            return $query->whereRaw('unaccent(name) ILIKE unaccent(?)', ["%{$search}%"]);
-        }
-
-        return $query;
     }
 
     public function scopeCategoryId($query, $categoryId)

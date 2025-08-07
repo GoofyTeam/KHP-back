@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasSearchScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Category extends Model
 {
     /** @use HasFactory<\Database\Factories\CategoryFactory> */
-    use HasFactory;
+    use HasFactory, HasSearchScope;
 
     protected $guarded = [
         'id',
@@ -35,21 +36,5 @@ class Category extends Model
     public function scopeForCompany($query)
     {
         return $query->where('company_id', auth()->user()->company_id);
-    }
-
-    /**
-     * Search categories by name, ignoring accents and case.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $search
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeSearch($query, $search)
-    {
-        if ($search) {
-            return $query->whereRaw('unaccent(name) ILIKE unaccent(?)', ["%{$search}%"]);
-        }
-
-        return $query;
     }
 }
