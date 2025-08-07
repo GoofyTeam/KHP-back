@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasSearchScope;
 use App\Traits\HasStockMovements;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Ingredient extends Model
 {
     /** @use HasFactory<\Database\Factories\IngredientFactory> */
-    use HasFactory, HasStockMovements;
+    use HasFactory, HasSearchScope, HasStockMovements;
 
     protected $guarded = [
         'id',
@@ -40,22 +41,6 @@ class Ingredient extends Model
     public function scopeForCompany($query)
     {
         return $query->where('company_id', auth()->user()->company_id);
-    }
-
-    /**
-     * Search ingredients by name.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $search
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeSearch($query, $search)
-    {
-        if ($search) {
-            return $query->whereRaw('unaccent(name) ILIKE unaccent(?)', ["%{$search}%"]);
-        }
-
-        return $query;
     }
 
     public function scopeLocationId($query, $locationId)
