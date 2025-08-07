@@ -19,9 +19,9 @@ trait HasSearchScope
 
             return $query->where(function ($q) use ($search) {
                 // Recherche par contenu (sous-chaîne)
-                $q->whereRaw("unaccent(name) ILIKE unaccent(?)", ["%{$search}%"])
+                $q->whereRaw('unaccent(name) ILIKE unaccent(?)', ["%{$search}%"])
                     // Recherche par similarité globale avec un seuil abaissé
-                    ->orWhereRaw("similarity(unaccent(name), unaccent(?)) > 0.2", [$search])
+                    ->orWhereRaw('similarity(unaccent(name), unaccent(?)) > 0.2', [$search])
                     // Recherche de mots individuels avec plusieurs approches
                     ->orWhereRaw("EXISTS (
                         SELECT 1
