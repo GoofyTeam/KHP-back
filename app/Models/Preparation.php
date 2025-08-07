@@ -60,7 +60,7 @@ class Preparation extends Model
     public function scopeCategoryId($query, $categoryId)
     {
         return $query->whereHas('categories', function ($q) use ($categoryId) {
-            $q->where('id', $categoryId);
+            $q->where('categories.id', $categoryId);
         });
     }
 
@@ -70,7 +70,7 @@ class Preparation extends Model
     public function scopeLocationId($query, $locationId)
     {
         return $query->whereHas('locations', function ($q) use ($locationId) {
-            $q->where('id', $locationId);
+            $q->where('locations.id', $locationId);
         });
     }
 
