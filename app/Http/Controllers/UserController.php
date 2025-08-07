@@ -8,34 +8,34 @@ use Illuminate\Support\Facades\Hash;
 class UserController extends Controller
 {
     public function updateInfo(Request $request)
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    $validatedData = $request->validate([
-        'name' => 'nullable|string|max:255',
-        'email' => 'nullable|email|unique:users,email,' . $user->id,
-    ]);
+        $validatedData = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:users,email,'.$user->id,
+        ]);
 
-    // Mise à jour uniquement des champs réellement envoyés et non vides
-    $dataToUpdate = [];
+        // Mise à jour uniquement des champs réellement envoyés et non vides
+        $dataToUpdate = [];
 
-    if ($request->filled('name')) {
-        $dataToUpdate['name'] = $validatedData['name'];
+        if ($request->filled('name')) {
+            $dataToUpdate['name'] = $validatedData['name'];
+        }
+
+        if ($request->filled('email')) {
+            $dataToUpdate['email'] = $validatedData['email'];
+        }
+
+        if (! empty($dataToUpdate)) {
+            $user->update($dataToUpdate);
+        }
+
+        return response()->json([
+            'message' => 'User information updated successfully',
+            'user' => $user->fresh(),
+        ]);
     }
-
-    if ($request->filled('email')) {
-        $dataToUpdate['email'] = $validatedData['email'];
-    }
-
-    if (!empty($dataToUpdate)) {
-        $user->update($dataToUpdate);
-    }
-
-    return response()->json([
-        'message' => 'User information updated successfully',
-        'user' => $user->fresh()
-    ]);
-}
 
     public function updatePassword(Request $request)
     {
