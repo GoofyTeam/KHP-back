@@ -23,6 +23,17 @@ type Preparation {
             resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@quantityByLocation"
         )
 
+    "Historique des mouvements de stock pour cette préparation"
+    stockMovements: [StockMovement!]! @morphMany
+
+    withdrawals_today_count: Int!
+
+    "Number of withdrawals for this ingredient today."
+    withdrawals_this_week_count: Int!
+
+    "Number of withdrawals for this ingredient this week."
+    withdrawals_this_month_count: Int!
+
     "When the preparation was created."
     created_at: DateTime!
 
@@ -36,6 +47,21 @@ type PreparationQuantity {
 
     "La localisation de ce stock."
     location: Location!
+}
+
+enum PreparationOrderByField {
+    ID @enum(value: "id")
+    NAME @enum(value: "name")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+    WITHDRAWALS_TODAY @enum(value: "withdrawals_today_count")
+    WITHDRAWALS_THIS_WEEK @enum(value: "withdrawals_this_week_count")
+    WITHDRAWALS_THIS_MONTH @enum(value: "withdrawals_this_month_count")
+}
+
+input PreparationOrderByClause {
+    column: PreparationOrderByField!
+    order: SortOrder! = ASC
 }
 
 extend type Query @guard {
@@ -52,7 +78,14 @@ extend type Query @guard {
 
         "Filtre par identifiant d'emplacement"
         locationId: ID @scope(name: "locationId")
-    ): [Preparation!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+        "Options de tri des préparations"
+        orderBy: [PreparationOrderByClause!] @orderBy
+    ): [Preparation!]!
+        @paginate(
+            defaultCount: 10
+            scopes: ["forCompany", "withWithdrawalCounts"]
+        )
 
     "Trouve une preparation (et seulement si elle appartient à ma company)"
     preparation(

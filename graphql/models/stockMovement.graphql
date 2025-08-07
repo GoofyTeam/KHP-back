@@ -1,0 +1,84 @@
+"Représente un mouvement de stock d'un ingrédient ou d'une préparation."
+type StockMovement {
+    "Identifiant unique."
+    id: ID!
+
+    "Type d'entité concernée par ce mouvement (ingredient ou preparation)."
+    trackable_type: String!
+
+    "ID de l'entité concernée."
+    trackable_id: ID!
+
+    "L'emplacement où le mouvement a eu lieu."
+    location: Location! @belongsTo
+
+    "L'entreprise à laquelle appartient ce mouvement."
+    company: Company! @belongsTo
+
+    "L'utilisateur qui a effectué l'opération."
+    user: User @belongsTo
+
+    "Type de mouvement: 'addition' ou 'withdrawal'."
+    type: String!
+
+    "Quantité concernée par le mouvement (toujours positive)."
+    quantity: Float!
+
+    "Quantité avant le mouvement."
+    quantity_before: Float
+
+    "Quantité après le mouvement."
+    quantity_after: Float
+
+    "Date et heure de création du mouvement."
+    created_at: DateTime!
+
+    "Date et heure de dernière mise à jour du mouvement."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les mouvements de stock pour l'entreprise actuelle."
+    stockMovements(
+        "Filtre par type de mouvement."
+        type: String @eq
+
+        "Filtre par ID d'emplacement."
+        location_id: ID @eq
+
+        "Filtre par type d'entité concernée."
+        trackable_type: String @eq
+
+        "Filtre par ID d'entité concernée."
+        trackable_id: ID @eq
+
+        "Filtre par date de début."
+        start_date: DateTime @where(operator: ">=", key: "created_at")
+
+        "Filtre par date de fin."
+        end_date: DateTime @where(operator: "<=", key: "created_at")
+
+        "Options de tri des résultats."
+        orderBy: [StockMovementOrderByClause!] @orderBy
+    ): [StockMovement!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+}
+
+"Options de tri pour les mouvements de stock."
+input StockMovementOrderByClause {
+    "Champ sur lequel effectuer le tri."
+    field: StockMovementOrderByField!
+
+    "Direction du tri."
+    order: SortOrder!
+}
+
+"Champs disponibles pour le tri des mouvements de stock."
+enum StockMovementOrderByField {
+    ID @enum(value: "id")
+    TYPE @enum(value: "type")
+    QUANTITY @enum(value: "quantity")
+    QUANTITY_BEFORE @enum(value: "quantity_before")
+    QUANTITY_AFTER @enum(value: "quantity_after")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}

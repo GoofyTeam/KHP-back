@@ -21,11 +21,45 @@ type Ingredient {
     image_url: String
         @field(resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@imageUrl")
 
+    "Historique des mouvements de stock pour cet ingrédient"
+    stockMovements: [StockMovement!]! @morphMany
+
+    withdrawals_today_count: Int!
+
+    "Number of withdrawals for this ingredient today."
+    withdrawals_this_week_count: Int!
+
+    "Number of withdrawals for this ingredient this week."
+    withdrawals_this_month_count: Int!
+
     "When the ingredient was created."
     created_at: DateTime!
 
     "When the ingredient was last updated."
     updated_at: DateTime!
+}
+
+enum IngredientOrderByField {
+    ID @enum(value: "id")
+    NAME @enum(value: "name")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+    WITHDRAWALS_TODAY @enum(value: "withdrawals_today_count")
+    WITHDRAWALS_THIS_WEEK @enum(value: "withdrawals_this_week_count")
+    WITHDRAWALS_THIS_MONTH @enum(value: "withdrawals_this_month_count")
+}
+
+input IngredientOrderByClause {
+    column: IngredientOrderByField!
+    order: SortOrder! = ASC
+}
+
+type IngredientQuantity {
+    "Le stock de l'ingrédient."
+    quantity: Float!
+
+    "La localisation de ce stock."
+    location: Location!
 }
 
 extend type Query @guard {
@@ -39,7 +73,14 @@ extend type Query @guard {
 
         locationId: ID @scope(name: "locationId")
         categoryId: ID @scope(name: "categoryId")
-    ): [Ingredient!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+        "Options de tri des ingrédients"
+        orderBy: [IngredientOrderByClause!] @orderBy
+    ): [Ingredient!]!
+        @paginate(
+            defaultCount: 10
+            scopes: ["forCompany", "withWithdrawalCounts"]
+        )
 
     "Find a single ingredient (only if it belongs to the current company)."
     ingredient(
@@ -48,12 +89,4 @@ extend type Query @guard {
         "Search by ingredient name."
         name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
     ): Ingredient @find(scopes: ["forCompany"])
-}
-
-type IngredientQuantity {
-    "Le stock de l’ingrédient."
-    quantity: Float!
-
-    "La localisation de ce stock."
-    location: Location!
 }

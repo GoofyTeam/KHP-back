@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasStockMovements;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Preparation extends Model
 {
     /** @use HasFactory<\Database\Factories\PreparationFactory> */
-    use HasFactory;
+    use HasFactory, HasStockMovements;
 
     protected $guarded = [
         'id',
@@ -80,6 +82,7 @@ class Preparation extends Model
     public function locations(): BelongsToMany
     {
         return $this->belongsToMany(Location::class)
+            ->using(LocationPreparation::class)
             ->withPivot('quantity')
             ->withTimestamps();
     }
@@ -88,5 +91,32 @@ class Preparation extends Model
     {
         return $this->belongsToMany(Category::class, 'category_preparation')
             ->withTimestamps();
+    }
+
+    /**
+     * Injecte trois alias de compteurs de retraits pour tri et affichage.
+     */
+    public function scopeWithWithdrawalCounts($query)
+    {
+        $now = CarbonImmutable::now();
+
+        return $query->withCount([
+            'stockMovements as withdrawals_today_count' => function ($q) use ($now) {
+                $q->where('type', 'withdrawal')
+                    ->whereDate('created_at', $now->toDateString());
+            },
+            'stockMovements as withdrawals_this_week_count' => function ($q) use ($now) {
+                $q->where('type', 'withdrawal')
+                    ->whereBetween('created_at', [
+                        $now->startOfWeek()->toDateTimeString(),
+                        $now->endOfWeek()->toDateTimeString(),
+                    ]);
+            },
+            'stockMovements as withdrawals_this_month_count' => function ($q) use ($now) {
+                $q->where('type', 'withdrawal')
+                    ->whereMonth('created_at', $now->month)
+                    ->whereYear('created_at', $now->year);
+            },
+        ]);
     }
 }
