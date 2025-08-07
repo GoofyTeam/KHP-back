@@ -63,8 +63,15 @@ class IngredientSeeder extends Seeder
     {
         $company = Company::where('name', $name)->firstOrFail();
 
-        foreach ($company->locations as $loc) {
-            $this->createIngredients($company->id, $loc->id, $perLocation, $images);
+        $ingredients = $this->createIngredients($company->id, $perLocation, $images);
+
+        foreach ($ingredients as $ingredient) {
+            $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
+            foreach ($randomLocations as $location) {
+                $ingredient->locations()->attach($location->id, [
+                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 chance d'être out of stock, sinon entre 0.50 et 15.99
+                ]);
+            }
         }
     }
 
@@ -73,15 +80,24 @@ class IngredientSeeder extends Seeder
         Company::where('name', '!=', $exclude)
             ->get()
             ->each(
-                fn ($company) => $company->locations->each(
-                    fn ($loc) => $this->createIngredients($company->id, $loc->id, $perLocation, $images)
-                )
+                function (Company $company) use ($perLocation, $images) {
+                    $ingredients = $this->createIngredients($company->id, $perLocation, $images);
+
+                    foreach ($ingredients as $ingredient) {
+                        $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
+                        foreach ($randomLocations as $location) {
+                            $ingredient->locations()->attach($location->id, [
+                                'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 chance d'être out of stock, sinon entre 0.50 et 15.99
+                            ]);
+                        }
+                    }
+                }
             );
     }
 
-    private function createIngredients(int $companyId, int $locationId, int $count, array $images): void
+    private function createIngredients(int $companyId, int $count, array $images): array
     {
-        $allLocations = \App\Models\Location::where('company_id', $companyId)->get();
+        $ingredients = [];
 
         for ($i = 0; $i < $count; $i++) {
             $upload = $images[array_rand($images)];
@@ -94,17 +110,9 @@ class IngredientSeeder extends Seeder
             $cat = Category::inRandomOrder()->first();
             $ingredient->categories()->attach($cat->id);
 
-            // Attache 2 à 4 locations aléatoires
-            $usedLocations = $allLocations->random(min($allLocations->count(), rand(2, 4)));
-
-            $locationData = [];
-            foreach ($usedLocations as $loc) {
-                $locationData[$loc->id] = [
-                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 out of stock
-                ];
-            }
-
-            $ingredient->locations()->attach($locationData);
+            $ingredients[] = $ingredient;
         }
+
+        return $ingredients;
     }
 }
