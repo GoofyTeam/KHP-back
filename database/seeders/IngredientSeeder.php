@@ -81,6 +81,8 @@ class IngredientSeeder extends Seeder
 
     private function createIngredients(int $companyId, int $locationId, int $count, array $images): void
     {
+        $allLocations = \App\Models\Location::where('company_id', $companyId)->get();
+
         for ($i = 0; $i < $count; $i++) {
             $upload = $images[array_rand($images)];
 
@@ -92,9 +94,17 @@ class IngredientSeeder extends Seeder
             $cat = Category::inRandomOrder()->first();
             $ingredient->categories()->attach($cat->id);
 
-            $ingredient->locations()->attach($locationId, [
-                'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 chance d'être out of stock, sinon entre 0.50 et 15.99
-            ]);
+            // Attache 2 à 4 locations aléatoires
+            $usedLocations = $allLocations->random(min($allLocations->count(), rand(2, 4)));
+
+            $locationData = [];
+            foreach ($usedLocations as $loc) {
+                $locationData[$loc->id] = [
+                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 out of stock
+                ];
+            }
+
+            $ingredient->locations()->attach($locationData);
         }
     }
 }
