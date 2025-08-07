@@ -17,13 +17,13 @@ class Category extends Model
 
     public function ingredients(): BelongsToMany
     {
-        return $this->belongsToMany(Ingredient::class, 'category_ingredient')
+        return $this->belongsToMany(Ingredient::class, 'category_ingredient', 'category_id', 'ingredient_id')
             ->withTimestamps();
     }
 
     public function preparations(): BelongsToMany
     {
-        return $this->belongsToMany(Preparation::class, 'category_preparation')
+        return $this->belongsToMany(Preparation::class, 'category_preparation', 'category_id', 'preparation_id')
             ->withTimestamps();
     }
 
