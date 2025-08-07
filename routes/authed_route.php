@@ -4,6 +4,7 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LocationTypeController;
 use App\Http\Controllers\PreparationController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +15,12 @@ Route::get('/user', function (Request $request) {
         'user' => $request->user(),
     ]);
 })->name('user');
+
+// Groupe de routes pour les utilisateurs
+Route::prefix('user')->name('user.')->group(function () {
+    Route::put('/update/info', [UserController::class, 'updateInfo'])->name('update.info');
+    Route::put('/update/password', [UserController::class, 'updatePassword'])->name('update.password');
+});
 
 // Groupe de routes pour les préparations
 Route::prefix('preparations')->name('preparations.')->group(function () {
