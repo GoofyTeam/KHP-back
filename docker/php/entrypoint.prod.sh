@@ -48,16 +48,26 @@ fi
 
 # Génération de la clé APP_KEY si inexistante
 if ! grep -q "APP_KEY=.\+" "$WEB_ROOT/.env"; then
-  php "$WEB_ROOT/artisan" key:generate
+  php artisan key:generate --force
   info "Generated application key"
 fi
 
+# Regénérer la config Laravel avec les variables runtime
+info "Clearing and caching Laravel config..."
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+php artisan cache:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+info "Laravel config regenerated with runtime ENV."
 
 # Attendre la disponibilité de la base de données
 info "Waiting for database connection to be ready..."
 DB_READY=0
 for i in $(seq 1 "$MAX_RETRIES"); do
-  if php "$WEB_ROOT/artisan" db:show >/dev/null 2>&1; then
+  if php artisan db:show >/dev/null 2>&1; then
     info "Database connection successful. Running migrations..."
     DB_READY=1
     break
@@ -69,7 +79,7 @@ done
 
 # Lancer les migrations
 if [[ "$DB_READY" -eq 1 ]]; then
-  php "$WEB_ROOT/artisan" migrate --force
+  php artisan migrate --force
   info "Database migrations completed successfully."
 else
   fatal "Database connection failed after $MAX_RETRIES attempts. Exiting..."
@@ -90,10 +100,8 @@ for i in $(seq 1 "$MAX_RETRIES"); do
 done
 
 if [[ "$MINIO_READY" -eq 1 ]]; then
-  # Configurer le client mc
   mc alias set myminio http://${MINIO_HOST}:${MINIO_PORT} "${MINIO_USER}" "${MINIO_PASSWORD}"
 
-  # Créer le bucket s'il n'existe pas
   if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
     mc mb myminio/${MINIO_BUCKET}
     info "Created MinIO bucket: ${MINIO_BUCKET}"
