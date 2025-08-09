@@ -1,107 +1,138 @@
 #!/usr/bin/env bash
-
 set -Eeuo pipefail
 
-#=== LOGGING FUNCTIONS =========================================
-info() {
-  echo "[INFO]    $*"
-}
+#=== LOGGING ===================================================
+info()    { echo "[INFO]    $*"; }
+warning() { echo "[WARNING] $*"; }
+fatal()   { echo "[ERROR]   $*" >&2; exit 1; }
 
-warning() {
-  echo "[WARNING] $*"
-}
-
-fatal() {
-  echo "[ERROR]   $*" >&2
-  exit 1
-}
-
-#=== GLOBAL VARIABLES ==========================================
+#=== GLOBALS ===================================================
 WEB_ROOT="/var/www/html"
 SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
-MAX_RETRIES=10
+MAX_RETRIES=20
 RETRY_DELAY=10
 
-#=== FUNCTION TO CHECK IF COMMAND EXISTS =======================
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
+command_exists() { command -v "$1" >/dev/null 2>&1; }
+artisan() { php artisan "$@" --no-ansi --no-interaction; }
 
-#=== START SCRIPT ==============================================
+#=== PREP (perms + git safe dir) ===============================
+info "Fixing permissions and Git safe directory..."
+chown -R www-data:www-data "$WEB_ROOT" || true
+git config --global --add safe.directory "$WEB_ROOT" || true
+export COMPOSER_ALLOW_SUPERUSER=1
 
-# Installation des dépendances Composer
-if [[ -f "$WEB_ROOT/composer.json" ]]; then
-  if command_exists composer; then
-    info "Composer file found, installing dependencies..."
-
-    cd "$WEB_ROOT" || exit
-
-    composer install --no-interaction --no-progress --no-suggest --optimize-autoloader --no-dev
-
-    info "Composer dependencies installed"
-  else
-    warning "composer command not found, skipping Composer install."
-  fi
+#=== COMPOSER ==================================================
+if [[ -f "$WEB_ROOT/composer.json" ]] && command_exists composer; then
+  info "Installing Composer dependencies..."
+  cd "$WEB_ROOT"
+  composer install --no-interaction --no-progress --optimize-autoloader --no-dev
+  info "Composer dependencies installed"
 else
-  info "composer.json not found, skipping Composer step."
+  info "Composer not found or composer.json missing, skipping."
 fi
 
-# Génération de la clé APP_KEY si inexistante
-if ! grep -q "APP_KEY=.\+" "$WEB_ROOT/.env"; then
-  php "$WEB_ROOT/artisan" key:generate
-  info "Generated application key"
+#=== APP_KEY (NE PAS GENERER EN PROD) ==========================
+if [[ -z "${APP_KEY:-}" ]]; then
+  warning "APP_KEY is NOT set in environment! Set it via Kubernetes Secret and redeploy."
 fi
 
+#=== CLEAR CACHES EARLY ========================================
+info "Clearing Laravel caches early (config/route/view only)..."
+artisan config:clear || true
+artisan route:clear  || true
+artisan view:clear   || true
 
-# Attendre la disponibilité de la base de données
-info "Waiting for database connection to be ready..."
+# Si le store est Redis ou file, on peut clear le cache applicatif aussi.
+CACHE_STORE_SAFE="${CACHE_STORE:-file}"
+if [[ "$CACHE_STORE_SAFE" != "database" ]]; then
+  info "Early cache:clear (store=$CACHE_STORE_SAFE)"
+  artisan cache:clear || true
+else
+  info "Skipping early cache:clear because CACHE_STORE=database"
+fi
+
+#=== DEBUG DB (env + réel Laravel) =============================
+info "DB target (env) → ${DB_CONNECTION:-}(host=${DB_HOST:-}:${DB_PORT:-}, db=${DB_DATABASE:-}, user=${DB_USERNAME:-})"
+EFFECTIVE_DB_HOST="$(php artisan tinker --execute='echo config("database.connections.pgsql.host");' --no-ansi 2>/dev/null || true)"
+info "Effective Laravel DB host: ${EFFECTIVE_DB_HOST:-<unknown>}"
+
+#=== WAIT FOR DATABASE (PDO only) ==============================
+info "Quick PDO check (raw, before Laravel)..."
 DB_READY=0
 for i in $(seq 1 "$MAX_RETRIES"); do
-  if php "$WEB_ROOT/artisan" db:show >/dev/null 2>&1; then
-    info "Database connection successful. Running migrations..."
+  if php -r '
+    $h=getenv("DB_HOST"); $p=getenv("DB_PORT")?:5432; $d=getenv("DB_DATABASE");
+    $u=getenv("DB_USERNAME"); $w=getenv("DB_PASSWORD");
+    $dsn="pgsql:host=$h;port=$p;dbname=$d";
+    try { new PDO($dsn,$u,$w,[PDO::ATTR_TIMEOUT=>3]); exit(0); }
+    catch(Exception $e){ fwrite(STDERR,$e->getMessage().PHP_EOL); exit(2); }
+  '; then
+    info "Database is reachable (PDO_OK)."
     DB_READY=1
     break
   else
-    warning "Database connection failed. Retrying in $RETRY_DELAY seconds... (Attempt $i/$MAX_RETRIES)"
+    warning "Database not reachable. Retrying in ${RETRY_DELAY}s... (${i}/${MAX_RETRIES})"
+    echo "[DEBUG] Shell DB_HOST=${DB_HOST:-} DB_DATABASE=${DB_DATABASE:-} DB_USERNAME=${DB_USERNAME:-}"
     sleep "$RETRY_DELAY"
   fi
 done
 
-# Lancer les migrations
-if [[ "$DB_READY" -eq 1 ]]; then
-  php "$WEB_ROOT/artisan" migrate --force
-  info "Database migrations completed successfully."
-else
-  fatal "Database connection failed after $MAX_RETRIES attempts. Exiting..."
+if [[ "$DB_READY" -ne 1 ]]; then
+  fatal "Database connection failed after $MAX_RETRIES attempts."
 fi
 
-# Attendre que MinIO soit disponible
-info "Waiting for MinIO to be ready..."
-MINIO_READY=0
-for i in $(seq 1 "$MAX_RETRIES"); do
-  if curl -s "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" > /dev/null; then
-    info "MinIO is ready."
-    MINIO_READY=1
-    break
-  else
-    warning "MinIO not ready. Retrying in $RETRY_DELAY seconds... (Attempt $i/$MAX_RETRIES)"
-    sleep "$RETRY_DELAY"
-  fi
-done
+#=== RUN MIGRATIONS (direct, sans pre-check) ===================
+info "Running migrations..."
+if ! OUTPUT=$(artisan migrate --force -vvv 2>&1); then
+  echo "$OUTPUT"
+  fatal "Migrations failed."
+fi
+info "Migrations completed."
 
-if [[ "$MINIO_READY" -eq 1 ]]; then
-  # Configurer le client mc
-  mc alias set myminio http://${MINIO_HOST}:${MINIO_PORT} "${MINIO_USER}" "${MINIO_PASSWORD}"
-
-  # Créer le bucket s'il n'existe pas
-  if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
-    mc mb myminio/${MINIO_BUCKET}
-    info "Created MinIO bucket: ${MINIO_BUCKET}"
-  else
-    info "MinIO bucket ${MINIO_BUCKET} already exists."
-  fi
-else
-  warning "MinIO is not available. Skipping bucket creation."
+#=== CACHE STORE=database : maintenant possible =================
+if [[ "$CACHE_STORE_SAFE" == "database" ]]; then
+  # Assure-toi d'avoir la migration 'cache' committée si tu utilises ce store.
+  info "Clearing cache on database store (post-migrate)..."
+  artisan cache:clear || true
 fi
 
-supervisord -c "$SUPERVISOR_CONF"
+#=== REBUILD CACHES ============================================
+info "Rebuilding Laravel caches..."
+artisan config:cache || true
+artisan route:cache  || true
+artisan view:cache   || true
+info "Laravel caches are ready."
+
+#=== MINIO (facultatif) ========================================
+if [[ -n "${MINIO_HOST:-}" && -n "${MINIO_PORT:-}" ]]; then
+  info "Waiting for MinIO..."
+  MINIO_READY=0
+  for i in $(seq 1 "$MAX_RETRIES"); do
+    if curl -fsS "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" >/dev/null; then
+      info "MinIO is ready."
+      MINIO_READY=1
+      break
+    else
+      warning "MinIO not ready. Retrying in ${RETRY_DELAY}s... (${i}/${MAX_RETRIES})"
+      sleep "$RETRY_DELAY"
+    fi
+  done
+
+  if [[ "$MINIO_READY" -eq 1 && -n "${MINIO_USER:-}" && -n "${MINIO_PASSWORD:-}" && -n "${MINIO_BUCKET:-}" ]]; then
+    mc alias set myminio "http://${MINIO_HOST}:${MINIO_PORT}" "${MINIO_USER}" "${MINIO_PASSWORD}" || true
+    if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
+      mc mb "myminio/${MINIO_BUCKET}" || true
+      info "Ensured MinIO bucket: ${MINIO_BUCKET}"
+    else
+      info "MinIO bucket ${MINIO_BUCKET} already exists."
+    fi
+  else
+    warning "MinIO not ready or creds/bucket not set — skipping bucket ensure."
+  fi
+else
+  warning "MINIO_HOST or MINIO_PORT not set — skipping MinIO checks."
+fi
+
+#=== START SUPERVISORD =========================================
+info "Starting supervisord..."
+exec supervisord -c "$SUPERVISOR_CONF"
