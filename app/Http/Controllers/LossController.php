@@ -1,34 +1,67 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Models\Location;
 use App\Models\Loss;
-use App\Services\LossService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LossController extends Controller
 {
-    public function index()
+    /**
+     * Enregistrer une perte
+     */
+    public function store(Request $request)
     {
-        return Loss::with(['ingredient', 'location', 'company'])->paginate(25);
-    }
-
-    public function store(Request $request, LossService $service)
-    {
-        $payload = $request->validate([
-            'company_id' => 'required|exists:companies,id',
-            'ingredient_type' => 'required|string',
-            'ingredient_id' => 'required|integer',
-            'location_id' => 'required|exists:locations,id',
+        $data = $request->validate([
+            'entity_type' => 'required|string', // ex: App\Models\Ingredient
+            'entity_id' => 'required|integer',
+            'location_id' => 'required|integer|exists:locations,id',
             'quantity' => 'required|numeric|min:0.01',
-            'unit' => 'nullable|string',
-            'reason' => 'nullable|string',
-            'comment' => 'nullable|string',
+            'reason' => 'nullable|string|max:255',
         ]);
 
-        $loss = $service->createLoss($payload);
+        DB::transaction(function () use ($data) {
+            // Récupérer l'entité réelle
+            $entityClass = $data['entity_type'];
+            $entity = $entityClass::findOrFail($data['entity_id']);
 
-        return response()->json($loss->load(['ingredient', 'location']), 201);
+            // Diminuer le stock dans la localisation
+            $location = Location::findOrFail($data['location_id']);
+            $currentQty = $entity->locations()->where('location_id', $location->id)->first()->pivot->quantity ?? 0;
+            $entity->locations()->updateExistingPivot($location->id, [
+                'quantity' => max(0, $currentQty - $data['quantity']),
+            ]);
+
+            // Enregistrer la perte
+            Loss::create($data);
+        });
+
+        return response()->json(['message' => 'Perte enregistrée avec succès'], 201);
+    }
+
+    /**
+     * Supprimer une perte et restaurer le stock
+     */
+    public function destroy(Loss $loss)
+    {
+        DB::transaction(function () use ($loss) {
+            // Récupérer l'entité réelle
+            $entityClass = $loss->entity_type;
+            $entity = $entityClass::findOrFail($loss->entity_id);
+
+            // Restaurer le stock dans la localisation
+            $location = Location::findOrFail($loss->location_id);
+            $currentQty = $entity->locations()->where('location_id', $location->id)->first()->pivot->quantity ?? 0;
+            $entity->locations()->updateExistingPivot($location->id, [
+                'quantity' => $currentQty + $loss->quantity,
+            ]);
+
+            // Supprimer la perte
+            $loss->delete();
+        });
+
+        return response()->json(['message' => 'Perte supprimée et stock restauré']);
     }
 }

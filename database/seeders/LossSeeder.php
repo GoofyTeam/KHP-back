@@ -29,7 +29,7 @@ class LossSeeder extends Seeder
 
                 Loss::factory()->create([
                     'company_id' => $company->id,
-                    'entity_type' => \App\Models\Ingredient::class,
+                    'entity_type' => Ingredient::class,
                     'entity_id' => $ingredient->id,
                     'location_id' => $location->id,
                 ]);

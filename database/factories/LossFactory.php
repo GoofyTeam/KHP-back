@@ -20,11 +20,10 @@ class LossFactory extends Factory
 
         return [
             'company_id' => $company->id,
-            'ingredient_type' => \App\Models\Ingredient::class,
-            'ingredient_id' => $ingredient->id,
+            'entity_type' => Ingredient::class,
+            'entity_id' => $ingredient->id,
             'location_id' => $location->id,
             'quantity' => $this->faker->randomFloat(2, 0.1, 5),
-            'unit' => 'portion',
             'reason' => 'casse',
             'comment' => $this->faker->sentence(),
         ];

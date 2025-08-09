@@ -4,26 +4,32 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLossesTable extends Migration
+return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::create('losses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            // polymorphic
-            $table->morphs('ingredient');
-            $table->foreignId('location_id')->constrained('locations')->cascadeOnDelete();
+
+            // Polymorphic fields
+            $table->string('entity_type');
+            $table->unsignedBigInteger('entity_id');
+
+            // Localisation
+            $table->foreignId('location_id')->constrained()->cascadeOnDelete();
+
+            // Quantité perdue
             $table->decimal('quantity', 10, 2);
-            $table->string('unit')->nullable(); // optional unit (g, ml, portion...)
-            $table->string('reason')->nullable(); // enum-like key (from config)
-            $table->text('comment')->nullable(); // libre pour details
+
+            // Raison
+            $table->string('reason')->nullable();
+
             $table->timestamps();
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('losses');
     }
-}
+};
