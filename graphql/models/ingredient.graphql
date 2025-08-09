@@ -71,8 +71,11 @@ extend type Query @guard {
         "Filter by unit of measurement. Accepts SQL LIKE wildcards `%` and `_`."
         unit: String @where(operator: "like")
 
-        locationId: ID @scope(name: "locationId")
-        categoryId: ID @scope(name: "categoryId")
+        "Filtrer par un ou plusieurs identifiants d'emplacements."
+        locationIds: [ID!] @scope(name: "locationId")
+
+        "Filtrer par une ou plusieurs catégories."
+        categoryIds: [ID!] @scope(name: "categoryId")
 
         "Options de tri des ingrédients"
         orderBy: [IngredientOrderByClause!] @orderBy

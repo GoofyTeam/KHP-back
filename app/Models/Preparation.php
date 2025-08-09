@@ -44,20 +44,36 @@ class Preparation extends Model
         return $q->where('company_id', auth()->user()->company_id);
     }
 
-    public function scopeCategoryId($query, $categoryId)
+    public function scopeCategoryId($query, $categoryIds)
     {
-        return $query->whereHas('categories', function ($q) use ($categoryId) {
-            $q->where('categories.id', $categoryId);
+        if (empty($categoryIds)) {
+            return $query;
+        }
+
+        return $query->whereHas('categories', function ($q) use ($categoryIds) {
+            if (is_array($categoryIds)) {
+                $q->whereIn('categories.id', $categoryIds);
+            } else {
+                $q->where('categories.id', $categoryIds);
+            }
         });
     }
 
     /**
-     * Filtre les préparations par identifiant d'emplacement
+     * Filtre les préparations par identifiants d'emplacements (un ou plusieurs)
      */
-    public function scopeLocationId($query, $locationId)
+    public function scopeLocationId($query, $locationIds)
     {
-        return $query->whereHas('locations', function ($q) use ($locationId) {
-            $q->where('locations.id', $locationId);
+        if (empty($locationIds)) {
+            return $query;
+        }
+
+        return $query->whereHas('locations', function ($q) use ($locationIds) {
+            if (is_array($locationIds)) {
+                $q->whereIn('locations.id', $locationIds);
+            } else {
+                $q->where('locations.id', $locationIds);
+            }
         });
     }
 
