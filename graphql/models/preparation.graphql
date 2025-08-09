@@ -73,11 +73,11 @@ extend type Query @guard {
         "Filtre par unité de mesure avec opérateur LIKE."
         unit: String @where(operator: "like")
 
-        "Filtre par catégorie"
-        categoryId: ID @scope(name: "categoryId")
+        "Filtrer par un ou plusieurs identifiants d'emplacements."
+        locationIds: [ID!] @scope(name: "locationId")
 
-        "Filtre par identifiant d'emplacement"
-        locationId: ID @scope(name: "locationId")
+        "Filtrer par une ou plusieurs catégories."
+        categoryIds: [ID!] @scope(name: "categoryId")
 
         "Options de tri des préparations"
         orderBy: [PreparationOrderByClause!] @orderBy
