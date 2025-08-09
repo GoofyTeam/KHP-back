@@ -3,6 +3,7 @@
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LocationTypeController;
+use App\Http\Controllers\LossController;
 use App\Http\Controllers\PreparationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -50,6 +51,12 @@ Route::prefix('location')->name('location.')->group(function () {
     Route::put('/{id}', [LocationController::class, 'update'])->name('update');
     Route::delete('/{id}', [LocationController::class, 'destroy'])->name('destroy');
     Route::post('/assign-type', [LocationController::class, 'assignType'])->name('assign-type');
+});
+
+// Groupe de routes pour les pertes
+Route::prefix('losses')->name('losses.')->group(function () {
+    Route::post('losses', [LossController::class, 'store']);
+    Route::get('losses', [LossController::class, 'index']);
 });
 
 // Routes utilitaires
