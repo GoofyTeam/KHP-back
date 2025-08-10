@@ -36,17 +36,6 @@ if [[ -z "${APP_KEY:-}" ]]; then
   # On NE génère PAS de clé ici pour éviter toute dépendance à .env
 fi
 
-#=== CACHES LARAVEL ============================================
-info "Refreshing Laravel caches..."
-php artisan config:clear || true
-php artisan route:clear || true
-php artisan view:clear  || true
-php artisan cache:clear || true
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-info "Laravel caches are ready."
-
 #=== DEBUG RAPIDE DB (optionnel, utile en cours de mise au point) ===
 info "DB target → ${DB_CONNECTION:-}(host=${DB_HOST:-}:${DB_PORT:-}, db=${DB_DATABASE:-}, user=${DB_USERNAME:-})"
 
@@ -60,6 +49,7 @@ for i in $(seq 1 "$MAX_RETRIES"); do
     break
   else
     warning "Database not reachable. Retrying in ${RETRY_DELAY}s... (${i}/${MAX_RETRIES})"
+    php -r "echo 'Current DB_HOST=' . env('DB_HOST') . PHP_EOL;"
     sleep "$RETRY_DELAY"
   fi
 done
@@ -72,6 +62,17 @@ if [[ "$DB_READY" -eq 1 ]]; then
 else
   fatal "Database connection failed after $MAX_RETRIES attempts."
 fi
+
+#=== CACHES LARAVEL ============================================
+info "Refreshing Laravel caches..."
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan view:clear  || true
+php artisan cache:clear || true
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+info "Laravel caches are ready."
 
 #=== MINIO (facultatif) ========================================
 if [[ -n "${MINIO_HOST:-}" && -n "${MINIO_PORT:-}" ]]; then
