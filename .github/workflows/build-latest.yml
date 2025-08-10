@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -31,3 +32,15 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           cache: true
           cache-repository: ghcr.io/${{ github.repository }}/cache
+  restart_api:
+    needs: build
+    uses: ./.github/workflows/argocd-restart.yml
+    with:
+      app: khp-main
+      targets: khp-api
+      namespace: khp-main
+      grpc_web: true
+      wait: true
+    secrets:
+      ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+      ARGOCD_TOKEN: ${{ secrets.ARGOCD_TOKEN }}

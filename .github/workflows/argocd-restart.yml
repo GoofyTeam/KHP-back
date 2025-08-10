@@ -1,0 +1,88 @@
+name: ArgoCD Restart
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        type: string
+        required: true
+        description: "Nom de l'Application Argo CD (ex: khp-main)"
+      targets:
+        type: string
+        required: false
+        default: ""
+        description: "Deployments à redémarrer (séparés par des virgules). Vide => tous."
+      namespace:
+        type: string
+        required: false
+        default: khp-main
+      grpc_web:
+        type: boolean
+        required: false
+        default: true
+      insecure:
+        type: boolean
+        required: false
+        default: false
+      wait:
+        type: boolean
+        required: false
+        default: true
+      timeout:
+        type: string
+        required: false
+        default: "180"
+    secrets:
+      ARGOCD_SERVER:
+        required: true
+      ARGOCD_TOKEN:
+        required: true
+
+concurrency:
+  group: argocd-restart-${{ inputs.app }}
+  cancel-in-progress: true
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Argo CD CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.3/argocd-linux-amd64
+          chmod +x argocd && sudo mv argocd /usr/local/bin/argocd
+
+      # Laisse GHCR propager le digest
+      - name: Cooldown
+        run: sleep 20
+
+      - name: Restart deployments
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
+        run: |
+          set -euo pipefail
+          FLAGS="--server $ARGOCD_SERVER --auth-token $ARGOCD_TOKEN"
+          [ "${{ inputs.grpc_web }}" = "true" ] && FLAGS="$FLAGS --grpc-web" || true
+          [ "${{ inputs.insecure }}" = "true" ] && FLAGS="$FLAGS --insecure" || true
+
+          if [ -z "${{ inputs.targets }}" ]; then
+            argocd $FLAGS app actions run "${{ inputs.app }}" restart --kind Deployment --all
+          else
+            IFS=',' read -ra T <<< "${{ inputs.targets }}"
+            for d in "${T[@]}"; do
+              d="$(echo "$d" | xargs)"  # trim
+              argocd $FLAGS app actions run "${{ inputs.app }}" restart \
+                --kind Deployment --namespace "${{ inputs.namespace }}" --resource-name "$d"
+            done
+          fi
+
+      - name: Wait for health (optional)
+        if: inputs.wait == true
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
+        run: |
+          FLAGS="--server $ARGOCD_SERVER --auth-token $ARGOCD_TOKEN"
+          [ "${{ inputs.grpc_web }}" = "true" ] && FLAGS="$FLAGS --grpc-web" || true
+          [ "${{ inputs.insecure }}" = "true" ] && FLAGS="$FLAGS --insecure" || true
+          argocd $FLAGS app wait "${{ inputs.app }}" --health --timeout "${{ inputs.timeout }}"

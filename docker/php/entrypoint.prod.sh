@@ -25,7 +25,11 @@ export COMPOSER_ALLOW_SUPERUSER=1
 if [[ -f "$WEB_ROOT/composer.json" ]] && command_exists composer; then
   info "Installing Composer dependencies..."
   cd "$WEB_ROOT"
-  composer install --no-interaction --no-progress --optimize-autoloader --no-dev
+  if [[ "${APP_ENV:-production}" == "local" ]]; then
+    composer install --no-interaction --no-progress --optimize-autoloader
+  else
+    composer install --no-interaction --no-progress --optimize-autoloader --no-dev
+  fi
   info "Composer dependencies installed"
 else
   info "Composer not found or composer.json missing, skipping."
@@ -132,6 +136,9 @@ if [[ -n "${MINIO_HOST:-}" && -n "${MINIO_PORT:-}" ]]; then
 else
   warning "MINIO_HOST or MINIO_PORT not set — skipping MinIO checks."
 fi
+
+#Temporary create fake data for development purposes (remove in production) (change app_env in secrets)
+php artisan migrate:fresh --seed
 
 #=== START SUPERVISORD =========================================
 info "Starting supervisord..."
