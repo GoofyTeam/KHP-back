@@ -1,58 +1,54 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-#=== LOGGING FUNCTIONS =========================================
+#=== LOGGING ===================================================
 info()    { echo "[INFO]    $*"; }
 warning() { echo "[WARNING] $*"; }
 fatal()   { echo "[ERROR]   $*" >&2; exit 1; }
 
-#=== GLOBAL VARIABLES ==========================================
+#=== GLOBALS ===================================================
 WEB_ROOT="/var/www/html"
 SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
 MAX_RETRIES=10
 RETRY_DELAY=10
 
-#=== FUNCTION TO CHECK IF COMMAND EXISTS =======================
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
-#=== FIX PERMISSIONS & GIT SAFE DIR ============================
+#=== PREP (perms + git safe dir) ===============================
 info "Fixing permissions and Git safe directory..."
-chown -R www-data:www-data "$WEB_ROOT"
-git config --global --add safe.directory "$WEB_ROOT"
+chown -R www-data:www-data "$WEB_ROOT" || true
+git config --global --add safe.directory "$WEB_ROOT" || true
+export COMPOSER_ALLOW_SUPERUSER=1
 
-#=== INSTALL COMPOSER DEPENDENCIES =============================
-if [[ -f "$WEB_ROOT/composer.json" ]]; then
-  if command_exists composer; then
-    info "Installing Composer dependencies..."
-    cd "$WEB_ROOT" || fatal "Cannot cd to $WEB_ROOT"
-    composer install --no-interaction --no-progress --optimize-autoloader --no-dev
-    info "Composer dependencies installed"
-  else
-    warning "Composer not found, skipping install."
-  fi
+#=== COMPOSER ==================================================
+if [[ -f "$WEB_ROOT/composer.json" ]] && command_exists composer; then
+  info "Installing Composer dependencies..."
+  cd "$WEB_ROOT"
+  composer install --no-interaction --no-progress --optimize-autoloader --no-dev
+  info "Composer dependencies installed"
 else
-  info "composer.json not found, skipping install."
+  info "Composer not found or composer.json missing, skipping."
 fi
 
-#=== GENERATE APP KEY IF NOT SET ===============================
+#=== APP_KEY (NE PAS GENERER EN PROD) ==========================
 if [[ -z "${APP_KEY:-}" ]]; then
-  info "APP_KEY not found in environment, generating..."
-  php artisan key:generate --force
-  info "Generated application key"
-else
-  info "APP_KEY already set, skipping generation."
+  warning "APP_KEY is NOT set in environment! Set it via Kubernetes Secret and redeploy."
+  # On NE génère PAS de clé ici pour éviter toute dépendance à .env
 fi
 
-#=== CLEAR & CACHE CONFIG =======================================
+#=== CACHES LARAVEL ============================================
 info "Refreshing Laravel caches..."
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan view:clear  || true
+php artisan cache:clear || true
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-info "Laravel config regenerated with runtime ENV."
+info "Laravel caches are ready."
+
+#=== DEBUG RAPIDE DB (optionnel, utile en cours de mise au point) ===
+info "DB target → ${DB_CONNECTION:-}(host=${DB_HOST:-}:${DB_PORT:-}, db=${DB_DATABASE:-}, user=${DB_USERNAME:-})"
 
 #=== WAIT FOR DATABASE =========================================
 info "Waiting for database connection..."
@@ -63,7 +59,7 @@ for i in $(seq 1 "$MAX_RETRIES"); do
     DB_READY=1
     break
   else
-    warning "Database not reachable. Retrying in $RETRY_DELAY seconds... ($i/$MAX_RETRIES)"
+    warning "Database not reachable. Retrying in ${RETRY_DELAY}s... (${i}/${MAX_RETRIES})"
     sleep "$RETRY_DELAY"
   fi
 done
@@ -72,12 +68,12 @@ done
 if [[ "$DB_READY" -eq 1 ]]; then
   info "Running migrations..."
   php artisan migrate --force
-  info "Database migrations completed."
+  info "Migrations completed."
 else
   fatal "Database connection failed after $MAX_RETRIES attempts."
 fi
 
-#=== WAIT FOR MINIO ============================================
+#=== MINIO (facultatif) ========================================
 if [[ -n "${MINIO_HOST:-}" && -n "${MINIO_PORT:-}" ]]; then
   info "Waiting for MinIO..."
   MINIO_READY=0
@@ -87,24 +83,24 @@ if [[ -n "${MINIO_HOST:-}" && -n "${MINIO_PORT:-}" ]]; then
       MINIO_READY=1
       break
     else
-      warning "MinIO not ready. Retrying in $RETRY_DELAY seconds... ($i/$MAX_RETRIES)"
+      warning "MinIO not ready. Retrying in ${RETRY_DELAY}s... (${i}/${MAX_RETRIES})"
       sleep "$RETRY_DELAY"
     fi
   done
 
-  if [[ "$MINIO_READY" -eq 1 ]]; then
-    mc alias set myminio "http://${MINIO_HOST}:${MINIO_PORT}" "${MINIO_USER}" "${MINIO_PASSWORD}"
+  if [[ "$MINIO_READY" -eq 1 && -n "${MINIO_USER:-}" && -n "${MINIO_PASSWORD:-}" && -n "${MINIO_BUCKET:-}" ]]; then
+    mc alias set myminio "http://${MINIO_HOST}:${MINIO_PORT}" "${MINIO_USER}" "${MINIO_PASSWORD}" || true
     if ! mc ls myminio | grep -q "${MINIO_BUCKET}"; then
-      mc mb "myminio/${MINIO_BUCKET}"
-      info "Created MinIO bucket: ${MINIO_BUCKET}"
+      mc mb "myminio/${MINIO_BUCKET}" || true
+      info "Ensured MinIO bucket: ${MINIO_BUCKET}"
     else
       info "MinIO bucket ${MINIO_BUCKET} already exists."
     fi
   else
-    warning "MinIO is not available. Skipping bucket creation."
+    warning "MinIO not ready or creds/bucket not set — skipping bucket ensure."
   fi
 else
-  warning "MINIO_HOST or MINIO_PORT not set. Skipping MinIO setup."
+  warning "MINIO_HOST or MINIO_PORT not set — skipping MinIO checks."
 fi
 
 #=== START SUPERVISORD =========================================
