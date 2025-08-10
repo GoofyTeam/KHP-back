@@ -9,7 +9,7 @@ fatal()   { echo "[ERROR]   $*" >&2; exit 1; }
 #=== GLOBALS ===================================================
 WEB_ROOT="/var/www/html"
 SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
-MAX_RETRIES=10
+MAX_RETRIES=20
 RETRY_DELAY=10
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
@@ -36,6 +36,12 @@ if [[ -z "${APP_KEY:-}" ]]; then
   # On NE génère PAS de clé ici pour éviter toute dépendance à .env
 fi
 
+info "Clearing Laravel caches early..."
+php artisan config:clear || true
+php artisan route:clear  || true
+php artisan view:clear   || true
+php artisan cache:clear  || true
+
 #=== DEBUG RAPIDE DB (optionnel, utile en cours de mise au point) ===
 info "DB target → ${DB_CONNECTION:-}(host=${DB_HOST:-}:${DB_PORT:-}, db=${DB_DATABASE:-}, user=${DB_USERNAME:-})"
 
@@ -43,6 +49,7 @@ info "DB target → ${DB_CONNECTION:-}(host=${DB_HOST:-}:${DB_PORT:-}, db=${DB_D
 info "Waiting for database connection..."
 DB_READY=0
 for i in $(seq 1 "$MAX_RETRIES"); do
+  info "Effective Laravel DB host: $(php -r 'echo config("database.connections.pgsql.host");')"
   if php artisan migrate:status >/dev/null 2>&1; then
     info "Database is reachable."
     DB_READY=1
@@ -65,10 +72,6 @@ fi
 
 #=== CACHES LARAVEL ============================================
 info "Refreshing Laravel caches..."
-php artisan config:clear || true
-php artisan route:clear || true
-php artisan view:clear  || true
-php artisan cache:clear || true
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
