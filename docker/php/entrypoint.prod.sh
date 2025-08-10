@@ -49,7 +49,7 @@ for i in $(seq 1 "$MAX_RETRIES"); do
     break
   else
     warning "Database not reachable. Retrying in ${RETRY_DELAY}s... (${i}/${MAX_RETRIES})"
-    php -r "echo 'Current DB_HOST=' . env('DB_HOST') . PHP_EOL;"
+    echo "[DEBUG] Shell DB_HOST=${DB_HOST} DB_DATABASE=${DB_DATABASE} DB_USERNAME=${DB_USERNAME}"
     sleep "$RETRY_DELAY"
   fi
 done
