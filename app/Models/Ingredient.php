@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasLosses;
 use App\Traits\HasSearchScope;
 use App\Traits\HasStockMovements;
 use Carbon\CarbonImmutable;
@@ -13,11 +14,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Ingredient extends Model
 {
     /** @use HasFactory<\Database\Factories\IngredientFactory> */
-    use HasFactory, HasSearchScope, HasStockMovements;
+    use HasFactory, HasLosses, HasSearchScope, HasStockMovements;
 
     protected $guarded = [
         'id',
     ];
+
+    protected static function booted()
+    {
+        static::created(function (Ingredient $ingredient) {
+            $locations = Location::where('company_id', $ingredient->company_id)->pluck('id');
+
+            $syncData = $locations
+                ->mapWithKeys(fn ($id) => [$id => ['quantity' => 0]])
+                ->toArray();
+
+            if (! empty($syncData)) {
+                $ingredient->locations()->syncWithoutDetaching($syncData);
+            }
+        });
+    }
 
     public function company(): BelongsTo
     {

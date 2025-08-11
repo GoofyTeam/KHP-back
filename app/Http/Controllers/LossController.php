@@ -2,66 +2,102 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Loss;
+use App\Models\Preparation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * Controller gérant l'enregistrement et l'annulation des pertes.
+ *
+ * Chaque perte déduit immédiatement la quantité de l'emplacement
+ * concerné et conserve une trace de l'opération.
+ */
 class LossController extends Controller
 {
     /**
-     * Enregistrer une perte
+     * Cas métier : Enregistrement d'une perte de stock
+     *
+     * Use cases :
+     * - Un ingrédient est cassé ou renversé
+     * - Une préparation est jetée suite à une erreur
+     *
+     * Cette méthode vérifie la disponibilité de la quantité, la retire
+     * de l'emplacement spécifié et enregistre la perte avec sa raison.
+     *
+     * @param  Request  $request  Données de la perte
+     * @return JsonResponse Perte créée avec localisation
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'entity_type' => 'required|string', // ex: App\Models\Ingredient
-            'entity_id' => 'required|integer',
-            'location_id' => 'required|integer|exists:locations,id',
-            'quantity' => 'required|numeric|min:0.01',
-            'reason' => 'nullable|string|max:255',
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'trackable_type' => ['required', 'string', 'in:ingredient,preparation'],
+            'trackable_id' => ['required', 'integer'],
+            'location_id' => ['required', 'integer'],
+            'quantity' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['nullable', 'string'],
         ]);
 
-        DB::transaction(function () use ($data) {
-            // Récupérer l'entité réelle
-            $entityClass = $data['entity_type'];
-            $entity = $entityClass::findOrFail($data['entity_id']);
+        $modelClass = $validated['trackable_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
 
-            // Diminuer le stock dans la localisation
-            $location = Location::findOrFail($data['location_id']);
-            $currentQty = $entity->locations()->where('location_id', $location->id)->first()->pivot->quantity ?? 0;
-            $entity->locations()->updateExistingPivot($location->id, [
-                'quantity' => max(0, $currentQty - $data['quantity']),
-            ]);
+        $trackable = $modelClass::where('id', $validated['trackable_id'])
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
 
-            // Enregistrer la perte
-            Loss::create($data);
-        });
+        $location = Location::where('id', $validated['location_id'])
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
 
-        return response()->json(['message' => 'Perte enregistrée avec succès'], 201);
+        try {
+            $loss = $trackable->recordLoss($location, $validated['quantity'], $validated['reason'] ?? null);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+
+        return response()->json([
+            'message' => 'Perte enregistrée avec succès',
+            'loss' => $loss->load('location'),
+        ], 201);
     }
 
     /**
-     * Supprimer une perte et restaurer le stock
+     * Cas métier : Annulation d'une perte enregistrée
+     *
+     * Use cases :
+     * - La perte a été saisie par erreur
+     * - Le produit supposé perdu est retrouvé
+     *
+     * Cette méthode restaure la quantité retirée et supprime l'entrée
+     * de perte correspondante.
+     *
+     * @param  Request  $request  Requête courante
+     * @param  Loss  $loss  Perte à annuler
+     * @return JsonResponse Message de confirmation
      */
-    public function destroy(Loss $loss)
+    public function rollback(Request $request, Loss $loss): JsonResponse
     {
-        DB::transaction(function () use ($loss) {
-            // Récupérer l'entité réelle
-            $entityClass = $loss->entity_type;
-            $entity = $entityClass::findOrFail($loss->entity_id);
+        $user = $request->user();
 
-            // Restaurer le stock dans la localisation
-            $location = Location::findOrFail($loss->location_id);
-            $currentQty = $entity->locations()->where('location_id', $location->id)->first()->pivot->quantity ?? 0;
-            $entity->locations()->updateExistingPivot($location->id, [
-                'quantity' => $currentQty + $loss->quantity,
-            ]);
+        if ($loss->company_id !== $user->company_id) {
+            return response()->json(['message' => 'Loss not found'], 404);
+        }
 
-            // Supprimer la perte
-            $loss->delete();
-        });
+        try {
+            $loss->cancel();
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 400);
+        }
 
-        return response()->json(['message' => 'Perte supprimée et stock restauré']);
+        return response()->json([
+            'message' => 'Perte annulée avec succès',
+        ]);
     }
 }

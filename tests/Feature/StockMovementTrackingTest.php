@@ -55,7 +55,7 @@ class StockMovementTrackingTest extends TestCase
         $newQuantity = 10.5;
 
         // Utiliser updateExistingPivot ou attach selon le cas
-        $this->ingredient->locations()->attach($this->location->id, ['quantity' => $newQuantity]);
+        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => $newQuantity]);
 
         // S'assurer que le mouvement de stock a été enregistré
         $movement = StockMovement::where('trackable_id', $this->ingredient->id)
@@ -78,7 +78,7 @@ class StockMovementTrackingTest extends TestCase
     {
         // D'abord, ajouter l'ingrédient avec une quantité initiale
         $initialQuantity = 5.0;
-        $this->ingredient->locations()->attach($this->location->id, ['quantity' => $initialQuantity]);
+        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => $initialQuantity]);
 
         // Supprimer tout mouvement de stock généré par l'ajout initial
         StockMovement::where('trackable_id', $this->ingredient->id)->delete();
@@ -108,7 +108,7 @@ class StockMovementTrackingTest extends TestCase
     {
         // D'abord, ajouter l'ingrédient avec une quantité initiale
         $initialQuantity = 15.0;
-        $this->ingredient->locations()->attach($this->location->id, ['quantity' => $initialQuantity]);
+        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => $initialQuantity]);
 
         // Supprimer tout mouvement de stock généré par l'ajout initial
         StockMovement::where('trackable_id', $this->ingredient->id)->delete();
@@ -137,7 +137,7 @@ class StockMovementTrackingTest extends TestCase
     {
         // Ajouter une préparation à un emplacement
         $quantity = 3.0;
-        $this->preparation->locations()->attach($this->location->id, ['quantity' => $quantity]);
+        $this->preparation->locations()->updateExistingPivot($this->location->id, ['quantity' => $quantity]);
 
         // Vérifier le mouvement de stock
         $movement = StockMovement::where('trackable_id', $this->preparation->id)
@@ -159,7 +159,7 @@ class StockMovementTrackingTest extends TestCase
     {
         // Ajouter d'abord l'ingrédient
         $initialQuantity = 12.5;
-        $this->ingredient->locations()->attach($this->location->id, ['quantity' => $initialQuantity]);
+        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => $initialQuantity]);
 
         // Supprimer tout mouvement de stock généré par l'ajout initial
         StockMovement::where('trackable_id', $this->ingredient->id)->delete();
@@ -187,7 +187,7 @@ class StockMovementTrackingTest extends TestCase
     {
         // D'abord, ajouter la préparation avec une quantité initiale
         $initialQuantity = 4.0;
-        $this->preparation->locations()->attach($this->location->id, ['quantity' => $initialQuantity]);
+        $this->preparation->locations()->updateExistingPivot($this->location->id, ['quantity' => $initialQuantity]);
 
         // Supprimer tout mouvement de stock généré par l'ajout initial
         StockMovement::where('trackable_id', $this->preparation->id)->delete();
@@ -217,7 +217,7 @@ class StockMovementTrackingTest extends TestCase
     {
         // Ajouter d'abord la préparation
         $initialQuantity = 7.5;
-        $this->preparation->locations()->attach($this->location->id, ['quantity' => $initialQuantity]);
+        $this->preparation->locations()->updateExistingPivot($this->location->id, ['quantity' => $initialQuantity]);
 
         // Supprimer tout mouvement de stock généré par l'ajout initial
         StockMovement::where('trackable_id', $this->preparation->id)->delete();

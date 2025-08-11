@@ -1,0 +1,58 @@
+"""
+Représente une perte d'ingrédient ou de préparation.
+"""
+type Loss {
+    "Identifiant unique."
+    id: ID!
+
+    "Type d'entité concernée par cette perte (ingredient ou preparation)."
+    lossable_type: String!
+
+    "ID de l'entité concernée."
+    lossable_id: ID!
+
+    "L'emplacement où la perte a eu lieu."
+    location: Location! @belongsTo
+
+    "L'entreprise à laquelle appartient cette perte."
+    company: Company! @belongsTo
+
+    "L'utilisateur qui a enregistré la perte."
+    user: User @belongsTo
+
+    "Quantité perdue."
+    quantity: Float!
+
+    "Raison de la perte."
+    reason: String
+
+    "Date et heure de création de la perte."
+    created_at: DateTime!
+
+    "Date et heure de dernière mise à jour de la perte."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les pertes pour l'entreprise actuelle."
+    losses(
+        trackable_type: String @eq(key: "lossable_type")
+        trackable_id: ID @eq(key: "lossable_id")
+        location_id: ID @eq
+        start_date: DateTime @where(operator: ">=", key: "created_at")
+        end_date: DateTime @where(operator: "<=", key: "created_at")
+        orderBy: [LossOrderByClause!] @orderBy
+    ): [Loss!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+}
+
+input LossOrderByClause {
+    field: LossOrderByField!
+    order: SortOrder!
+}
+
+enum LossOrderByField {
+    ID @enum(value: "id")
+    QUANTITY @enum(value: "quantity")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}

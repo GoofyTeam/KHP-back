@@ -54,9 +54,9 @@ Route::prefix('location')->name('location.')->group(function () {
 });
 
 // Groupe de routes pour les pertes
-Route::prefix('losses')->group(function () {
-    Route::post('/create', [LossController::class, 'store'])->name('store');
-    Route::delete('/rollback/{loss}', [LossController::class, 'destroy'])->name('destroy');
+Route::prefix('losses')->name('losses.')->group(function () {
+    Route::post('/', [LossController::class, 'store'])->name('store');
+    Route::delete('/rollback/{loss}', [LossController::class, 'rollback'])->name('rollback');
 });
 
 // Routes utilitaires

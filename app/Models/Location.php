@@ -31,6 +31,29 @@ class Location extends Model
         'id',
     ];
 
+    protected static function booted()
+    {
+        static::created(function (Location $location) {
+            $ingredients = Ingredient::where('company_id', $location->company_id)->pluck('id');
+            $ingredientData = $ingredients
+                ->mapWithKeys(fn ($id) => [$id => ['quantity' => 0]])
+                ->toArray();
+
+            if (! empty($ingredientData)) {
+                $location->ingredients()->syncWithoutDetaching($ingredientData);
+            }
+
+            $preparations = Preparation::where('company_id', $location->company_id)->pluck('id');
+            $preparationData = $preparations
+                ->mapWithKeys(fn ($id) => [$id => ['quantity' => 0]])
+                ->toArray();
+
+            if (! empty($preparationData)) {
+                $location->preparations()->syncWithoutDetaching($preparationData);
+            }
+        });
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);
