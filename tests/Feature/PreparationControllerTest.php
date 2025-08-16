@@ -456,7 +456,7 @@ class PreparationControllerTest extends TestCase
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         // Quantité initiale
-        $prep->locations()->attach($location->id, ['quantity' => 5.0]);
+        $prep->locations()->updateExistingPivot($location->id, ['quantity' => 5.0]);
 
         $payload = [
             'quantities' => [
@@ -592,7 +592,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock
-        $ing->locations()->attach($source->id, ['quantity' => 10.0]);
+        $ing->locations()->updateExistingPivot($source->id, ['quantity' => 10.0]);
 
         // Créer une catégorie
         $category = Category::factory()->create([
@@ -679,8 +679,8 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock aux ingrédients
-        $ing1->locations()->attach($location1->id, ['quantity' => 10.0]);
-        $ing2->locations()->attach($location1->id, ['quantity' => 8.0]);
+        $ing1->locations()->updateExistingPivot($location1->id, ['quantity' => 10.0]);
+        $ing2->locations()->updateExistingPivot($location1->id, ['quantity' => 8.0]);
 
         // Créer une préparation
         $preparation = Preparation::factory()->create([
@@ -789,8 +789,8 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock à l'ingrédient dans différents emplacements
-        $ing->locations()->attach($location1->id, ['quantity' => 5.0]);
-        $ing->locations()->attach($location2->id, ['quantity' => 3.0]);
+        $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 5.0]);
+        $ing->locations()->updateExistingPivot($location2->id, ['quantity' => 3.0]);
 
         // Créer une préparation
         $preparation = Preparation::factory()->create([
@@ -881,7 +881,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter un stock limité
-        $ing->locations()->attach($location1->id, ['quantity' => 2.0]);
+        $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 2.0]);
 
         // Créer une préparation
         $preparation = Preparation::factory()->create([
@@ -962,7 +962,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock dans le congélateur
-        $ing->locations()->attach($freezer->id, ['quantity' => 5.0]);
+        $ing->locations()->updateExistingPivot($freezer->id, ['quantity' => 5.0]);
 
         // Créer une préparation
         $preparation = Preparation::factory()->create([
@@ -1042,8 +1042,8 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock
-        $ing->locations()->attach($location1->id, ['quantity' => 5.0]);
-        $ing->locations()->attach($location2->id, ['quantity' => 3.0]);
+        $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 5.0]);
+        $ing->locations()->updateExistingPivot($location2->id, ['quantity' => 3.0]);
 
         // Créer une préparation
         $preparation = Preparation::factory()->create([
@@ -1129,7 +1129,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock
-        $ing->locations()->attach($source->id, ['quantity' => 10.0]);
+        $ing->locations()->updateExistingPivot($source->id, ['quantity' => 10.0]);
 
         // Créer une préparation
         $preparation = Preparation::factory()->create([
@@ -1146,7 +1146,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter une quantité initiale de la préparation
-        $preparation->locations()->attach($destination->id, ['quantity' => 1.5]);
+        $preparation->locations()->updateExistingPivot($destination->id, ['quantity' => 1.5]);
 
         // Effectuer la préparation
         $payload = [

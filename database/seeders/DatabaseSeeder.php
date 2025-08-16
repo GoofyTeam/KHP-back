@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             IngredientSeeder::class,
             PreparationSeeder::class,
             StockMovementSeeder::class,
+            LossSeeder::class,
         ]);
     }
 }
