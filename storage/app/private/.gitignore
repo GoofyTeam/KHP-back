@@ -1,2 +1,5 @@
 *
 !.gitignore
+!seeders/
+!seeders/images/
+!seeders/images/*
