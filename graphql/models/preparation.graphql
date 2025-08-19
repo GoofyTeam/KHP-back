@@ -6,7 +6,7 @@ type Preparation {
     name: String!
 
     "Unit of measurement for the preparation."
-    unit: String!
+    unit: UnitEnum!
 
     "The company that produces this preparation."
     company: Company! @belongsTo
@@ -71,7 +71,7 @@ extend type Query @guard {
         search: String @scope(name: "search")
 
         "Filtre par unité de mesure avec opérateur LIKE."
-        unit: String @where(operator: "like")
+        unit: UnitEnum @eq
 
         "Filtrer par un ou plusieurs identifiants d'emplacements."
         locationIds: [ID!] @scope(name: "locationId")

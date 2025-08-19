@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\MeasurementUnit;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,17 +20,7 @@ class PreparationFactory extends Factory
     {
         return [
             'name' => fake()->unique()->word(),
-            'unit' => fake()->randomElement([
-                'g',
-                'kg',
-                'ml',
-                'l',
-                'cuillère à café',
-                'cuillère à soupe',
-                'pincée',
-                'tasse',
-                'pièce',
-            ]),
+            'unit' => fake()->randomElement(MeasurementUnit::values()),
             'company_id' => Company::factory(),
         ];
     }
