@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
@@ -84,7 +85,7 @@ class PreparationControllerTest extends TestCase
 
         $payload = [
             'name' => 'Dual Ingredient',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
             'entities' => [
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
@@ -118,7 +119,7 @@ class PreparationControllerTest extends TestCase
 
         $payload = [
             'name' => 'Dual Ingredient',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
             'entities' => [
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
@@ -577,7 +578,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements
@@ -604,7 +605,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Simple preparation',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Associer la catégorie à la préparation
@@ -658,13 +659,13 @@ class PreparationControllerTest extends TestCase
         $ing1 = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         $ing2 = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Sucre',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements
@@ -686,7 +687,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Pâte à gâteau',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Lier les ingrédients à la préparation
@@ -769,7 +770,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements
@@ -796,7 +797,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Simple preparation',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Lier l'ingrédient à la préparation
@@ -866,7 +867,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements
@@ -887,7 +888,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Simple preparation',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Lier l'ingrédient à la préparation
@@ -946,7 +947,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Viande',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements dont un congélateur
@@ -968,7 +969,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Préparation de viande',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Lier l'ingrédient à la préparation
@@ -1022,7 +1023,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements
@@ -1049,7 +1050,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Simple preparation',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Lier l'ingrédient à la préparation
@@ -1114,7 +1115,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Créer des emplacements
@@ -1135,7 +1136,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Simple preparation',
-            'unit' => 'kg',
+            'unit' => MeasurementUnit::KILOGRAM,
         ]);
 
         // Lier l'ingrédient à la préparation

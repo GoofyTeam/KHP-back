@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\MeasurementUnit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -143,20 +144,7 @@ class IngredientFactory extends Factory
 
         return [
             'name' => $this->faker->randomElement($ingredients).' '.$this->faker->numberBetween(1, 999),
-            'unit' => $this->faker->randomElement([
-                'g',
-                'kg',
-                'ml',
-                'l',
-                'cuillère à café',
-                'cuillère à soupe',
-                'pincée',
-                'tasse',
-                'pièce',
-                'tranche',
-                'boîte',
-                'sachet',
-            ]),
+            'unit' => $this->faker->randomElement(MeasurementUnit::values()),
             'base_quantity' => $this->faker->numberBetween(1, 1000),
             'barcode' => $this->faker->unique()->ean13(),
         ];

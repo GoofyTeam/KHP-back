@@ -6,7 +6,7 @@ type Ingredient {
     name: String!
 
     "Unit of measurement for the ingredient."
-    unit: String!
+    unit: UnitEnum!
 
     quantities: [IngredientQuantity!]!
         @field(
@@ -68,8 +68,7 @@ extend type Query @guard {
         "Filter by a search term. Accepts SQL LIKE wildcards `%` and `_`."
         search: String @scope(name: "search")
 
-        "Filter by unit of measurement. Accepts SQL LIKE wildcards `%` and `_`."
-        unit: String @where(operator: "like")
+        unit: UnitEnum @eq
 
         "Filtrer par un ou plusieurs identifiants d'emplacements."
         locationIds: [ID!] @scope(name: "locationId")

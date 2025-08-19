@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -53,7 +54,7 @@ class PreparationController extends Controller
                 'max:255',
                 Rule::unique('preparations')->where('company_id', $user->company_id),
             ],
-            'unit' => ['required', 'string', 'max:255'],
+            'unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
             'entities' => ['required', 'array', 'min:2'],
             'entities.*.id' => ['required', 'integer'],
             'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
@@ -127,7 +128,7 @@ class PreparationController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255', Rule::unique('preparations')
                 ->where('company_id', $user->company_id)->ignore($id)],
-            'unit' => ['sometimes', 'string', 'max:255'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
             'entities_to_add' => ['sometimes', 'array'],
             'entities_to_add.*.id' => ['required_with:entities_to_add', 'integer'],
             'entities_to_add.*.type' => ['required_with:entities_to_add', 'string', 'in:ingredient,preparation'],
@@ -371,7 +372,7 @@ class PreparationController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => "Préparation de {$validated['quantity']} {$preparation->unit} de {$preparation->name} effectuée avec succès",
+                'message' => "Préparation de {$validated['quantity']} {$preparation->unit->value} de {$preparation->name} effectuée avec succès",
                 'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
             ], 200);
         } catch (\Exception $e) {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\MeasurementUnit;
 use App\Traits\HasLosses;
 use App\Traits\HasSearchScope;
 use App\Traits\HasStockMovements;
@@ -18,6 +19,10 @@ class Ingredient extends Model
 
     protected $guarded = [
         'id',
+    ];
+
+    protected $casts = [
+        'unit' => MeasurementUnit::class,
     ];
 
     protected static function booted()

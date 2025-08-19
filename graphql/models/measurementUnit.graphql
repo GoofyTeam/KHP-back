@@ -1,0 +1,17 @@
+"Type représentant une unité de mesure"
+type MeasurementUnitType {
+    "Valeur utilisée en interne (ex: 'kg', 'L')"
+    value: String!
+
+    "Libellé français (ex: 'Kilogramme (kg)')"
+    label: String!
+
+    "Catégorie de l'unité (masse, volume ou unité)"
+    category: String!
+}
+
+extend type Query @guard {
+    "Liste les unités de mesure disponibles"
+    measurementUnits: [MeasurementUnitType!]!
+        @field(resolver: "App\\GraphQL\\Queries\\MeasurementUnitsQuery@resolve")
+}

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MeasurementUnit;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -22,7 +23,9 @@ return new class extends Migration
             $table->string('name')->nullable(false);
             $table->foreignId('company_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->string('image_url')->nullable(true);
-            $table->string('unit')->nullable(false);
+            $table->enum('unit', MeasurementUnit::values())
+                ->default(MeasurementUnit::UNIT)
+                ->nullable(false);
             $table->timestamps();
 
             $table->unique(['company_id', 'name']);
