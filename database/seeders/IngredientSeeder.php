@@ -8,13 +8,18 @@ use App\Models\Ingredient;
 use App\Services\ImageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 
 class IngredientSeeder extends Seeder
 {
     private ImageService $imageService;
 
-    private string $picsumUrl = 'https://picsum.photos/200/200.jpg';
+    /**
+     * Dossier contenant tes images de seed
+     * (relatif au disk "private" -> storage/app/private)
+     */
+    private string $seedImagesDir = 'seeders/images';
 
     public function __construct(ImageService $imageService)
     {
@@ -23,40 +28,58 @@ class IngredientSeeder extends Seeder
 
     public function run(): void
     {
-        $images = $this->fetchRandomImages(15);
+        // Charge une banque d'images locales (pas d'appels réseau)
+        $images = $this->loadLocalImages(50); // prends large pour réutiliser partout
+        if (empty($images)) {
+            $this->command?->warn("Aucune image trouvée dans storage/app/private/{$this->seedImagesDir}");
+        }
+
         $this->seedCompany('GoofyTeam', 15, $images);
         $this->seedOtherCompanies('GoofyTeam', 5, $images);
     }
 
-    private function fetchRandomImages(int $count): array
+    /**
+     * Récupère N fichiers images du dossier privé et les transforme en UploadedFile.
+     * Si $count > nb d'images dispo, on réutilise certaines images (tirage aléatoire).
+     */
+    private function loadLocalImages(int $count): array
     {
-        $uploads = [];
+        // Essaye d’abord un disk "private" (recommandé), sinon fallback sur "local"
+        $disk = Storage::disk('local');
 
+        // Liste des fichiers dans le dossier
+        $all = collect($disk->files($this->seedImagesDir))
+            ->filter(function (string $path) {
+                $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+                return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+            })
+            ->values()
+            ->all();
+
+        if (empty($all)) {
+            return [];
+        }
+
+        // Si on veut $count, on pioche avec remise si nécessaire
+        $picked = [];
         for ($i = 0; $i < $count; $i++) {
+            $relative = Arr::random($all);
+            $absolute = method_exists($disk, 'path') ? $disk->path($relative) : storage_path('app/'.$relative);
 
-            $response = Http::get($this->picsumUrl.'?random='.uniqid());
+            // Crée un UploadedFile "test" (pas un upload réel)
+            $mime = @mime_content_type($absolute) ?: 'image/jpeg';
 
-            $tempFile = $this->storeTemporaryFile($response);
-
-            $uploads[] = new UploadedFile(
-                $tempFile,
-                basename($tempFile),
-                'image/jpeg',
+            $picked[] = new UploadedFile(
+                $absolute,
+                basename($absolute),
+                $mime,
                 null,
-                true
+                true // test mode
             );
         }
 
-        return $uploads;
-    }
-
-    private function storeTemporaryFile($response): string
-    {
-        $filename = uniqid('picsum_').'.jpg';
-        $tempPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.$filename;
-        file_put_contents($tempPath, $response->body());
-
-        return $tempPath;
+        return $picked;
     }
 
     private function seedCompany(string $name, int $perLocation, array $images): void
@@ -69,7 +92,8 @@ class IngredientSeeder extends Seeder
             $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
             foreach ($randomLocations as $location) {
                 $ingredient->locations()->attach($location->id, [
-                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 chance d'être out of stock, sinon entre 0.50 et 15.99
+                    // 1/5 out of stock, sinon entre 0.50 et 15.99
+                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
                 ]);
             }
         }
@@ -79,20 +103,18 @@ class IngredientSeeder extends Seeder
     {
         Company::where('name', '!=', $exclude)
             ->get()
-            ->each(
-                function (Company $company) use ($perLocation, $images) {
-                    $ingredients = $this->createIngredients($company->id, $perLocation, $images);
+            ->each(function (Company $company) use ($perLocation, $images) {
+                $ingredients = $this->createIngredients($company->id, $perLocation, $images);
 
-                    foreach ($ingredients as $ingredient) {
-                        $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
-                        foreach ($randomLocations as $location) {
-                            $ingredient->locations()->attach($location->id, [
-                                'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100), // 1/5 chance d'être out of stock, sinon entre 0.50 et 15.99
-                            ]);
-                        }
+                foreach ($ingredients as $ingredient) {
+                    $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
+                    foreach ($randomLocations as $location) {
+                        $ingredient->locations()->attach($location->id, [
+                            'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
+                        ]);
                     }
                 }
-            );
+            });
     }
 
     private function createIngredients(int $companyId, int $count, array $images): array
@@ -100,6 +122,8 @@ class IngredientSeeder extends Seeder
         $ingredients = [];
 
         for ($i = 0; $i < $count; $i++) {
+            // pioche une image au hasard dans le pool
+            /** @var \Illuminate\Http\UploadedFile $upload */
             $upload = $images[array_rand($images)];
 
             $ingredient = Ingredient::factory()->create([
@@ -107,8 +131,9 @@ class IngredientSeeder extends Seeder
                 'image_url' => $this->imageService->store($upload, 'ingredients'),
             ]);
 
-            $cat = Category::inRandomOrder()->first();
-            $ingredient->categories()->attach($cat->id);
+            if ($cat = Category::inRandomOrder()->first()) {
+                $ingredient->categories()->attach($cat->id);
+            }
 
             $ingredients[] = $ingredient;
         }
