@@ -91,7 +91,7 @@ class ImageService
         }
 
         // 5) Créer un nom de fichier déterministe basé sur le contenu
-        $filename = sha1($contents).'.'.$ext;
+        $filename = hash('sha256', $contents).'.'.$ext;
         $path = "{$folder}/{$filename}";
 
         // 6) Éviter les doublons
