@@ -23,6 +23,7 @@ return new class extends Migration
             $table->enum('unit', MeasurementUnit::values())
                 ->default(MeasurementUnit::UNIT)
                 ->nullable(false);
+            $table->string('image_url')->nullable(true);
             $table->timestamps();
 
             $table->unique(['name', 'company_id']);
