@@ -9,10 +9,12 @@ use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
+use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * PreparationController
@@ -29,12 +31,15 @@ class PreparationController extends Controller
      *
      * Règles métier pour la méthode store() :
      * - 'name' : obligatoire, chaîne de caractères, max 255, unique par société.
-     * - 'unit' : obligatoire, chaîne de caractères, max 255.
+     * - 'unit' : obligatoire, chaîne parmi MeasurementUnit::values().
      * - 'entities' : obligatoire, tableau, au moins 2 éléments.
      *     • entities.*.id : entier requis.
      *     • entities.*.type : doit être 'ingredient' ou 'preparation'.
      * - 'categories' : obligatoire, tableau, au moins 1 élément.
      *     • categories.* : chaîne de caractères, max 255.
+     * - 'image' / 'image_url' : optionnels, mais mutuellement exclusifs.
+     *   • si 'image' fourni => upload S3 via ImageService
+     *   • si 'image_url' fourni => téléchargement + stockage S3 via ImageService
      * - La préparation est automatiquement liée à la société de l'utilisateur.
      * - Pour chaque entité fournie, un enregistrement PreparationEntity est créé.
      *
@@ -43,7 +48,7 @@ class PreparationController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ImageService $imageService): JsonResponse
     {
         $user = $request->user();
 
@@ -52,19 +57,50 @@ class PreparationController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('preparations')->where('company_id', $user->company_id),
+                Rule::unique('preparations')->where(function ($q) use ($user) {
+                    return $q->where('company_id', $user->company_id);
+                }),
             ],
             'unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
+
+            // Image (upload OU URL) - optionnels
+            'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'image_url' => ['sometimes', 'nullable', 'url'],
+
             'entities' => ['required', 'array', 'min:2'],
             'entities.*.id' => ['required', 'integer'],
             'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
+
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => ['string', 'max:255'],
         ]);
 
+        // Exclusivité XOR image/image_url
+        if ($request->hasFile('image') && $request->filled('image_url')) {
+            throw ValidationException::withMessages([
+                'image' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+                'image_url' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+            ]);
+        }
+
+        // Traitement image (upload ou URL distante)
+        $storedPath = null;
+        if ($request->hasFile('image')) {
+            $storedPath = $imageService->store($request->file('image'), 'preparations');
+        } elseif ($request->filled('image_url')) {
+            // Doit valider le MIME/taille côté service (comme pour Ingredient)
+            $storedPath = $imageService->storeFromUrl($request->input('image_url'), 'preparations');
+        }
+
         // Liaison à la société de l'utilisateur
-        $validated['company_id'] = $user->company_id;
-        $preparation = Preparation::create($validated);
+        $data = [
+            'company_id' => $user->company_id,
+            'name' => $validated['name'],
+            'unit' => $validated['unit'],
+            'image_url' => $storedPath, // peut rester null
+        ];
+
+        $preparation = Preparation::create($data);
 
         // Création des liens vers les entités
         foreach ($validated['entities'] as $entity) {
@@ -80,7 +116,10 @@ class PreparationController extends Controller
         $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
             $formattedName = ucfirst($categoryName);
 
-            return Category::firstOrCreate(['name' => $formattedName, 'company_id' => $user->company_id]);
+            return Category::firstOrCreate([
+                'name' => $formattedName,
+                'company_id' => $user->company_id,
+            ]);
         });
 
         // Association des catégories à la préparation
@@ -100,6 +139,7 @@ class PreparationController extends Controller
      * - 'entities_to_remove' : array d'entités à supprimer
      * - 'categories'         : array de catégories à associer (remplace les existantes)
      * - 'quantities'         : array de quantités par emplacement
+     * - 'image' / 'image_url': optionnels et mutuellement exclusifs (MAJ de l'illustration)
      *
      * Règles métier pour update() :
      * - La préparation doit appartenir à la même société que l'utilisateur (404 sinon).
@@ -117,7 +157,7 @@ class PreparationController extends Controller
      *
      * @param  int  $id
      */
-    public function update(Request $request, $id): JsonResponse
+    public function update(Request $request, $id, ImageService $imageService): JsonResponse
     {
         $user = $request->user();
 
@@ -126,47 +166,87 @@ class PreparationController extends Controller
             ->firstOrFail();
 
         $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255', Rule::unique('preparations')
-                ->where('company_id', $user->company_id)->ignore($id)],
+            'name' => [
+                'sometimes',
+                'string',
+                'max:255',
+                Rule::unique('preparations')
+                    ->where(function ($q) use ($user) {
+                        return $q->where('company_id', $user->company_id);
+                    })
+                    ->ignore($id),
+            ],
             'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
+
+            // Image (upload OU URL) - optionnels
+            'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'image_url' => ['sometimes', 'nullable', 'url'],
+
             'entities_to_add' => ['sometimes', 'array'],
             'entities_to_add.*.id' => ['required_with:entities_to_add', 'integer'],
             'entities_to_add.*.type' => ['required_with:entities_to_add', 'string', 'in:ingredient,preparation'],
+
             'entities_to_remove' => ['sometimes', 'array'],
             'entities_to_remove.*.id' => ['required_with:entities_to_remove', 'integer'],
             'entities_to_remove.*.type' => ['required_with:entities_to_remove', 'string', 'in:ingredient,preparation'],
+
             'quantities' => ['sometimes', 'array'],
             'quantities.*.quantity' => ['required_with:quantities', 'numeric', 'min:0'],
             'quantities.*.location_id' => ['required_with:quantities', 'exists:locations,id'],
+
             'categories' => ['sometimes', 'array'],
             'categories.*' => ['string', 'max:255'],
         ]);
 
-        // Mise à jour des champs standard
-        $preparation->update($validated);
+        // Exclusivité XOR image/image_url
+        if ($request->hasFile('image') && $request->filled('image_url')) {
+            throw ValidationException::withMessages([
+                'image' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+                'image_url' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+            ]);
+        }
+
+        // Mise à jour des champs standard (name/unit)
+        if (array_key_exists('name', $validated)) {
+            $preparation->name = $validated['name'];
+        }
+        if (array_key_exists('unit', $validated)) {
+            $preparation->unit = $validated['unit'];
+        }
+
+        // MAJ de l'image (upload ou URL distante)
+        if ($request->hasFile('image')) {
+            $preparation->image_url = $imageService->store($request->file('image'), 'preparations');
+        } elseif ($request->filled('image_url')) {
+            $preparation->image_url = $imageService->storeFromUrl($request->input('image_url'), 'preparations');
+        }
+        $preparation->save();
 
         // Suppressions demandées
         if (! empty($validated['entities_to_remove'] ?? [])) {
             foreach ($validated['entities_to_remove'] as $entity) {
+                $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
                 PreparationEntity::where('preparation_id', $preparation->id)
                     ->where('entity_id', $entity['id'])
+                    ->where('entity_type', $entityClass) // précision du type
                     ->delete();
             }
         }
 
         // Ajouts demandés
         if (! empty($validated['entities_to_add'] ?? [])) {
-            // Récupère les IDs déjà présents
+            // Récupère les couples (id,type) déjà présents
             $existing = $preparation->entities()
-                ->pluck('entity_id')
+                ->select('entity_id', 'entity_type')
+                ->get()
+                ->map(fn ($e) => $e['entity_type'].'#'.$e['entity_id'])
                 ->toArray();
 
             foreach ($validated['entities_to_add'] as $entity) {
-                if (! in_array($entity['id'], $existing, true)) {
-                    $entityClass = $entity['type'] === 'ingredient'
-                        ? Ingredient::class
-                        : Preparation::class;
+                $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+                $key = $entityClass.'#'.$entity['id'];
 
+                if (! in_array($key, $existing, true)) {
                     PreparationEntity::create([
                         'preparation_id' => $preparation->id,
                         'entity_id' => $entity['id'],
@@ -332,7 +412,7 @@ class PreparationController extends Controller
                     /**
                      * @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot
                      */
-                    $pivot = $locationEntity->pivot;
+                    $pivot = $locationEntity->pivot ?? null;
 
                     if (! $locationEntity || $pivot->quantity < $source['quantity']) {
                         $stockDispo = $locationEntity ? $pivot->quantity : 0;

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
@@ -12,23 +11,24 @@ use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
  * Class PreparationControllerTest
  *
  * Cette suite de tests couvre les scénarios de création, mise à jour
- * (avec entities_to_add / entities_to_remove), destruction
- * d'une préparation et la préparation elle-même avec prélèvement
- * de composants depuis plusieurs emplacements.
+ * (avec entities_to_add / entities_to_remove), destruction,
+ * la préparation elle-même avec prélèvement de composants,
+ * et la gestion d'image (upload OU URL) avec exclusivité.
  */
 class PreparationControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Scénario : création échoue avec une seule entité.
-     */
+    /** Scénario : création échoue avec une seule entité. */
     public function test_it_fails_to_create_with_single_entity(): void
     {
         $company = Company::factory()->create();
@@ -48,9 +48,7 @@ class PreparationControllerTest extends TestCase
             ->assertJsonValidationErrors('entities');
     }
 
-    /**
-     * Scénario : création échoue sans catégories.
-     */
+    /** Scénario : création échoue sans catégories. */
     public function test_it_fails_to_create_without_categories(): void
     {
         $company = Company::factory()->create();
@@ -73,9 +71,7 @@ class PreparationControllerTest extends TestCase
             ->assertJsonValidationErrors('categories');
     }
 
-    /**
-     * Scénario : création avec deux ingrédients.
-     */
+    /** Scénario : création avec deux ingrédients. */
     public function test_it_creates_with_two_ingredients(): void
     {
         $company = Company::factory()->create();
@@ -85,7 +81,7 @@ class PreparationControllerTest extends TestCase
 
         $payload = [
             'name' => 'Dual Ingredient',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
             'entities' => [
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
@@ -107,9 +103,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : création avec deux ingrédients et des catégories.
-     */
+    /** Scénario : création avec deux ingrédients et des catégories. */
     public function test_it_creates_with_two_ingredients_and_category(): void
     {
         $company = Company::factory()->create();
@@ -119,7 +113,7 @@ class PreparationControllerTest extends TestCase
 
         $payload = [
             'name' => 'Dual Ingredient',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
             'entities' => [
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
@@ -159,9 +153,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : création avec deux préparations.
-     */
+    /** Scénario : création avec deux préparations. */
     public function test_it_creates_with_two_preparations(): void
     {
         $company = Company::factory()->create();
@@ -179,7 +171,7 @@ class PreparationControllerTest extends TestCase
             'categories' => ['Boisson'],
         ];
 
-        $response = $this->actingAs($user)
+        $this->actingAs($user)
             ->postJson('/api/preparations', $payload)
             ->assertStatus(201);
 
@@ -199,9 +191,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : création mixte (1 ingrédient + 1 préparation).
-     */
+    /** Scénario : création mixte (1 ingrédient + 1 préparation). */
     public function test_it_creates_with_mixed_entities(): void
     {
         $company = Company::factory()->create();
@@ -233,9 +223,109 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : mise à jour sans clés d'entités.
-     */
+    /** Scénario image : création avec upload fichier (S3). */
+    public function test_it_creates_with_uploaded_image_and_stores_to_s3(): void
+    {
+        Storage::fake('s3');
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+
+        $file = UploadedFile::fake()->image('prep.jpg', 400, 400);
+
+        $payload = [
+            'name' => 'Avec Image Upload',
+            'unit' => 'kg',
+            'entities' => [
+                ['id' => $ing1->id, 'type' => 'ingredient'],
+                ['id' => $ing2->id, 'type' => 'ingredient'],
+            ],
+            'categories' => ['Test'],
+            'image' => $file,
+        ];
+
+        $resp = $this->actingAs($user)
+            ->post('/api/preparations', $payload)
+            ->assertStatus(201)
+            ->json();
+
+        $prep = Preparation::find($resp['preparation']['id']);
+        $this->assertNotNull($prep->image_url);
+        $this->assertTrue(Storage::disk('s3')->exists($prep->image_url));
+    }
+
+    /** Scénario image : création avec image_url distante (S3). */
+    public function test_it_creates_with_image_url_and_stores_to_s3(): void
+    {
+        Storage::fake('s3');
+        $bytes = random_bytes(1024);
+        Http::fake([
+            'example.com/*' => Http::response($bytes, 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'Avec Image URL',
+            'unit' => 'kg',
+            'entities' => [
+                ['id' => $ing1->id, 'type' => 'ingredient'],
+                ['id' => $ing2->id, 'type' => 'ingredient'],
+            ],
+            'categories' => ['Test'],
+            'image_url' => 'https://example.com/p.jpg',
+        ];
+
+        $resp = $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(201)
+            ->json();
+
+        $prep = Preparation::find($resp['preparation']['id']);
+        $this->assertNotNull($prep->image_url);
+        $this->assertTrue(Storage::disk('s3')->exists($prep->image_url));
+    }
+
+    /** Scénario image : création échoue si upload + URL fournis. */
+    public function test_it_fails_create_when_both_file_and_url_are_provided(): void
+    {
+        Storage::fake('s3');
+        Http::fake();
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+
+        $file = UploadedFile::fake()->image('x.jpg');
+
+        $payload = [
+            'name' => 'Bad Both',
+            'unit' => 'kg',
+            'entities' => [
+                ['id' => $ing1->id, 'type' => 'ingredient'],
+                ['id' => $ing2->id, 'type' => 'ingredient'],
+            ],
+            'categories' => ['Test'],
+            'image_url' => 'https://example.com/x.jpg',
+        ];
+
+        $this->actingAs($user)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->post('/api/preparations', array_merge($payload, ['image' => $file]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['image', 'image_url']);
+    }
+
+    /** Scénario : mise à jour sans clés d'entités. */
     public function test_it_updates_without_entities(): void
     {
         $company = Company::factory()->create();
@@ -266,9 +356,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : mise à jour des catégories d'une préparation.
-     */
+    /** Scénario : mise à jour des catégories d'une préparation. */
     public function test_it_updates_categories(): void
     {
         $company = Company::factory()->create();
@@ -316,9 +404,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : suppression d'une entité via entities_to_remove.
-     */
+    /** Scénario : suppression d'une entité via entities_to_remove. */
     public function test_it_removes_entities_on_update(): void
     {
         $company = Company::factory()->create();
@@ -358,9 +444,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : ajout d'une entité via entities_to_add.
-     */
+    /** Scénario : ajout d'une entité via entities_to_add. */
     public function test_it_adds_entities_on_update(): void
     {
         $company = Company::factory()->create();
@@ -396,9 +480,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : suppression et ajout simultanés.
-     */
+    /** Scénario : suppression et ajout simultanés. */
     public function test_it_adds_and_removes_entities_on_update(): void
     {
         $company = Company::factory()->create();
@@ -446,9 +528,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : mise à jour des quantités par emplacement.
-     */
+    /** Scénario : mise à jour des quantités par emplacement. */
     public function test_it_updates_quantities_by_location(): void
     {
         $company = Company::factory()->create();
@@ -461,10 +541,7 @@ class PreparationControllerTest extends TestCase
 
         $payload = [
             'quantities' => [
-                [
-                    'location_id' => $location->id,
-                    'quantity' => 10.0,
-                ],
+                ['location_id' => $location->id, 'quantity' => 10.0],
             ],
         ];
 
@@ -479,9 +556,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : entities_to_remove présent mais vide -> ne fait rien.
-     */
+    /** Scénario : entities_to_remove présent mais vide -> ne fait rien. */
     public function test_it_does_not_remove_anything_when_remove_list_empty(): void
     {
         $company = Company::factory()->create();
@@ -508,9 +583,77 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : suppression d'une préparation.
-     */
+    /** Scénario image : update via upload (multipart PUT). */
+    public function test_it_updates_image_with_uploaded_file(): void
+    {
+        Storage::fake('s3');
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id, 'image_url' => null]);
+
+        $file = UploadedFile::fake()->image('new.jpg', 320, 320);
+
+        $this->actingAs($user)
+            ->post("/api/preparations/{$prep->id}", [
+                '_method' => 'PUT',
+                'image' => $file,
+            ])
+            ->assertStatus(200);
+
+        $prep->refresh();
+        $this->assertNotNull($prep->image_url);
+        $this->assertTrue(Storage::disk('s3')->exists($prep->image_url));
+    }
+
+    /** Scénario image : update via URL distante. */
+    public function test_it_updates_image_with_url(): void
+    {
+        Storage::fake('s3');
+        $bytes = random_bytes(256);
+        Http::fake([
+            'example.com/*' => Http::response($bytes, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id, 'image_url' => null]);
+
+        $payload = ['image_url' => 'https://example.com/new.png'];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(200);
+
+        $prep->refresh();
+        $this->assertNotNull($prep->image_url);
+        $this->assertTrue(Storage::disk('s3')->exists($prep->image_url));
+    }
+
+    /** Scénario image : update échoue si fichier + URL fournis. */
+    public function test_it_fails_update_when_both_file_and_url_are_provided(): void
+    {
+        Storage::fake('s3');
+        Http::fake();
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $file = UploadedFile::fake()->image('x.jpg');
+
+        $this->actingAs($user)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->post("/api/preparations/{$prep->id}", [
+                '_method' => 'PUT',
+                'image' => $file,
+                'image_url' => 'https://example.com/x.jpg',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['image', 'image_url']);
+    }
+
+    /** Scénario : suppression d'une préparation. */
     public function test_it_deletes_a_preparation(): void
     {
         $company = Company::factory()->create();
@@ -529,9 +672,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : suppression d'une préparation non existante.
-     */
+    /** Scénario : suppression d'une préparation non existante. */
     public function test_it_fails_to_delete_non_existent_preparation(): void
     {
         $company = Company::factory()->create();
@@ -544,9 +685,7 @@ class PreparationControllerTest extends TestCase
             ->assertJsonStructure(['message']);
     }
 
-    /**
-     * Scénario : suppression d'une préparation hors société.
-     */
+    /** Scénario : suppression d'une préparation hors société. */
     public function test_it_fails_to_delete_preparation_not_belonging_to_company(): void
     {
         $company1 = Company::factory()->create();
@@ -566,9 +705,7 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Scénario : préparation avec vérification des catégories dans la réponse.
-     */
+    /** Scénario : préparation avec vérification des catégories dans la réponse. */
     public function test_prepare_response_includes_categories(): void
     {
         $company = Company::factory()->create();
@@ -578,7 +715,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
         ]);
 
         // Créer des emplacements
@@ -605,7 +742,7 @@ class PreparationControllerTest extends TestCase
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Simple preparation',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
         ]);
 
         // Associer la catégorie à la préparation
@@ -628,10 +765,7 @@ class PreparationControllerTest extends TestCase
                     'entity_type' => 'ingredient',
                     'quantity' => 3.0,
                     'sources' => [
-                        [
-                            'location_id' => $source->id,
-                            'quantity' => 3.0,
-                        ],
+                        ['location_id' => $source->id, 'quantity' => 3.0],
                     ],
                 ],
             ],
@@ -647,9 +781,7 @@ class PreparationControllerTest extends TestCase
         $this->assertEquals('TestCategory', $response->json('preparation.categories.0.name'));
     }
 
-    /**
-     * Scénario : préparation réussie avec un seul emplacement source.
-     */
+    /** Scénario : préparation réussie avec un seul emplacement source. */
     public function test_it_prepares_successfully_with_single_source(): void
     {
         $company = Company::factory()->create();
@@ -659,77 +791,45 @@ class PreparationControllerTest extends TestCase
         $ing1 = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Farine',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
         ]);
 
         $ing2 = Ingredient::factory()->create([
             'company_id' => $company->id,
             'name' => 'Sucre',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
         ]);
 
         // Créer des emplacements
-        $location1 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve',
-        ]);
+        $location1 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve']);
+        $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        $location2 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Cuisine',
-        ]);
-
-        // Ajouter du stock aux ingrédients
+        // Stocks
         $ing1->locations()->updateExistingPivot($location1->id, ['quantity' => 10.0]);
         $ing2->locations()->updateExistingPivot($location1->id, ['quantity' => 8.0]);
 
-        // Créer une préparation
+        // Préparation
         $preparation = Preparation::factory()->create([
             'company_id' => $company->id,
             'name' => 'Pâte à gâteau',
-            'unit' => MeasurementUnit::KILOGRAM,
+            'unit' => 'kg',
         ]);
 
-        // Lier les ingrédients à la préparation
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing1->id,
-            'entity_type' => Ingredient::class,
-        ]);
+        // Liaisons
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing1->id, 'entity_type' => Ingredient::class]);
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing2->id, 'entity_type' => Ingredient::class]);
 
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing2->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Effectuer la préparation
+        // Prepare
         $payload = [
             'quantity' => 2.5,
             'location_id' => $location2->id,
             'components' => [
-                [
-                    'entity_id' => $ing1->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 3.0,
-                    'sources' => [
-                        [
-                            'location_id' => $location1->id,
-                            'quantity' => 3.0,
-                        ],
-                    ],
-                ],
-                [
-                    'entity_id' => $ing2->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 2.0,
-                    'sources' => [
-                        [
-                            'location_id' => $location1->id,
-                            'quantity' => 2.0,
-                        ],
-                    ],
-                ],
+                ['entity_id' => $ing1->id, 'entity_type' => 'ingredient', 'quantity' => 3.0, 'sources' => [
+                    ['location_id' => $location1->id, 'quantity' => 3.0],
+                ]],
+                ['entity_id' => $ing2->id, 'entity_type' => 'ingredient', 'quantity' => 2.0, 'sources' => [
+                    ['location_id' => $location1->id, 'quantity' => 2.0],
+                ]],
             ],
         ];
 
@@ -737,96 +837,39 @@ class PreparationControllerTest extends TestCase
             ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
             ->assertStatus(200);
 
-        // Vérifier que les stocks ont été réduits
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing1->id,
-            'location_id' => $location1->id,
-            'quantity' => 7.0, // 10.0 - 3.0
-        ]);
+        // Stocks réduits
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing1->id, 'location_id' => $location1->id, 'quantity' => 7.0]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing2->id, 'location_id' => $location1->id, 'quantity' => 6.0]);
 
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing2->id,
-            'location_id' => $location1->id,
-            'quantity' => 6.0, // 8.0 - 2.0
-        ]);
-
-        // Vérifier que la préparation a été ajoutée à l'emplacement destination
-        $this->assertDatabaseHas('location_preparation', [
-            'preparation_id' => $preparation->id,
-            'location_id' => $location2->id,
-            'quantity' => 2.5,
-        ]);
+        // Quantité destination
+        $this->assertDatabaseHas('location_preparation', ['preparation_id' => $preparation->id, 'location_id' => $location2->id, 'quantity' => 2.5]);
     }
 
-    /**
-     * Scénario : préparation avec plusieurs emplacements sources.
-     */
+    /** Scénario : préparation avec plusieurs emplacements sources. */
     public function test_it_prepares_with_multiple_sources(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        // Créer un ingrédient
-        $ing = Ingredient::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Farine',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Farine', 'unit' => 'kg']);
+        $location1 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve 1']);
+        $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve 2']);
+        $destination = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        // Créer des emplacements
-        $location1 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve 1',
-        ]);
-
-        $location2 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve 2',
-        ]);
-
-        $destination = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Cuisine',
-        ]);
-
-        // Ajouter du stock à l'ingrédient dans différents emplacements
         $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 5.0]);
         $ing->locations()->updateExistingPivot($location2->id, ['quantity' => 3.0]);
 
-        // Créer une préparation
-        $preparation = Preparation::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Simple preparation',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
 
-        // Lier l'ingrédient à la préparation
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Effectuer la préparation avec prélèvement depuis plusieurs emplacements
         $payload = [
             'quantity' => 2.0,
             'location_id' => $destination->id,
             'components' => [
-                [
-                    'entity_id' => $ing->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 6.0,
-                    'sources' => [
-                        [
-                            'location_id' => $location1->id,
-                            'quantity' => 4.0,
-                        ],
-                        [
-                            'location_id' => $location2->id,
-                            'quantity' => 2.0,
-                        ],
-                    ],
-                ],
+                ['entity_id' => $ing->id, 'entity_type' => 'ingredient', 'quantity' => 6.0, 'sources' => [
+                    ['location_id' => $location1->id, 'quantity' => 4.0],
+                    ['location_id' => $location2->id, 'quantity' => 2.0],
+                ]],
             ],
         ];
 
@@ -834,86 +877,32 @@ class PreparationControllerTest extends TestCase
             ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
             ->assertStatus(200);
 
-        // Vérifier que les stocks ont été réduits aux bons emplacements
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing->id,
-            'location_id' => $location1->id,
-            'quantity' => 1.0, // 5.0 - 4.0
-        ]);
-
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing->id,
-            'location_id' => $location2->id,
-            'quantity' => 1.0, // 3.0 - 2.0
-        ]);
-
-        // Vérifier que la préparation a été ajoutée
-        $this->assertDatabaseHas('location_preparation', [
-            'preparation_id' => $preparation->id,
-            'location_id' => $destination->id,
-            'quantity' => 2.0,
-        ]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $location1->id, 'quantity' => 1.0]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $location2->id, 'quantity' => 1.0]);
+        $this->assertDatabaseHas('location_preparation', ['preparation_id' => $preparation->id, 'location_id' => $destination->id, 'quantity' => 2.0]);
     }
 
-    /**
-     * Scénario : échec de préparation avec stock insuffisant.
-     */
+    /** Scénario : échec de préparation avec stock insuffisant. */
     public function test_it_fails_to_prepare_with_insufficient_stock(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        // Créer un ingrédient
-        $ing = Ingredient::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Farine',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
-
-        // Créer des emplacements
-        $location1 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve',
-        ]);
-
-        $location2 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Cuisine',
-        ]);
-
-        // Ajouter un stock limité
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Farine', 'unit' => 'kg']);
+        $location1 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve']);
+        $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
         $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 2.0]);
 
-        // Créer une préparation
-        $preparation = Preparation::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Simple preparation',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
 
-        // Lier l'ingrédient à la préparation
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Tenter une préparation qui demande plus que le stock disponible
         $payload = [
             'quantity' => 1.0,
             'location_id' => $location2->id,
             'components' => [
-                [
-                    'entity_id' => $ing->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 3.0, // Plus que les 2.0 disponibles
-                    'sources' => [
-                        [
-                            'location_id' => $location1->id,
-                            'quantity' => 3.0,
-                        ],
-                    ],
-                ],
+                ['entity_id' => $ing->id, 'entity_type' => 'ingredient', 'quantity' => 3.0, 'sources' => [
+                    ['location_id' => $location1->id, 'quantity' => 3.0],
+                ]],
             ],
         ];
 
@@ -922,79 +911,33 @@ class PreparationControllerTest extends TestCase
             ->assertStatus(400)
             ->assertJsonFragment(['message' => "Stock insuffisant pour 'Farine' à l'emplacement 'Réserve' (disponible: 2, requis: 3)"]);
 
-        // Vérifier que le stock n'a pas été modifié (rollback réussi)
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing->id,
-            'location_id' => $location1->id,
-            'quantity' => 2.0, // Inchangé
-        ]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $location1->id, 'quantity' => 2.0]);
     }
 
-    /**
-     * Scénario : échec de préparation avec un congélateur.
-     */
+    /** Scénario : échec de préparation avec un congélateur. */
     public function test_it_fails_when_using_freezer_location(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        // Créer un type d'emplacement congélateur
-        $freezerType = LocationType::firstOrCreate([
-            'name' => 'Congélateur',
-        ]);
+        $freezerType = LocationType::firstOrCreate(['name' => 'Congélateur']);
 
-        // Créer un ingrédient
-        $ing = Ingredient::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Viande',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Viande', 'unit' => 'kg']);
+        $freezer = Location::factory()->create(['company_id' => $company->id, 'name' => 'Congélateur principal', 'location_type_id' => $freezerType->id]);
+        $kitchen = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        // Créer des emplacements dont un congélateur
-        $freezer = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Congélateur principal',
-            'location_type_id' => $freezerType->id,
-        ]);
-
-        $kitchen = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Cuisine',
-        ]);
-
-        // Ajouter du stock dans le congélateur
         $ing->locations()->updateExistingPivot($freezer->id, ['quantity' => 5.0]);
 
-        // Créer une préparation
-        $preparation = Preparation::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Préparation de viande',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Préparation de viande', 'unit' => 'kg']);
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
 
-        // Lier l'ingrédient à la préparation
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Tenter une préparation qui utilise un emplacement congélateur
         $payload = [
             'quantity' => 1.0,
             'location_id' => $kitchen->id,
             'components' => [
-                [
-                    'entity_id' => $ing->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 2.0,
-                    'sources' => [
-                        [
-                            'location_id' => $freezer->id,
-                            'quantity' => 2.0,
-                        ],
-                    ],
-                ],
+                ['entity_id' => $ing->id, 'entity_type' => 'ingredient', 'quantity' => 2.0, 'sources' => [
+                    ['location_id' => $freezer->id, 'quantity' => 2.0],
+                ]],
             ],
         ];
 
@@ -1003,84 +946,34 @@ class PreparationControllerTest extends TestCase
             ->assertStatus(400)
             ->assertJsonFragment(['message' => "Impossible d'utiliser un emplacement de type congélateur ('Congélateur principal') pour le composant 'Viande'"]);
 
-        // Vérifier que le stock n'a pas été modifié
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing->id,
-            'location_id' => $freezer->id,
-            'quantity' => 5.0, // Inchangé
-        ]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $freezer->id, 'quantity' => 5.0]);
     }
 
-    /**
-     * Scénario : échec lorsque la somme des sources ne correspond pas à la quantité requise.
-     */
+    /** Scénario : échec lorsque la somme des sources ne correspond pas à la quantité requise. */
     public function test_it_fails_when_source_sum_does_not_match_required_quantity(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        // Créer un ingrédient
-        $ing = Ingredient::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Farine',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Farine', 'unit' => 'kg']);
+        $location1 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve 1']);
+        $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve 2']);
+        $destination = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        // Créer des emplacements
-        $location1 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve 1',
-        ]);
-
-        $location2 = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve 2',
-        ]);
-
-        $destination = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Cuisine',
-        ]);
-
-        // Ajouter du stock
         $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 5.0]);
         $ing->locations()->updateExistingPivot($location2->id, ['quantity' => 3.0]);
 
-        // Créer une préparation
-        $preparation = Preparation::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Simple preparation',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
 
-        // Lier l'ingrédient à la préparation
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Effectuer une préparation avec des sources dont la somme ne correspond pas
         $payload = [
             'quantity' => 2.0,
             'location_id' => $destination->id,
             'components' => [
-                [
-                    'entity_id' => $ing->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 6.0,
-                    'sources' => [
-                        [
-                            'location_id' => $location1->id,
-                            'quantity' => 3.0,
-                        ],
-                        [
-                            'location_id' => $location2->id,
-                            'quantity' => 2.0,
-                        ],
-                        // Total 5.0 alors que quantity est 6.0
-                    ],
-                ],
+                ['entity_id' => $ing->id, 'entity_type' => 'ingredient', 'quantity' => 6.0, 'sources' => [
+                    ['location_id' => $location1->id, 'quantity' => 3.0],
+                    ['location_id' => $location2->id, 'quantity' => 2.0],
+                ]],
             ],
         ];
 
@@ -1089,82 +982,35 @@ class PreparationControllerTest extends TestCase
             ->assertStatus(400)
             ->assertJsonFragment(['message' => "La somme des quantités des sources (5) ne correspond pas à la quantité requise (6) pour 'Farine'"]);
 
-        // Vérifier que les stocks n'ont pas été modifiés
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing->id,
-            'location_id' => $location1->id,
-            'quantity' => 5.0,
-        ]);
-
-        $this->assertDatabaseHas('ingredient_location', [
-            'ingredient_id' => $ing->id,
-            'location_id' => $location2->id,
-            'quantity' => 3.0,
-        ]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $location1->id, 'quantity' => 5.0]);
+        $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $location2->id, 'quantity' => 3.0]);
     }
 
-    /**
-     * Scénario : préparation avec cumul de quantité existante.
-     */
+    /** Scénario : préparation avec cumul de quantité existante. */
     public function test_it_adds_to_existing_quantity(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        // Créer un ingrédient
-        $ing = Ingredient::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Farine',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Farine', 'unit' => 'kg']);
+        $source = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve']);
+        $destination = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        // Créer des emplacements
-        $source = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Réserve',
-        ]);
-
-        $destination = Location::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Cuisine',
-        ]);
-
-        // Ajouter du stock
         $ing->locations()->updateExistingPivot($source->id, ['quantity' => 10.0]);
 
-        // Créer une préparation
-        $preparation = Preparation::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Simple preparation',
-            'unit' => MeasurementUnit::KILOGRAM,
-        ]);
+        $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
+        PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
 
-        // Lier l'ingrédient à la préparation
-        PreparationEntity::create([
-            'preparation_id' => $preparation->id,
-            'entity_id' => $ing->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Ajouter une quantité initiale de la préparation
+        // quantité initiale
         $preparation->locations()->updateExistingPivot($destination->id, ['quantity' => 1.5]);
 
-        // Effectuer la préparation
         $payload = [
             'quantity' => 2.5,
             'location_id' => $destination->id,
             'components' => [
-                [
-                    'entity_id' => $ing->id,
-                    'entity_type' => 'ingredient',
-                    'quantity' => 3.0,
-                    'sources' => [
-                        [
-                            'location_id' => $source->id,
-                            'quantity' => 3.0,
-                        ],
-                    ],
-                ],
+                ['entity_id' => $ing->id, 'entity_type' => 'ingredient', 'quantity' => 3.0, 'sources' => [
+                    ['location_id' => $source->id, 'quantity' => 3.0],
+                ]],
             ],
         ];
 
@@ -1172,11 +1018,6 @@ class PreparationControllerTest extends TestCase
             ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
             ->assertStatus(200);
 
-        // Vérifier que la quantité a été cumulée
-        $this->assertDatabaseHas('location_preparation', [
-            'preparation_id' => $preparation->id,
-            'location_id' => $destination->id,
-            'quantity' => 4.0, // 1.5 + 2.5
-        ]);
+        $this->assertDatabaseHas('location_preparation', ['preparation_id' => $preparation->id, 'location_id' => $destination->id, 'quantity' => 4.0]);
     }
 }

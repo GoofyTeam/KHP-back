@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Ingredient;
 use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class IngredientController extends Controller
 {
@@ -22,48 +24,70 @@ class IngredientController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('ingredients')->where(function ($query) use ($user) { // Ajout du "use ($user)"
+                Rule::unique('ingredients')->where(function ($query) use ($user) {
                     return $query->where('company_id', $user->company_id);
                 }),
             ],
-            'unit' => 'required|string|max:50',
-            'image' => 'nullable|image|max:2048',
+            // Valide contre les valeurs de l'enum
+            'unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+
+            // Fichier OU URL (au moins l’un des deux)
+            'image' => 'nullable|image|max:2048|required_without:image_url',
+            'image_url' => 'nullable|url|required_without:image',
+
             'categories' => 'required|array|min:1',
             'categories.*' => 'string|max:255',
+
             'quantities' => 'required|array|min:1',
             'quantities.*.quantity' => 'required|numeric|min:0',
             'quantities.*.location_id' => 'required|exists:locations,id',
+
             'barcode' => 'nullable|string|max:255',
-            'base_quantity' => 'nullable|numeric|min:0',
+            // ⚠️ non nullable : requis au store
+            'base_quantity' => 'required|numeric|min:0',
         ]);
 
-        $categories = collect($request->input('categories'))->map(function ($categoryName) use ($user) {
-            $formattedName = ucfirst($categoryName);
-
-            return Category::firstOrCreate(['name' => $formattedName, 'company_id' => $user->company_id]);
-        });
-
-        $ingredient = Ingredient::create([
-            'name' => $request->input('name'),
-            'unit' => $request->input('unit'),
-            'company_id' => $user->company_id,
-            // 'image_url' => $imageService->store(
-            //     $request->file('image'),
-            //     'ingredients'
-            // ),
-        ]);
-
-        if ($request->hasFile('image')) {
-            $ingredient->image_url = $imageService->store(
-                $request->file('image'),
-                'ingredients'
-            );
-            $ingredient->save();
+        // Vérifier exclusivité : ne pas fournir "image" et "image_url" en même temps
+        if ($request->hasFile('image') && $request->filled('image_url')) {
+            throw ValidationException::withMessages([
+                'image' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+                'image_url' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+            ]);
         }
 
+        // Préparer les catégories
+        $categories = collect($request->input('categories'))
+            ->map(function ($categoryName) use ($user) {
+                $formattedName = ucfirst($categoryName);
+
+                return Category::firstOrCreate([
+                    'name' => $formattedName,
+                    'company_id' => $user->company_id,
+                ]);
+            });
+
+        // Déterminer le chemin d'image si fourni (upload ou URL)
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $imageService->store($request->file('image'), 'ingredients');
+        } elseif ($request->filled('image_url')) {
+            $imagePath = $imageService->storeFromUrl($request->input('image_url'), 'ingredients');
+        }
+
+        // Créer l’ingrédient
+        $ingredient = Ingredient::create([
+            'name' => $request->input('name'),
+            'unit' => $request->input('unit'), // string accepté par le cast enum
+            'company_id' => $user->company_id,
+            'image_url' => $imagePath, // direct si présent
+            'barcode' => $request->input('barcode'),
+            'base_quantity' => $request->input('base_quantity'), // requis
+        ]);
+
+        // Lier les catégories
         $ingredient->categories()->attach($categories->pluck('id'));
 
-        // pour chaque location, on cree ou met a jour la quantite dans la table ingredient_location
+        // Quantités par location
         foreach ($request->input('quantities') as $quantityData) {
             $ingredient->locations()->syncWithoutDetaching([
                 $quantityData['location_id'] => [
@@ -95,40 +119,76 @@ class IngredientController extends Controller
                     return $query->where('company_id', $user->company_id);
                 }),
             ],
-            'unit' => 'sometimes|string|max:50',
-            'image' => 'nullable|image|max:2048',
+            // Accepte une nouvelle unit si fournie, et valide contre l'enum
+            'unit' => ['sometimes', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+
+            // Autoriser mise à jour par fichier OU URL (mais pas les deux)
+            'image' => 'sometimes|nullable|image|max:2048',
+            'image_url' => 'sometimes|nullable|url',
+
             'categories' => 'sometimes|array|min:0',
             'categories.*' => 'string|max:255',
+
             'quantities' => 'sometimes|array|min:0',
             'quantities.*.quantity' => 'required|numeric|min:0',
             'quantities.*.location_id' => 'required|exists:locations,id',
+
+            'barcode' => 'sometimes|nullable|string|max:255',
+            // non nullable côté DB, mais en update on n'oblige pas si non fourni
+            'base_quantity' => 'sometimes|numeric|min:0',
         ]);
 
-        if ($request->hasFile('image')) {
-            $ingredient->image_url = $imageService->store(
-                $request->file('image'),
-                'ingredients'
-            );
+        // Vérifier exclusivité : ne pas fournir "image" et "image_url" en même temps
+        if ($request->hasFile('image') && $request->filled('image_url')) {
+            throw ValidationException::withMessages([
+                'image' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+                'image_url' => 'Ne fournissez pas "image" et "image_url" en même temps.',
+            ]);
         }
 
-        $ingredient->name = $request->input('name', $ingredient->name);
-        $ingredient->unit = $request->input('unit', $ingredient->unit);
+        // Image (upload ou URL)
+        if ($request->hasFile('image')) {
+            $ingredient->image_url = $imageService->store($request->file('image'), 'ingredients');
+        } elseif ($request->filled('image_url')) {
+            $ingredient->image_url = $imageService->storeFromUrl($request->input('image_url'), 'ingredients');
+        }
+
+        // Champs simples
+        if ($request->has('name')) {
+            $ingredient->name = $request->input('name');
+        }
+        if ($request->has('unit')) {
+            $ingredient->unit = $request->input('unit');
+        }
+        if ($request->has('barcode')) {
+            $ingredient->barcode = $request->input('barcode');
+        }
+        if ($request->has('base_quantity')) {
+            $ingredient->base_quantity = $request->input('base_quantity');
+        }
         $ingredient->save();
 
-        // Update categories
-        $categories = collect($request->input('categories'))->map(function ($categoryName) use ($user) {
-            return Category::firstOrCreate(['name' => ucfirst($categoryName), 'company_id' => $user->company_id]);
-        });
+        // Mettre à jour les catégories seulement si fournies
+        if ($request->has('categories')) {
+            $categories = collect($request->input('categories'))
+                ->map(function ($categoryName) use ($user) {
+                    return Category::firstOrCreate([
+                        'name' => ucfirst($categoryName),
+                        'company_id' => $user->company_id,
+                    ]);
+                });
+            $ingredient->categories()->sync($categories->pluck('id'));
+        }
 
-        $ingredient->categories()->sync($categories->pluck('id'));
-
-        // Update quantities
-        foreach ($request->input('quantities') as $quantityData) {
-            $ingredient->locations()->syncWithoutDetaching([
-                $quantityData['location_id'] => [
-                    'quantity' => $quantityData['quantity'],
-                ],
-            ]);
+        // Mettre à jour les quantités seulement si fournies
+        if ($request->has('quantities')) {
+            foreach ($request->input('quantities') as $quantityData) {
+                $ingredient->locations()->syncWithoutDetaching([
+                    $quantityData['location_id'] => [
+                        'quantity' => $quantityData['quantity'],
+                    ],
+                ]);
+            }
         }
 
         return response()->json([
