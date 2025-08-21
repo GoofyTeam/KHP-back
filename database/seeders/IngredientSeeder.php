@@ -131,7 +131,7 @@ class IngredientSeeder extends Seeder
                 'image_url' => $this->imageService->store($upload, 'ingredients'),
             ]);
 
-            if ($cat = Category::inRandomOrder()->first()) {
+            if ($cat = Category::where('company_id', $ingredient->company_id)->inRandomOrder()->first()) {
                 $ingredient->categories()->attach($cat->id);
             }
 

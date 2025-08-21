@@ -12,6 +12,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('preparation_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->foreignId('category_id')->constrained()->onDelete('cascade')->nullable(false);
+
+            $table->unique(['preparation_id', 'category_id']);
+
             $table->timestamps();
         });
     }
