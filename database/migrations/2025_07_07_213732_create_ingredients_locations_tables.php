@@ -35,6 +35,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ingredient_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->foreignId('category_id')->constrained()->onDelete('cascade')->nullable(false);
+
+            $table->unique(['ingredient_id', 'category_id']);
+
             $table->timestamps();
         });
 
