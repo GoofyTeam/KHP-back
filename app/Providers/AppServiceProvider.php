@@ -38,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
             'name' => 'UnitEnum',
             'values' => collect(MeasurementUnit::cases())
                 ->mapWithKeys(fn ($c) => [
-                    $c->value => ['value' => $c], // nom du literal = "dL", valeur interne = case enum
+                    $c->value => ['value' => $c], // literal name = "dL", internal value = enum case
                 ])->all(),
         ]));
     }
