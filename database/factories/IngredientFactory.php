@@ -160,11 +160,20 @@ class IngredientFactory extends Factory
     {
         return $this->afterMaking(function (Ingredient $ingredient) {
             if (! array_key_exists('category_id', $ingredient->getAttributes())) {
-                $ingredient->category_id = Category::where('company_id', $ingredient->company_id)
-                    ->value('id')
-                    ?? Category::factory()->create([
-                        'company_id' => $ingredient->company_id,
-                    ])->id;
+                $companyId = $ingredient->company_id;
+                if (isset($this->categoryCache[$companyId])) {
+                    $ingredient->category_id = $this->categoryCache[$companyId];
+                } else {
+                    $categoryId = Category::where('company_id', $companyId)
+                        ->value('id');
+                    if ($categoryId === null) {
+                        $categoryId = Category::factory()->create([
+                            'company_id' => $companyId,
+                        ])->id;
+                    }
+                    $this->categoryCache[$companyId] = $categoryId;
+                    $ingredient->category_id = $categoryId;
+                }
             }
         });
     }
