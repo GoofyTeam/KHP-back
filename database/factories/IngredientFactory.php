@@ -156,7 +156,7 @@ class IngredientFactory extends Factory
         ];
     }
 
-    public function configure()
+    public function configure(): static
     {
         return $this->afterMaking(function (Ingredient $ingredient) {
             if (! array_key_exists('category_id', $ingredient->getAttributes())) {
