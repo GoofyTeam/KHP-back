@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 
 class PreparationSeeder extends Seeder
 {
@@ -19,12 +20,26 @@ class PreparationSeeder extends Seeder
     {
         $company = Company::where('name', 'GoofyTeam')->first();
 
+        $categoryIds = Category::where('company_id', $company->id)
+            ->pluck('id')
+            ->all();
+
         // Crée 40 préparations pour GoofyTeam
         $preparations = Preparation::factory()
             ->count(40)
             ->create([
                 'company_id' => $company->id,
             ]);
+
+        $preparations = collect();
+        for ($i = 0; $i < 40; $i++) {
+            $preparations->push(
+                Preparation::factory()->create([
+                    'company_id' => $company->id,
+                    'category_id' => Arr::random($categoryIds),
+                ])
+            );
+        }
 
         // Récupère quelques ingrédients de la société
         $ingredients = Ingredient::where('company_id', $company->id)->inRandomOrder()->take(20)->get();
@@ -81,23 +96,25 @@ class PreparationSeeder extends Seeder
                 // Attache les emplacements avec leurs quantités
                 $preparation->locations()->attach($locationData);
             }
-
-            // Attache une catégorie aléatoire à la préparation
-            $cat = Category::where('company_id', $company->id)->inRandomOrder()->first();
-            if ($cat) {
-                $preparation->categories()->attach($cat->id);
-            }
         }
 
         // Pour les autres sociétés
         $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
 
         foreach ($otherCompanies as $company) {
-            $preparations = Preparation::factory()
-                ->count(5)
-                ->create([
-                    'company_id' => $company->id,
-                ]);
+            $categoryIds = Category::where('company_id', $company->id)
+                ->pluck('id')
+                ->all();
+
+            $preparations = collect();
+            for ($i = 0; $i < 5; $i++) {
+                $preparations->push(
+                    Preparation::factory()->create([
+                        'company_id' => $company->id,
+                        'category_id' => Arr::random($categoryIds),
+                    ])
+                );
+            }
             $ingredients = Ingredient::where('company_id', $company->id)->inRandomOrder()->take(10)->get();
             $locations = Location::where('company_id', $company->id)->get();
 
@@ -125,12 +142,6 @@ class PreparationSeeder extends Seeder
 
                     // Attache les emplacements avec leurs quantités
                     $preparation->locations()->attach($locationData);
-                }
-
-                // Attache une catégorie aléatoire à la préparation
-                $cat = Category::where('company_id', $company->id)->inRandomOrder()->first();
-                if ($cat) {
-                    $preparation->categories()->attach($cat->id);
                 }
             }
         }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\MeasurementUnit;
+use App\Models\Category;
 use App\Models\Company;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -13,12 +14,22 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::create('categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->nullable(false);
+            $table->foreignId('company_id')->constrained()->onDelete('cascade')->nullable(false);
+            $table->timestamps();
+
+            $table->unique(['company_id', 'name']);
+        });
+
         Schema::create('preparations', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Company::class)
                 ->nullable(false)
                 ->constrained()
                 ->onDelete('cascade');
+            $table->foreignIdFor(Category::class)->constrained()->cascadeOnDelete();
             $table->string('name')->nullable(false);
             $table->enum('unit', MeasurementUnit::values())
                 ->default(MeasurementUnit::UNIT)
@@ -36,5 +47,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('preparations');
+        Schema::dropIfExists('categories');
     }
 };

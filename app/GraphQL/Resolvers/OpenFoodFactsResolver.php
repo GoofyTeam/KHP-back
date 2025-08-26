@@ -2,8 +2,8 @@
 
 namespace App\GraphQL\Resolvers;
 
-use App\DTO\OpenFoodFactsDTO;
 use App\Models\Ingredient;
+use App\DTO\OpenFoodFactsDTO;
 use App\Services\OpenFoodFactsService;
 
 class OpenFoodFactsResolver
@@ -37,8 +37,8 @@ class OpenFoodFactsResolver
                     'product_name_fr' => $ingredient->name,
                     'product_quantity' => $ingredient->base_quantity,
                     'product_quantity_unit' => $ingredient->unit->value,
-                    'categories' => $ingredient->categories->pluck('name')->implode(','),
-                    'image_front_url' => $ingredient->image_url ? url('/api/image-proxy/'.$ingredient->image_url) : null,
+                    'categories' => $ingredient->category->name,
+                    'image_front_url' => $ingredient->image_url ? url('/api/image-proxy/' . $ingredient->image_url) : null,
                     'is_already_in_database' => true,
                     'ingredient_id' => $ingredient->id,
                 ]);
