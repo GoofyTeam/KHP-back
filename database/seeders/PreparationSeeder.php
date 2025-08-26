@@ -25,12 +25,6 @@ class PreparationSeeder extends Seeder
             ->all();
 
         // Crée 40 préparations pour GoofyTeam
-        $preparations = Preparation::factory()
-            ->count(40)
-            ->create([
-                'company_id' => $company->id,
-            ]);
-
         $preparations = collect();
         for ($i = 0; $i < 40; $i++) {
             $preparations->push(
