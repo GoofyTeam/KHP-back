@@ -8,7 +8,7 @@ use App\Models\LocationPreparation;
 use App\Observers\IngredientLocationObserver;
 use App\Observers\LocationPreparationObserver;
 use App\Services\OpenFoodFactsService;
-use GraphQL\Type\Definition\PhpEnumType;
+use GraphQL\Type\Definition\EnumType;
 use Illuminate\Support\ServiceProvider;
 use Nuwave\Lighthouse\Schema\TypeRegistry;
 
@@ -33,8 +33,13 @@ class AppServiceProvider extends ServiceProvider
 
         // Enregistre l'enum PHP directement dans Lighthouse TypeRegistry
         $typeRegistry = app(TypeRegistry::class);
-        $typeRegistry->register(
-            new PhpEnumType(MeasurementUnit::class, 'UnitEnum')
-        );
+
+        $typeRegistry->register(new EnumType([
+            'name' => 'UnitEnum',
+            'values' => collect(MeasurementUnit::cases())
+                ->mapWithKeys(fn ($c) => [
+                    $c->value => ['value' => $c], // nom du literal = "dL", valeur interne = case enum
+                ])->all(),
+        ]));
     }
 }
