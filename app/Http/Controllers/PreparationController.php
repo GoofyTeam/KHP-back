@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MeasurementUnit;
-use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\LocationType;
