@@ -100,9 +100,9 @@ class PreparationSeeder extends Seeder
                 ->pluck('id')
                 ->all();
 
-            $preparations = collect();
+            $createdPreparations = collect();
             for ($i = 0; $i < 5; $i++) {
-                $preparations->push(
+                $createdPreparations->push(
                     Preparation::factory()->create([
                         'company_id' => $company->id,
                         'category_id' => Arr::random($categoryIds),
