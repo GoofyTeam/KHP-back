@@ -27,7 +27,7 @@ class PreparationFactory extends Factory
         ];
     }
 
-    public function configure()
+    public function configure(): static
     {
         return $this->afterMaking(function (Preparation $preparation) {
             if (! array_key_exists('category_id', $preparation->getAttributes())) {
