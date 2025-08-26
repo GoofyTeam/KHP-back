@@ -34,12 +34,13 @@ class PreparationControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $ing = Ingredient::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'Solo Entity',
             'unit' => 'g',
             'entities' => [['id' => $ing->id, 'type' => 'ingredient']],
-            'categories' => ['Dessert'],
+            'category_id' => $category->id,
         ];
 
         $this->actingAs($user)
@@ -49,7 +50,7 @@ class PreparationControllerTest extends TestCase
     }
 
     /** Scénario : création échoue sans catégories. */
-    public function test_it_fails_to_create_without_categories(): void
+    public function test_it_fails_to_create_without_category(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -68,7 +69,7 @@ class PreparationControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/preparations', $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors('categories');
+            ->assertJsonValidationErrors('category_id');
     }
 
     /** Scénario : création avec deux ingrédients. */
@@ -78,6 +79,7 @@ class PreparationControllerTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
         $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'Dual Ingredient',
@@ -86,7 +88,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
             ],
-            'categories' => ['Dessert'],
+            'category_id' => $category->id,
         ];
 
         $this->actingAs($user)
@@ -103,56 +105,6 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /** Scénario : création avec deux ingrédients et des catégories. */
-    public function test_it_creates_with_two_ingredients_and_category(): void
-    {
-        $company = Company::factory()->create();
-        $user = User::factory()->create(['company_id' => $company->id]);
-        $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
-        $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
-
-        $payload = [
-            'name' => 'Dual Ingredient',
-            'unit' => 'kg',
-            'entities' => [
-                ['id' => $ing1->id, 'type' => 'ingredient'],
-                ['id' => $ing2->id, 'type' => 'ingredient'],
-            ],
-            'categories' => ['Dessert', 'Pâtisserie'],
-        ];
-
-        $response = $this->actingAs($user)
-            ->postJson('/api/preparations', $payload)
-            ->assertStatus(201);
-
-        $preparationId = $response->json('preparation.id');
-
-        $this->assertDatabaseHas('preparation_entities', [
-            'entity_id' => $ing1->id,
-            'entity_type' => Ingredient::class,
-        ]);
-        $this->assertDatabaseHas('preparation_entities', [
-            'entity_id' => $ing2->id,
-            'entity_type' => Ingredient::class,
-        ]);
-
-        // Vérifier que les catégories ont été créées et associées
-        $dessertCategory = Category::where('name', 'Dessert')->where('company_id', $company->id)->first();
-        $patisserieCategory = Category::where('name', 'Pâtisserie')->where('company_id', $company->id)->first();
-
-        $this->assertNotNull($dessertCategory);
-        $this->assertNotNull($patisserieCategory);
-
-        $this->assertDatabaseHas('category_preparation', [
-            'category_id' => $dessertCategory->id,
-            'preparation_id' => $preparationId,
-        ]);
-        $this->assertDatabaseHas('category_preparation', [
-            'category_id' => $patisserieCategory->id,
-            'preparation_id' => $preparationId,
-        ]);
-    }
-
     /** Scénario : création avec deux préparations. */
     public function test_it_creates_with_two_preparations(): void
     {
@@ -160,6 +112,7 @@ class PreparationControllerTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $pre1 = Preparation::factory()->create(['company_id' => $company->id]);
         $pre2 = Preparation::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'Dual Preparation',
@@ -168,7 +121,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $pre1->id, 'type' => 'preparation'],
                 ['id' => $pre2->id, 'type' => 'preparation'],
             ],
-            'categories' => ['Boisson'],
+            'category_id' => $category->id,
         ];
 
         $this->actingAs($user)
@@ -183,12 +136,6 @@ class PreparationControllerTest extends TestCase
             'entity_id' => $pre2->id,
             'entity_type' => Preparation::class,
         ]);
-
-        // Vérifier que la catégorie a été créée
-        $this->assertDatabaseHas('categories', [
-            'name' => 'Boisson',
-            'company_id' => $company->id,
-        ]);
     }
 
     /** Scénario : création mixte (1 ingrédient + 1 préparation). */
@@ -198,6 +145,7 @@ class PreparationControllerTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $ing = Ingredient::factory()->create(['company_id' => $company->id]);
         $pre = Preparation::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'Mixed',
@@ -206,7 +154,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing->id, 'type' => 'ingredient'],
                 ['id' => $pre->id, 'type' => 'preparation'],
             ],
-            'categories' => ['Mixte'],
+            'category_id' => $category->id,
         ];
 
         $this->actingAs($user)
@@ -233,6 +181,7 @@ class PreparationControllerTest extends TestCase
 
         $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
         $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $file = UploadedFile::fake()->image('prep.jpg', 400, 400);
 
@@ -243,7 +192,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
             ],
-            'categories' => ['Test'],
+            'category_id' => $category->id,
             'image' => $file,
         ];
 
@@ -272,6 +221,8 @@ class PreparationControllerTest extends TestCase
         $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
         $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
 
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
         $payload = [
             'name' => 'Avec Image URL',
             'unit' => 'kg',
@@ -279,7 +230,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
             ],
-            'categories' => ['Test'],
+            'category_id' => $category->id,
             'image_url' => 'https://example.com/p.jpg',
         ];
 
@@ -305,6 +256,8 @@ class PreparationControllerTest extends TestCase
         $ing1 = Ingredient::factory()->create(['company_id' => $company->id]);
         $ing2 = Ingredient::factory()->create(['company_id' => $company->id]);
 
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
         $file = UploadedFile::fake()->image('x.jpg');
 
         $payload = [
@@ -314,7 +267,7 @@ class PreparationControllerTest extends TestCase
                 ['id' => $ing1->id, 'type' => 'ingredient'],
                 ['id' => $ing2->id, 'type' => 'ingredient'],
             ],
-            'categories' => ['Test'],
+            'category_id' => $category->id,
             'image_url' => 'https://example.com/x.jpg',
         ];
 
@@ -357,7 +310,7 @@ class PreparationControllerTest extends TestCase
     }
 
     /** Scénario : mise à jour des catégories d'une préparation. */
-    public function test_it_updates_categories(): void
+    public function test_it_updates_category(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -369,39 +322,47 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Créer une préparation avec la catégorie existante
-        $prep = Preparation::factory()->create(['company_id' => $company->id]);
-        $prep->categories()->attach($oldCategory->id);
+        $prep = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $oldCategory->id,
+        ]);
 
         // Mise à jour avec de nouvelles catégories
+        $newCategory = Category::factory()->create(['company_id' => $company->id, 'name' => 'NewCategory']);
         $payload = [
-            'categories' => ['NewCategory1', 'NewCategory2'],
+            'category_id' => $newCategory->id,
         ];
 
         $this->actingAs($user)
             ->putJson("/api/preparations/{$prep->id}", $payload)
             ->assertStatus(200);
 
-        // Vérifier que les anciennes catégories ont été remplacées
-        $this->assertDatabaseMissing('category_preparation', [
+        // Vérifier que la nouvelle catégorie a été associée
+        $this->assertDatabaseHas('preparations', [
+            'id' => $prep->id,
+            'category_id' => $newCategory->id,
+        ]);
+
+        // Vérifier que l'ancienne catégorie a été remplacée
+        $this->assertDatabaseMissing('preparations', [
+            'id' => $prep->id,
             'category_id' => $oldCategory->id,
-            'preparation_id' => $prep->id,
         ]);
+    }
 
-        // Vérifier que les nouvelles catégories ont été ajoutées
-        $newCategory1 = Category::where('name', 'NewCategory1')->where('company_id', $company->id)->first();
-        $newCategory2 = Category::where('name', 'NewCategory2')->where('company_id', $company->id)->first();
+    /** Scénario : mise à jour échoue si catégorie nulle. */
+    public function test_it_fails_to_update_with_null_category(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
 
-        $this->assertNotNull($newCategory1);
-        $this->assertNotNull($newCategory2);
+        $payload = ['category_id' => null];
 
-        $this->assertDatabaseHas('category_preparation', [
-            'category_id' => $newCategory1->id,
-            'preparation_id' => $prep->id,
-        ]);
-        $this->assertDatabaseHas('category_preparation', [
-            'category_id' => $newCategory2->id,
-            'preparation_id' => $prep->id,
-        ]);
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('category_id');
     }
 
     /** Scénario : suppression d'une entité via entities_to_remove. */
@@ -705,8 +666,8 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
-    /** Scénario : préparation avec vérification des catégories dans la réponse. */
-    public function test_prepare_response_includes_categories(): void
+    /** Scénario : préparation avec vérification de la catégorie dans la réponse. */
+    public function test_prepare_response_includes_category(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -746,7 +707,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Associer la catégorie à la préparation
-        $preparation->categories()->attach($category->id);
+        $preparation->category()->associate($category);
 
         // Lier l'ingrédient à la préparation
         PreparationEntity::create([
@@ -775,10 +736,9 @@ class PreparationControllerTest extends TestCase
             ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
             ->assertStatus(200);
 
-        // Vérifier que les catégories sont incluses dans la réponse
-        $this->assertArrayHasKey('categories', $response->json('preparation'));
-        $this->assertCount(1, $response->json('preparation.categories'));
-        $this->assertEquals('TestCategory', $response->json('preparation.categories.0.name'));
+        // Vérifier que la catégorie est incluse dans la réponse
+        $this->assertArrayHasKey('category', $response->json('preparation'));
+        $this->assertEquals('TestCategory', $response->json('preparation.category.name'));
     }
 
     /** Scénario : préparation réussie avec un seul emplacement source. */

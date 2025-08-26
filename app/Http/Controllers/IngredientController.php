@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MeasurementUnit;
-use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Services\ImageService;
@@ -37,8 +36,10 @@ class IngredientController extends Controller
             'image' => 'nullable|image|max:2048|required_without:image_url',
             'image_url' => 'nullable|url|required_without:image',
 
-            'categories' => 'required|array|min:1',
-            'categories.*' => 'string|max:255',
+            'category_id' => [
+                'required',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'quantities' => 'required|array|min:1',
             'quantities.*.quantity' => 'required|numeric|min:0',
@@ -57,17 +58,6 @@ class IngredientController extends Controller
             ]);
         }
 
-        // Préparer les catégories
-        $categories = collect($request->input('categories'))
-            ->map(function ($categoryName) use ($user) {
-                $formattedName = ucfirst($categoryName);
-
-                return Category::firstOrCreate([
-                    'name' => $formattedName,
-                    'company_id' => $user->company_id,
-                ]);
-            });
-
         // Déterminer le chemin d'image si fourni (upload ou URL)
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -84,10 +74,8 @@ class IngredientController extends Controller
             'image_url' => $imagePath, // direct si présent
             'barcode' => $request->input('barcode'),
             'base_quantity' => $request->input('base_quantity'), // requis
+            'category_id' => $request->input('category_id'),
         ]);
-
-        // Lier les catégories
-        $ingredient->categories()->attach($categories->pluck('id'));
 
         // Quantités par location
         foreach ($request->input('quantities') as $quantityData) {
@@ -128,8 +116,10 @@ class IngredientController extends Controller
             'image' => 'sometimes|nullable|image|max:2048',
             'image_url' => 'sometimes|nullable|url',
 
-            'categories' => 'sometimes|array|min:0',
-            'categories.*' => 'string|max:255',
+            'category_id' => [
+                'sometimes',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'quantities' => 'sometimes|array|min:0',
             'quantities.*.quantity' => 'required|numeric|min:0',
@@ -170,16 +160,9 @@ class IngredientController extends Controller
         }
         $ingredient->save();
 
-        // Mettre à jour les catégories seulement si fournies
-        if ($request->has('categories')) {
-            $categories = collect($request->input('categories'))
-                ->map(function ($categoryName) use ($user) {
-                    return Category::firstOrCreate([
-                        'name' => ucfirst($categoryName),
-                        'company_id' => $user->company_id,
-                    ]);
-                });
-            $ingredient->categories()->sync($categories->pluck('id'));
+        if ($request->has('category_id')) {
+            $ingredient->category_id = $request->input('category_id');
+            $ingredient->save();
         }
 
         // Mettre à jour les quantités seulement si fournies

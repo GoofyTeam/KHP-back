@@ -18,8 +18,8 @@ use Tests\TestCase;
  *
  * Use cases couverts :
  * - Création : avec fichier image, avec URL d’image, sans image (échec), avec les deux (échec),
- *   unicité du nom par société, même nom dans une autre société (OK), sans catégories (échec),
- *   normalisation des catégories (ucfirst), enregistrement de barcode/base_quantity,
+ *   unicité du nom par société, même nom dans une autre société (OK), sans catégorie (échec),
+ *   normalisation de la catégorie (ucfirst), enregistrement de barcode/base_quantity,
  *   stockage S3 + chemin renvoyé.
  * - Image URL : type MIME invalide (échec), taille > max (échec).
  * - Update : champs simples, MAJ image (fichier ou URL), erreur si fichier + URL,
@@ -37,12 +37,13 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Légumes'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
         ];
 
@@ -61,12 +62,13 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Légumes'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
             'image_url' => 'https://example.com/tomate.jpg',
         ];
@@ -81,7 +83,7 @@ class IngredientControllerTest extends TestCase
     }
 
     /** Création OK avec fichier uploadé : S3 + catégories + quantités. */
-    public function test_it_creates_with_uploaded_file_and_sets_categories_and_quantities(): void
+    public function test_it_creates_with_uploaded_file_and_sets_category_and_quantities(): void
     {
         Storage::fake('s3');
 
@@ -89,6 +91,7 @@ class IngredientControllerTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $loc1 = Location::factory()->create(['company_id' => $company->id]);
         $loc2 = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $file = UploadedFile::fake()->image('t.jpg', 300, 300);
 
@@ -96,7 +99,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['legumes', 'Bio'],
+            'category_id' => $category->id,
             'quantities' => [
                 ['location_id' => $loc1->id, 'quantity' => 10],
                 ['location_id' => $loc2->id, 'quantity' => 4.5],
@@ -116,9 +119,7 @@ class IngredientControllerTest extends TestCase
         $this->assertNotNull($ingredient->image_url);
         $this->assertTrue(Storage::disk('s3')->exists($ingredient->image_url));
 
-        // catégories créées (ucfirst) + attachées
-        $this->assertDatabaseHas('categories', ['name' => 'Legumes', 'company_id' => $company->id]);
-        $this->assertDatabaseHas('categories', ['name' => 'Bio', 'company_id' => $company->id]);
+        $this->assertDatabaseHas('ingredients', ['id' => $ingredientId, 'category_id' => $category->id]);
 
         // pivot quantités
         $this->assertDatabaseHas('ingredient_location', [
@@ -149,12 +150,13 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'TomateURL',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Légumes'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 3]],
             'image_url' => 'https://example.com/tomate.jpg',
         ];
@@ -174,6 +176,7 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Tomate']);
 
@@ -181,7 +184,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Légumes'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/t.jpg',
         ];
@@ -210,12 +213,13 @@ class IngredientControllerTest extends TestCase
 
         $user = User::factory()->create(['company_id' => $company2->id]);
         $loc = Location::factory()->create(['company_id' => $company2->id]);
+        $category = Category::factory()->create(['company_id' => $company2->id]);
 
         $payload = [
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Légumes'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/t.jpg',
         ];
@@ -226,7 +230,7 @@ class IngredientControllerTest extends TestCase
     }
 
     /** Création échoue sans catégories. */
-    public function test_it_fails_to_create_without_categories(): void
+    public function test_it_fails_to_create_without_category(): void
     {
         Storage::fake('s3');
         Http::fake([
@@ -248,7 +252,7 @@ class IngredientControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/ingredients', $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors('categories');
+            ->assertJsonValidationErrors('category_id');
     }
 
     /** Image URL échoue si MIME non image. */
@@ -262,12 +266,13 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'BadMime',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Test'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/not-image',
         ];
@@ -293,12 +298,13 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
 
         $payload = [
             'name' => 'TooBig',
             'unit' => 'kg',
             'base_quantity' => 1,
-            'categories' => ['Test'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/too-big.jpg',
         ];
@@ -323,7 +329,8 @@ class IngredientControllerTest extends TestCase
         ]);
 
         $cat = Category::factory()->create(['company_id' => $company->id, 'name' => 'OldCat']);
-        $ing->categories()->attach($cat->id);
+        $ing->category()->associate($cat);
+        $ing->save();
 
         $loc = Location::factory()->create(['company_id' => $company->id]);
         $ing->locations()->syncWithoutDetaching([$loc->id => ['quantity' => 2]]);
@@ -335,29 +342,46 @@ class IngredientControllerTest extends TestCase
             ->assertStatus(200);
 
         $this->assertDatabaseHas('ingredients', ['id' => $ing->id, 'name' => 'New', 'unit' => 'g']);
-        $this->assertDatabaseHas('category_ingredient', ['ingredient_id' => $ing->id, 'category_id' => $cat->id]);
+        $this->assertDatabaseHas('ingredients', ['id' => $ing->id, 'category_id' => $cat->id]);
         $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $loc->id, 'quantity' => 2]);
     }
 
     /** Update catégories : remplacées si fournies. */
-    public function test_it_updates_categories_when_provided(): void
+    public function test_it_updates_category_when_provided(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
         $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
         $old = Category::factory()->create(['company_id' => $company->id, 'name' => 'OldCat']);
-        $ing->categories()->attach($old->id);
+        $ing->category()->associate($old);
+        $ing->save();
 
-        $payload = ['categories' => ['newcat1', 'NewCat2']];
+        $new = Category::factory()->create(['company_id' => $company->id, 'name' => 'NewCat']);
+
+        $payload = ['category_id' => $new->id];
 
         $this->actingAs($user)
             ->putJson("/api/ingredients/{$ing->id}", $payload)
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('category_ingredient', ['ingredient_id' => $ing->id, 'category_id' => $old->id]);
-        $this->assertDatabaseHas('categories', ['name' => 'Newcat1', 'company_id' => $company->id]);
-        $this->assertDatabaseHas('categories', ['name' => 'NewCat2', 'company_id' => $company->id]);
+        $this->assertDatabaseHas('ingredients', ['id' => $ing->id, 'category_id' => $new->id]);
+    }
+
+    /** Update échoue si catégorie nulle. */
+    public function test_it_fails_to_update_with_null_category(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
+
+        $payload = ['category_id' => null];
+
+        $this->actingAs($user)
+            ->putJson("/api/ingredients/{$ing->id}", $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('category_id');
     }
 
     /** Update quantités : syncWithoutDetaching met à jour et/ou ajoute. */
@@ -501,11 +525,13 @@ class IngredientControllerTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $loc = Location::factory()->create(['company_id' => $company->id]);
 
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
         $payload = [
             'name' => 'AvecMeta',
             'unit' => 'kg',
             'base_quantity' => 1.25,
-            'categories' => ['Divers'],
+            'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
             'barcode' => '123456789',
             'image_url' => 'https://example.com/pic.jpg',

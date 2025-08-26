@@ -6,10 +6,10 @@ type Category {
     name: String!
 
     "Ingredients in this category."
-    ingredients: [Ingredient!]! @belongsToMany
+    ingredients: [Ingredient!]! @hasMany
 
     "Preparations in this category."
-    preparations: [Preparation!]! @belongsToMany
+    preparations: [Preparation!]! @hasMany
 
     "The company that owns this category."
     company: Company! @belongsTo

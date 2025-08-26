@@ -35,8 +35,7 @@ class PreparationController extends Controller
      * - 'entities' : obligatoire, tableau, au moins 2 éléments.
      *     • entities.*.id : entier requis.
      *     • entities.*.type : doit être 'ingredient' ou 'preparation'.
-     * - 'categories' : obligatoire, tableau, au moins 1 élément.
-     *     • categories.* : chaîne de caractères, max 255.
+     * - 'category_id' : obligatoire, identifiant de catégorie existante.
      * - 'image' / 'image_url' : optionnels, mais mutuellement exclusifs.
      *   • si 'image' fourni => upload S3 via ImageService
      *   • si 'image_url' fourni => téléchargement + stockage S3 via ImageService
@@ -71,8 +70,10 @@ class PreparationController extends Controller
             'entities.*.id' => ['required', 'integer'],
             'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
 
-            'categories' => ['required', 'array', 'min:1'],
-            'categories.*' => ['string', 'max:255'],
+            'category_id' => [
+                'required',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
         ]);
 
         // Exclusivité XOR image/image_url
@@ -98,6 +99,7 @@ class PreparationController extends Controller
             'name' => $validated['name'],
             'unit' => $validated['unit'],
             'image_url' => $storedPath, // peut rester null
+            'category_id' => $validated['category_id'],
         ];
 
         $preparation = Preparation::create($data);
@@ -112,22 +114,9 @@ class PreparationController extends Controller
             ]);
         }
 
-        // Traitement des catégories
-        $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
-            $formattedName = ucfirst($categoryName);
-
-            return Category::firstOrCreate([
-                'name' => $formattedName,
-                'company_id' => $user->company_id,
-            ]);
-        });
-
-        // Association des catégories à la préparation
-        $preparation->categories()->attach($categories->pluck('id'));
-
         return response()->json([
             'message' => 'Préparation créée avec succès',
-            'preparation' => $preparation->load('entities.entity', 'categories'),
+            'preparation' => $preparation->load('entities.entity', 'category'),
         ], 201);
     }
 
@@ -137,7 +126,7 @@ class PreparationController extends Controller
      * On attend maintenant deux tableaux optionnels et un tableau de quantités :
      * - 'entities_to_add'    : array d'entités à créer si elles n'existent pas encore
      * - 'entities_to_remove' : array d'entités à supprimer
-     * - 'categories'         : array de catégories à associer (remplace les existantes)
+     * - 'category_id'      : identifiant de catégorie à associer (remplace l'existante)
      * - 'quantities'         : array de quantités par emplacement
      * - 'image' / 'image_url': optionnels et mutuellement exclusifs (MAJ de l'illustration)
      *
@@ -194,8 +183,10 @@ class PreparationController extends Controller
             'quantities.*.quantity' => ['required_with:quantities', 'numeric', 'min:0'],
             'quantities.*.location_id' => ['required_with:quantities', 'exists:locations,id'],
 
-            'categories' => ['sometimes', 'array'],
-            'categories.*' => ['string', 'max:255'],
+            'category_id' => [
+                'sometimes',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
         ]);
 
         // Exclusivité XOR image/image_url
@@ -256,16 +247,9 @@ class PreparationController extends Controller
             }
         }
 
-        // Mise à jour des catégories
-        if (isset($validated['categories'])) {
-            $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
-                return Category::firstOrCreate([
-                    'name' => ucfirst($categoryName),
-                    'company_id' => $user->company_id,
-                ]);
-            });
-
-            $preparation->categories()->sync($categories->pluck('id'));
+        if (isset($validated['category_id'])) {
+            $preparation->category_id = $validated['category_id'];
+            $preparation->save();
         }
 
         // Gestion des quantités par emplacement
@@ -282,7 +266,7 @@ class PreparationController extends Controller
 
         return response()->json([
             'message' => 'Préparation mise à jour avec succès',
-            'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+            'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
         ], 200);
     }
 
@@ -453,7 +437,7 @@ class PreparationController extends Controller
 
             return response()->json([
                 'message' => "Préparation de {$validated['quantity']} {$preparation->unit->value} de {$preparation->name} effectuée avec succès",
-                'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+                'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
