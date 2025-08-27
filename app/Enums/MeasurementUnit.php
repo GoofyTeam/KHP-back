@@ -84,8 +84,10 @@ enum MeasurementUnit: string
         $normalized = strtolower(trim($unit));
 
         // On vérifie si ça correspond directement à un case de l'enum
+        $normalized = strtolower(trim(str_replace(' ', '', $normalized)));
+
         foreach (self::cases() as $case) {
-            if (strtolower(trim($case->value)) === $normalized) {
+            if (strtolower(str_replace(' ', '', trim($case->value))) === $normalized) {
                 return $case;
             }
         }
