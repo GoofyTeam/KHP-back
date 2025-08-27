@@ -73,4 +73,24 @@ enum MeasurementUnit: string
     {
         return array_map(fn (self $c) => $c->value, self::cases());
     }
+
+    public static function fromOpenFoodFacts(?string $unit): self
+    {
+        if (empty($unit)) {
+            return self::UNIT;
+        }
+
+        // Normalisation : OpenFoodFacts peut envoyer des majuscules/minuscules
+        $normalized = strtolower(trim($unit));
+
+        // On vérifie si ça correspond directement à un case de l'enum
+        foreach (self::cases() as $case) {
+            if (strtolower($case->value) === $normalized) {
+                return $case;
+            }
+        }
+
+        // Sinon fallback sur "unit"
+        return self::UNIT;
+    }
 }

@@ -2,6 +2,8 @@
 
 namespace App\DTO;
 
+use App\Enums\MeasurementUnit;
+
 class OpenFoodFactsDTO
 {
     public string $barcode;
@@ -33,6 +35,8 @@ class OpenFoodFactsDTO
         $this->product_name = $product['product_name_fr']
             ?? $product['product_name']
             ?? '';
+
+        $this->unit = MeasurementUnit::fromOpenFoodFacts($product['product_quantity_unit'] ?? '')->value;
 
         if (isset($product['product_quantity'])) {
             $this->base_quantity = (float) $product['product_quantity'];
