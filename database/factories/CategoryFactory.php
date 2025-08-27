@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Category;
 use App\Models\Company;
+use App\Models\LocationType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,5 +23,26 @@ class CategoryFactory extends Factory
             'name' => $this->faker->unique()->word(),
             'company_id' => Company::factory(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Category $category) {
+            $companyId = $category->company_id;
+
+            $freezer = LocationType::firstOrCreate(
+                ['company_id' => $companyId, 'name' => 'Congélateur'],
+                ['is_default' => true]
+            );
+            $fridge = LocationType::firstOrCreate(
+                ['company_id' => $companyId, 'name' => 'Réfrigérateur'],
+                ['is_default' => true]
+            );
+
+            $category->locationTypes()->attach([
+                $fridge->id => ['shelf_life_hours' => 24],
+                $freezer->id => ['shelf_life_hours' => 168],
+            ]);
+        });
     }
 }
