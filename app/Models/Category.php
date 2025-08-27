@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasSearchScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
@@ -29,6 +30,13 @@ class Category extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function locationTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(LocationType::class)
+            ->withPivot('shelf_life_hours')
+            ->withTimestamps();
     }
 
     public function scopeForCompany($query)
