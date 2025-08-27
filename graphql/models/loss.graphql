@@ -9,7 +9,7 @@ type Loss {
     lossable_type: String!
 
     "ID de l'entité concernée."
-    lossable_id: ID!
+    entity_id: ID!
 
     "L'emplacement où la perte a eu lieu."
     location: Location! @belongsTo
@@ -37,7 +37,7 @@ extend type Query @guard {
     "Liste les pertes pour l'entreprise actuelle."
     losses(
         trackable_type: String @eq(key: "lossable_type")
-        trackable_id: ID @eq(key: "lossable_id")
+        trackable_id: ID @eq(key: "entity_id")
         location_id: ID @eq
         start_date: DateTime @where(operator: ">=", key: "created_at")
         end_date: DateTime @where(operator: "<=", key: "created_at")

@@ -64,7 +64,7 @@ class LossTrackingTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('losses', [
-            'lossable_id' => $this->ingredient->id,
+            'entity_id' => $this->ingredient->id,
             'lossable_type' => Ingredient::class,
             'location_id' => $this->location->id,
             'quantity' => 3.5,
@@ -104,7 +104,7 @@ class LossTrackingTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('losses', [
-            'lossable_id' => $this->preparation->id,
+            'entity_id' => $this->preparation->id,
             'lossable_type' => Preparation::class,
             'location_id' => $this->location->id,
             'quantity' => 2.0,

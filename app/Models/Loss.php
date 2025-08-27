@@ -23,7 +23,7 @@ class Loss extends Model
     use HasFactory;
 
     protected $fillable = [
-        'lossable_id',
+        'entity_id',
         'lossable_type',
         'location_id',
         'company_id',
