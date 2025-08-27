@@ -26,4 +26,5 @@ type OpenFoodFactsProduct {
     categories: [String]
     imageUrl: String
     is_already_in_database: Boolean
+    ingredient_id: ID
 }
