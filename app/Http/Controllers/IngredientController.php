@@ -238,8 +238,9 @@ class IngredientController extends Controller
             ->where('company_id', $user->company_id)
             ->firstOrFail();
 
-        $currentQuantity = $ingredient->locations()->find($location->id)?->pivot->quantity ?? 0;
-        $newQuantity = $currentQuantity + $validated['quantity'];
+        $currentQuantity = (float) ($ingredient->locations()->find($location->id)?->pivot->quantity ?? 0);
+        $adjustment = (float) $validated['quantity'];
+        $newQuantity = $currentQuantity + $adjustment;
 
         if ($newQuantity < 0) {
             return response()->json([

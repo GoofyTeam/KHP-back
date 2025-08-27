@@ -484,8 +484,9 @@ class PreparationController extends Controller
             ->where('company_id', $user->company_id)
             ->firstOrFail();
 
-        $currentQuantity = $preparation->locations()->find($location->id)?->pivot->quantity ?? 0;
-        $newQuantity = $currentQuantity + $validated['quantity'];
+        $currentQuantity = (float) ($preparation->locations()->find($location->id)?->pivot->quantity ?? 0);
+        $adjustment = (float) $validated['quantity'];
+        $newQuantity = $currentQuantity + $adjustment;
 
         if ($newQuantity < 0) {
             return response()->json([
