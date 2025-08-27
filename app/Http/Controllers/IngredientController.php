@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Services\ImageService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -211,6 +213,48 @@ class IngredientController extends Controller
 
         return response()->json([
             'message' => 'Ingredient deleted successfully',
+        ], 200);
+    }
+
+    /**
+     * Adjust the quantity of an ingredient for a specific location.
+     */
+    public function adjustQuantity(Request $request, Ingredient $ingredient): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Ingredient not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
+            'quantity' => ['required', 'numeric'],
+        ]);
+
+        $location = Location::where('id', $validated['location_id'])
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        $currentQuantity = (float) ($ingredient->locations()->find($location->id)?->pivot->quantity ?? 0);
+        $adjustment = (float) $validated['quantity'];
+        $newQuantity = $currentQuantity + $adjustment;
+
+        if ($newQuantity < 0) {
+            return response()->json([
+                'message' => 'Quantity cannot be negative',
+            ], 422);
+        }
+
+        $ingredient->locations()->syncWithoutDetaching([
+            $location->id => ['quantity' => $newQuantity],
+        ]);
+
+        return response()->json([
+            'message' => 'Ingredient quantity updated successfully',
+            'ingredient' => $ingredient->load('locations', 'categories'),
         ], 200);
     }
 }

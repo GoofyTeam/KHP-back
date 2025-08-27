@@ -463,4 +463,44 @@ class PreparationController extends Controller
             ], 400);
         }
     }
+
+    /**
+     * Ajuste la quantité d'une préparation pour un emplacement donné.
+     */
+    public function adjustQuantity(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+
+        $preparation = Preparation::where('id', $id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
+            'quantity' => ['required', 'numeric'],
+        ]);
+
+        $location = Location::where('id', $validated['location_id'])
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        $currentQuantity = (float) ($preparation->locations()->find($location->id)?->pivot->quantity ?? 0);
+        $adjustment = (float) $validated['quantity'];
+        $newQuantity = $currentQuantity + $adjustment;
+
+        if ($newQuantity < 0) {
+            return response()->json([
+                'message' => 'Quantity cannot be negative',
+            ], 422);
+        }
+
+        $preparation->locations()->syncWithoutDetaching([
+            $location->id => ['quantity' => $newQuantity],
+        ]);
+
+        return response()->json([
+            'message' => 'Quantité de la préparation mise à jour avec succès',
+            'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+        ], 200);
+    }
 }

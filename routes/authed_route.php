@@ -29,6 +29,7 @@ Route::prefix('preparations')->name('preparations.')->group(function () {
     Route::put('/{id}', [PreparationController::class, 'update'])->name('update');
     Route::delete('/{id}', [PreparationController::class, 'destroy'])->name('destroy');
     Route::post('/{id}/prepare', [PreparationController::class, 'prepare'])->name('prepare');
+    Route::post('/{id}/adjust-quantity', [PreparationController::class, 'adjustQuantity'])->name('adjust-quantity');
 });
 
 // Groupe de routes pour les ingrédients
@@ -36,6 +37,7 @@ Route::prefix('ingredients')->name('ingredients.')->group(function () {
     Route::post('/', [IngredientController::class, 'store'])->name('store');
     Route::put('/{ingredient}', [IngredientController::class, 'update'])->name('update');
     Route::delete('/{ingredient}', [IngredientController::class, 'destroy'])->name('destroy');
+    Route::post('/{ingredient}/adjust-quantity', [IngredientController::class, 'adjustQuantity'])->name('adjust-quantity');
 });
 
 // Groupe de routes pour les types de localisation
