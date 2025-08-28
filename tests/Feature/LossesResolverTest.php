@@ -14,13 +14,17 @@ use Tests\TestCase;
 
 class LossesStatsResolverTest extends TestCase
 {
-    use RefreshDatabase;
     use MakesGraphQLRequests;
+    use RefreshDatabase;
 
     protected Company $company;
+
     protected User $user;
+
     protected Location $location;
+
     protected Ingredient $ingredient;
+
     protected Preparation $preparation;
 
     protected function setUp(): void
