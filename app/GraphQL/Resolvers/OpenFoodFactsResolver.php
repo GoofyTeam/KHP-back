@@ -2,8 +2,8 @@
 
 namespace App\GraphQL\Resolvers;
 
-use App\Models\Ingredient;
 use App\DTO\OpenFoodFactsDTO;
+use App\Models\Ingredient;
 use App\Services\OpenFoodFactsService;
 
 class OpenFoodFactsResolver
@@ -41,7 +41,7 @@ class OpenFoodFactsResolver
                      * @phpstan-ignore-next-line
                      */
                     'categories' => $ingredient->category->name,
-                    'image_front_url' => $ingredient->image_url ? url('/api/image-proxy/' . $ingredient->image_url) : null,
+                    'image_front_url' => $ingredient->image_url ? url('/api/image-proxy/'.$ingredient->image_url) : null,
                     'is_already_in_database' => true,
                     'ingredient_id' => $ingredient->id,
                 ]);
