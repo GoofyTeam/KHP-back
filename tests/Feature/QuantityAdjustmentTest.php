@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
+use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,8 +20,17 @@ class QuantityAdjustmentTest extends TestCase
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $location = Location::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $locationType = LocationType::factory()->create();
+        $location = Location::factory()->create([
+            'company_id' => $company->id,
+            'location_type_id' => $locationType->id,
+        ]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+        $category->locationTypes()->attach($locationType->id, ['shelf_life_hours' => 24]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+        ]);
         $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
 
         $this->actingAs($user)
@@ -34,6 +45,53 @@ class QuantityAdjustmentTest extends TestCase
             'location_id' => $location->id,
             'quantity' => 12.5,
         ]);
+
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'company_id' => $company->id,
+            'quantity' => 7.5,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+                'location_id' => $location->id,
+                'quantity' => -2,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'company_id' => $company->id,
+            'quantity' => 5.5,
+        ]);
+    }
+
+    public function test_it_skips_perishable_when_no_shelf_life(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $locationType = LocationType::factory()->create();
+        $location = Location::factory()->create([
+            'company_id' => $company->id,
+            'location_type_id' => $locationType->id,
+        ]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+        ]);
+        $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
+
+        $this->actingAs($user)
+            ->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+                'location_id' => $location->id,
+                'quantity' => 2,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseCount('perishables', 0);
     }
 
     public function test_it_prevents_negative_ingredient_quantity(): void

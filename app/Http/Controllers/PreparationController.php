@@ -8,6 +8,7 @@ use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
+use App\Services\PerishableService;
 use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -307,7 +308,7 @@ class PreparationController extends Controller
      *
      * @param  int  $id
      */
-    public function prepare(Request $request, $id): JsonResponse
+    public function prepare(Request $request, $id, PerishableService $perishableService): JsonResponse
     {
         $user = $request->user();
 
@@ -408,6 +409,10 @@ class PreparationController extends Controller
                         $source['location_id'],
                         ['quantity' => $pivot->quantity - $source['quantity']]
                     );
+
+                    if ($entity instanceof Ingredient) {
+                        $perishableService->remove($entity->id, $source['location_id'], $user->company_id, $source['quantity']);
+                    }
                 }
             }
 
@@ -483,7 +488,7 @@ class PreparationController extends Controller
 
         return response()->json([
             'message' => 'Quantité de la préparation mise à jour avec succès',
-            'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+            'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
         ], 200);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
 use App\Models\Location;
+use App\Services\PerishableService;
 use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -202,7 +203,7 @@ class IngredientController extends Controller
     /**
      * Adjust the quantity of an ingredient for a specific location.
      */
-    public function adjustQuantity(Request $request, Ingredient $ingredient): JsonResponse
+    public function adjustQuantity(Request $request, Ingredient $ingredient, PerishableService $perishableService): JsonResponse
     {
         $user = $request->user();
 
@@ -235,9 +236,15 @@ class IngredientController extends Controller
             $location->id => ['quantity' => $newQuantity],
         ]);
 
+        if ($adjustment > 0) {
+            $perishableService->add($ingredient->id, $location->id, $user->company_id, $adjustment);
+        } elseif ($adjustment < 0) {
+            $perishableService->remove($ingredient->id, $location->id, $user->company_id, abs($adjustment));
+        }
+
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',
-            'ingredient' => $ingredient->load('locations', 'categories'),
+            'ingredient' => $ingredient->load('locations', 'category'),
         ], 200);
     }
 }
