@@ -94,6 +94,18 @@ class Ingredient extends Model
         });
     }
 
+    /**
+     * Filtre par code-barres exact.
+     */
+    public function scopeBarcode($query, ?string $barcode)
+    {
+        if (empty($barcode)) {
+            return $query;
+        }
+
+        return $query->where('barcode', $barcode);
+    }
+
     public function preparationEntities()
     {
         return $this->morphMany(PreparationEntity::class, 'entity');
