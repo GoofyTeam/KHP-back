@@ -125,6 +125,31 @@ class LossTrackingTest extends TestCase
     }
 
     /**
+     * Enregistre correctement une perte avec des quantités décimales proches.
+     */
+    public function test_recording_loss_with_decimal_precision(): void
+    {
+        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => 0.68]);
+        StockMovement::query()->delete();
+
+        $response = $this->postJson('/api/losses', [
+            'trackable_type' => 'ingredient',
+            'trackable_id' => $this->ingredient->id,
+            'location_id' => $this->location->id,
+            'quantity' => 0.67,
+            'reason' => 'Test',
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $this->ingredient->id,
+            'location_id' => $this->location->id,
+            'quantity' => 0.01,
+        ]);
+    }
+
+    /**
      * Empêche l'enregistrement d'une perte si le stock est insuffisant.
      */
     public function test_recording_loss_with_insufficient_stock_returns_error(): void
