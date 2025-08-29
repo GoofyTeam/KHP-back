@@ -8,7 +8,6 @@ use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Perishable;
-use App\Models\Loss;
 use App\Models\User;
 use App\Services\PerishableService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,7 +59,7 @@ class PerishableTest extends TestCase
             'quantity' => 2,
         ]);
 
-        $service = new PerishableService();
+        $service = new PerishableService;
         $service->remove($ingredient->id, $location->id, $company->id, 3);
 
         $this->assertSame(2, Perishable::count());
@@ -115,4 +114,3 @@ class PerishableTest extends TestCase
         ]);
     }
 }
-

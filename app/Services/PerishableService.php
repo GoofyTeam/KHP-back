@@ -79,4 +79,3 @@ class PerishableService
         return $perishable->created_at->copy()->addHours($shelfLife);
     }
 }
-
