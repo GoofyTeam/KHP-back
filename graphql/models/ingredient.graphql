@@ -81,6 +81,9 @@ extend type Query @guard {
 
         "Options de tri des ingrédients"
         orderBy: [IngredientOrderByClause!] @orderBy
+
+        "Get ingredient by its barcode."
+        barcode: String @scope(name: "barcode")
     ): [Ingredient!]!
         @paginate(
             defaultCount: 10
@@ -90,8 +93,10 @@ extend type Query @guard {
     "Find a single ingredient (only if it belongs to the current company)."
     ingredient(
         "Search by primary key."
-        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        id: ID @eq @rules(apply: ["prohibits:name,barcode", "required_without_all:name,barcode"])
         "Search by ingredient name."
-        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+        name: String @eq @rules(apply: ["prohibits:id,barcode", "required_without_all:id,barcode"])
+        "Search by ingredient barcode."
+        barcode: String @eq @rules(apply: ["prohibits:id,name", "required_without_all:id,name"])
     ): Ingredient @find(scopes: ["forCompany"])
 }
