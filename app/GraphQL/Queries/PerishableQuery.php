@@ -22,6 +22,7 @@ class PerishableQuery
 
         if ($filter === 'SOON') {
             $threshold = Carbon::now()->addHours(48);
+
             return $perishables->filter(fn ($p) => $service->expiration($p)->between(now(), $threshold));
         }
 
