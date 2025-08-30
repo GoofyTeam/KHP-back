@@ -79,7 +79,7 @@ class PreparationSeeder extends Seeder
                 }
 
                 // Attache les emplacements avec leurs quantités
-                $preparation->locations()->attach($locationData);
+                $preparation->locations()->syncWithoutDetaching($locationData);
             }
 
             // Attache une catégorie aléatoire à la préparation
@@ -124,7 +124,7 @@ class PreparationSeeder extends Seeder
                     }
 
                     // Attache les emplacements avec leurs quantités
-                    $preparation->locations()->attach($locationData);
+                    $preparation->locations()->syncWithoutDetaching($locationData);
                 }
 
                 // Attache une catégorie aléatoire à la préparation
