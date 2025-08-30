@@ -6,6 +6,7 @@ use App\Traits\HasSearchScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
@@ -16,21 +17,26 @@ class Category extends Model
         'id',
     ];
 
-    public function ingredients(): BelongsToMany
+    public function ingredients(): HasMany
     {
-        return $this->belongsToMany(Ingredient::class, 'category_ingredient', 'category_id', 'ingredient_id')
-            ->withTimestamps();
+        return $this->hasMany(Ingredient::class);
     }
 
-    public function preparations(): BelongsToMany
+    public function preparations(): HasMany
     {
-        return $this->belongsToMany(Preparation::class, 'category_preparation', 'category_id', 'preparation_id')
-            ->withTimestamps();
+        return $this->hasMany(Preparation::class);
     }
 
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function locationTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(LocationType::class)
+            ->withPivot('shelf_life_hours')
+            ->withTimestamps();
     }
 
     public function scopeForCompany($query)

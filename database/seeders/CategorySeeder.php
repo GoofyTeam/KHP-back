@@ -14,43 +14,86 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            'Fruits et Légumes',
-            'Viandes et Poissons',
+            'Viandes Rouges',
+            'Viandes Blanches',
+            'Poissons',
+            'Fruits de Mer',
+            'Légumes',
+            'Fruits',
             'Produits Laitiers',
+            'Céréales et Pâtes',
             'Épices et Herbes',
             'Condiments et Sauces',
-            'Pains et Pâtisseries',
             'Boissons',
             'Produits Surgelés',
-            'Produits Secs',
+            'Produits en Conserves',
             'Produits Bio',
-            'Produits Locaux',
+            'Snacks et Apéritifs',
+            'Pains et Viennoiseries',
+            'Desserts et Pâtisseries',
+            'Ingrédients Divers',
+            'Salades',
+            'Soupes',
+            'Plats Préparés',
+            'Végétariens',
+            'Végétaliens',
+            'Sans Gluten',
+            'Sans Lactose',
+            'Sauces',
+            'Marinades',
+            'Huiles et Vinaigres',
+            'Fromages',
+            'Charcuterie',
+            'Œufs',
+            'Noix et Graines',
+            'Légumineuses',
+            'Céréales',
+            'Pâtes',
+            'Riz',
+            'Farines',
+            'Sucre et Édulcorants',
+            'Chocolat et Cacao',
+            'Café et Thé',
+            'Jus de Fruits',
+            'Sodas',
+            'Eaux Minérales',
+            'Bières',
+            'Vins',
+            'Spiritueux',
+            'Cocktails',
             'Produits Exotiques',
-            'Produits Végétariens',
-            'Produits Végans',
-            'Produits Sans Gluten',
-            'Produits Sans Lactose',
-            'Produits Diététiques',
-            'Produits de Saison',
-            'Produits Artisanaux',
+            'Autres',
         ];
 
         $company = Company::where('name', 'GoofyTeam')->first();
+        $types = $company->locationTypes()->get()->keyBy('name');
 
         foreach ($categories as $categoryName) {
-            Category::factory()->create([
+            $category = Category::create([
                 'name' => $categoryName,
                 'company_id' => $company->id,
+            ]);
+
+            $category->locationTypes()->attach([
+                $types['Réfrigérateur']->id => ['shelf_life_hours' => 48],
+                $types['Congélateur']->id => ['shelf_life_hours' => 168],
             ]);
         }
 
         // Create categories for other companies
         $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
         foreach ($otherCompanies as $company) {
+            $types = $company->locationTypes()->get()->keyBy('name');
+
             foreach ($categories as $categoryName) {
-                Category::factory()->create([
+                $category = Category::create([
                     'name' => $categoryName,
                     'company_id' => $company->id,
+                ]);
+
+                $category->locationTypes()->attach([
+                    $types['Réfrigérateur']->id => ['shelf_life_hours' => 48],
+                    $types['Congélateur']->id => ['shelf_life_hours' => 168],
                 ]);
             }
         }

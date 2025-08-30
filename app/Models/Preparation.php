@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Preparation extends Model
@@ -71,13 +72,11 @@ class Preparation extends Model
             return $query;
         }
 
-        return $query->whereHas('categories', function ($q) use ($categoryIds) {
-            if (is_array($categoryIds)) {
-                $q->whereIn('categories.id', $categoryIds);
-            } else {
-                $q->where('categories.id', $categoryIds);
-            }
-        });
+        if (is_array($categoryIds)) {
+            return $query->whereIn('category_id', $categoryIds);
+        }
+
+        return $query->where('category_id', $categoryIds);
     }
 
     /**
@@ -111,10 +110,9 @@ class Preparation extends Model
             ->withTimestamps();
     }
 
-    public function categories(): BelongsToMany
+    public function category(): BelongsTo
     {
-        return $this->belongsToMany(Category::class, 'category_preparation')
-            ->withTimestamps();
+        return $this->belongsTo(Category::class);
     }
 
     /**

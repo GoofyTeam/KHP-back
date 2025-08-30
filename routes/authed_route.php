@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LocationTypeController;
@@ -75,3 +76,10 @@ Route::get('/image-proxy/{bucket}/{path}', function ($bucket, $path) {
         return response()->json(['error' => 'Image not found'], 404);
     }
 })->where('path', '.*')->name('image-proxy');
+
+// Groupe de routes pour les catégories
+Route::prefix('categories')->name('categories.')->group(function () {
+    Route::post('/', [CategoryController::class, 'store'])->name('store');
+    Route::put('/{id}', [CategoryController::class, 'update'])->name('update');
+    Route::delete('/{id}', [CategoryController::class, 'destroy'])->name('destroy');
+});

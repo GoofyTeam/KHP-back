@@ -6,19 +6,33 @@ type Category {
     name: String!
 
     "Ingredients in this category."
-    ingredients: [Ingredient!]! @belongsToMany
+    ingredients: [Ingredient!]! @hasMany
 
     "Preparations in this category."
-    preparations: [Preparation!]! @belongsToMany
+    preparations: [Preparation!]! @hasMany
 
     "The company that owns this category."
     company: Company! @belongsTo
+
+    "Shelf life durations by location type."
+    shelfLives: [CategoryShelfLife!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@shelfLifeByLocationType"
+        )
 
     "When the Category was created."
     created_at: DateTime!
 
     "When the Category was last updated."
     updated_at: DateTime!
+}
+
+type CategoryShelfLife {
+    "The location type for this shelf life."
+    locationType: LocationType!
+
+    "Shelf life in hours for the category at this location type."
+    shelf_life_hours: Int!
 }
 
 extend type Query @guard {

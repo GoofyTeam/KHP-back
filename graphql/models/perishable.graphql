@@ -1,0 +1,22 @@
+enum PerishableFilter {
+    FRESH
+    SOON
+    EXPIRED
+}
+
+type Perishable {
+    id: ID!
+    ingredient: Ingredient! @belongsTo
+    location: Location! @belongsTo
+    quantity: Float!
+    expiration_at: DateTime!
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    perishables(filter: PerishableFilter = FRESH): [Perishable!]!
+        @field(resolver: "App\\GraphQL\\Queries\\PerishableQuery@resolve")
+    nonPerishableIngredients: [Ingredient!]!
+        @field(resolver: "App\\GraphQL\\Queries\\NonPerishableIngredientsQuery@resolve")
+}
