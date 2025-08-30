@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\Perishable;
+use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
-use App\Models\Company;
+use App\Models\Perishable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -46,4 +46,3 @@ class PerishableFactory extends Factory
         });
     }
 }
-
