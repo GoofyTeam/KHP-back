@@ -35,7 +35,7 @@ class QuantityAdjustmentTest extends TestCase
         $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
 
         $this->actingAs($user)
-            ->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+            ->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
                 'location_id' => $location->id,
                 'quantity' => 7.5,
             ])
@@ -55,9 +55,9 @@ class QuantityAdjustmentTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+            ->postJson("/api/ingredients/{$ingredient->id}/remove-quantity", [
                 'location_id' => $location->id,
-                'quantity' => -2,
+                'quantity' => 2,
             ])
             ->assertStatus(200);
 
@@ -87,7 +87,7 @@ class QuantityAdjustmentTest extends TestCase
         $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
 
         $this->actingAs($user)
-            ->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+            ->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
                 'location_id' => $location->id,
                 'quantity' => 2,
             ])
@@ -106,9 +106,9 @@ class QuantityAdjustmentTest extends TestCase
         $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
 
         $this->actingAs($user)
-            ->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+            ->postJson("/api/ingredients/{$ingredient->id}/remove-quantity", [
                 'location_id' => $location->id,
-                'quantity' => -10,
+                'quantity' => 10,
             ])
             ->assertStatus(422);
 
@@ -129,7 +129,7 @@ class QuantityAdjustmentTest extends TestCase
         $preparation->locations()->updateExistingPivot($location->id, ['quantity' => 2]);
 
         $this->actingAs($user)
-            ->postJson("/api/preparations/{$preparation->id}/adjust-quantity", [
+            ->postJson("/api/preparations/{$preparation->id}/add-quantity", [
                 'location_id' => $location->id,
                 'quantity' => 5,
             ])
@@ -152,9 +152,9 @@ class QuantityAdjustmentTest extends TestCase
         $preparation->locations()->updateExistingPivot($location->id, ['quantity' => 3]);
 
         $this->actingAs($user)
-            ->postJson("/api/preparations/{$preparation->id}/adjust-quantity", [
+            ->postJson("/api/preparations/{$preparation->id}/remove-quantity", [
                 'location_id' => $location->id,
-                'quantity' => -5,
+                'quantity' => 5,
             ])
             ->assertStatus(422);
 
