@@ -94,8 +94,8 @@ class IngredientSeeder extends Seeder
 
             foreach ($randomLocations as $location) {
                 $locationData[$location->id] = [
-                    // 1/5 out of stock, sinon entre 0.50 et 15.99
-                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
+                    // 1/10 out of stock, sinon entre 0.50 et 15.99
+                    'quantity' => rand(1, 10) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
                 ];
             }
 
@@ -116,7 +116,8 @@ class IngredientSeeder extends Seeder
 
                     foreach ($randomLocations as $location) {
                         $locationData[$location->id] = [
-                            'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
+                            // 1/10 out of stock, sinon entre 0.50 et 15.99
+                            'quantity' => rand(1, 10) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
                         ];
                     }
 
