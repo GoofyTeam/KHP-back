@@ -1,0 +1,21 @@
+type Menu {
+    id: ID!
+    name: String!
+    items: [MenuItem!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type MenuItem {
+    id: ID!
+    quantity: Float!
+    unit: UnitEnum!
+    entity: MenuItemEntity! @morphTo
+}
+
+union MenuItemEntity = Ingredient | Preparation
+
+extend type Query @guard {
+    menus: [Menu!]! @all(scopes: ["forCompany"])
+    menu(id: ID!): Menu @find(scopes: ["forCompany"])
+}
