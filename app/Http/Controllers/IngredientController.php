@@ -280,4 +280,43 @@ class IngredientController extends Controller
             'ingredient' => $ingredient->load('locations', 'category'),
         ], 200);
     }
+
+    /**
+     * Cas métier : Déplacement de stock d'un ingrédient entre deux emplacements.
+     */
+    public function moveQuantity(Request $request, Ingredient $ingredient, StockService $stockService): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Ingredient not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'from_location_id' => ['required', 'integer', 'exists:locations,id'],
+            'to_location_id' => ['required', 'integer', 'different:from_location_id', 'exists:locations,id'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+        ]);
+
+        try {
+            $stockService->move(
+                $ingredient,
+                (int) $validated['from_location_id'],
+                (int) $validated['to_location_id'],
+                $user->company_id,
+                (float) $validated['quantity']
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'message' => 'Quantity cannot be negative',
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Ingredient quantity moved successfully',
+            'ingredient' => $ingredient->load('locations', 'category'),
+        ], 200);
+    }
 }
