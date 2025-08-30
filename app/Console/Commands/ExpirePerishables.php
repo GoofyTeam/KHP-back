@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Perishable;
-use App\Models\Loss;
 use App\Models\Ingredient;
+use App\Models\Loss;
+use App\Models\Perishable;
 use App\Services\PerishableService;
+use Illuminate\Console\Command;
 
 class ExpirePerishables extends Command
 {
