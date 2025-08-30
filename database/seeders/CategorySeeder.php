@@ -66,21 +66,34 @@ class CategorySeeder extends Seeder
         ];
 
         $company = Company::where('name', 'GoofyTeam')->first();
+        $types = $company->locationTypes()->get()->keyBy('name');
 
         foreach ($categories as $categoryName) {
-            Category::create([
+            $category = Category::create([
                 'name' => $categoryName,
                 'company_id' => $company->id,
+            ]);
+
+            $category->locationTypes()->attach([
+                $types['Réfrigérateur']->id => ['shelf_life_hours' => 48],
+                $types['Congélateur']->id => ['shelf_life_hours' => 168],
             ]);
         }
 
         // Create categories for other companies
         $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
         foreach ($otherCompanies as $company) {
+            $types = $company->locationTypes()->get()->keyBy('name');
+
             foreach ($categories as $categoryName) {
-                Category::create([
+                $category = Category::create([
                     'name' => $categoryName,
                     'company_id' => $company->id,
+                ]);
+
+                $category->locationTypes()->attach([
+                    $types['Réfrigérateur']->id => ['shelf_life_hours' => 48],
+                    $types['Congélateur']->id => ['shelf_life_hours' => 168],
                 ]);
             }
         }
