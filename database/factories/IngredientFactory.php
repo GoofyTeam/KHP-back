@@ -3,6 +3,9 @@
 namespace Database\Factories;
 
 use App\Enums\MeasurementUnit;
+use App\Models\Category;
+use App\Models\Company;
+use App\Models\Ingredient;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -10,6 +13,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class IngredientFactory extends Factory
 {
+    protected $model = Ingredient::class;
+
     /**
      * Define the model's default state.
      *
@@ -147,6 +152,29 @@ class IngredientFactory extends Factory
             'unit' => $this->faker->randomElement(MeasurementUnit::values()),
             'base_quantity' => $this->faker->numberBetween(1, 1000),
             'barcode' => $this->faker->unique()->ean13(),
+            'company_id' => Company::factory(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (Ingredient $ingredient) {
+            if (! array_key_exists('category_id', $ingredient->getAttributes())) {
+                $companyId = $ingredient->company_id;
+                if (isset($this->categoryCache[$companyId])) {
+                    $ingredient->category_id = $this->categoryCache[$companyId];
+                } else {
+                    $categoryId = Category::where('company_id', $companyId)
+                        ->value('id');
+                    if ($categoryId === null) {
+                        $categoryId = Category::factory()->create([
+                            'company_id' => $companyId,
+                        ])->id;
+                    }
+                    $this->categoryCache[$companyId] = $categoryId;
+                    $ingredient->category_id = $categoryId;
+                }
+            }
+        });
     }
 }

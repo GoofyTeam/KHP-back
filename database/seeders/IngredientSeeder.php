@@ -129,6 +129,10 @@ class IngredientSeeder extends Seeder
     {
         $ingredients = [];
 
+        $categoryIds = Category::where('company_id', $companyId)
+            ->pluck('id')
+            ->all();
+
         for ($i = 0; $i < $count; $i++) {
             // pioche une image au hasard dans le pool
             /** @var \Illuminate\Http\UploadedFile $upload */
@@ -137,11 +141,8 @@ class IngredientSeeder extends Seeder
             $ingredient = Ingredient::factory()->create([
                 'company_id' => $companyId,
                 'image_url' => $this->imageService->store($upload, 'ingredients'),
+                'category_id' => Arr::random($categoryIds),
             ]);
-
-            if ($cat = Category::where('company_id', $ingredient->company_id)->inRandomOrder()->first()) {
-                $ingredient->categories()->attach($cat->id);
-            }
 
             $ingredients[] = $ingredient;
         }

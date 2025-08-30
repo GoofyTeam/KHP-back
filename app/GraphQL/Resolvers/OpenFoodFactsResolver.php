@@ -37,7 +37,10 @@ class OpenFoodFactsResolver
                     'product_name_fr' => $ingredient->name,
                     'product_quantity' => $ingredient->base_quantity,
                     'product_quantity_unit' => $ingredient->unit->value,
-                    'categories' => $ingredient->categories->pluck('name')->implode(','),
+                    /**
+                     * @phpstan-ignore-next-line
+                     */
+                    'categories' => $ingredient->category->name,
                     'image_front_url' => $ingredient->image_url ? url('/api/image-proxy/'.$ingredient->image_url) : null,
                     'is_already_in_database' => true,
                     'ingredient_id' => $ingredient->id,

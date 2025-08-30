@@ -53,10 +53,9 @@ class Ingredient extends Model
             ->withTimestamps();
     }
 
-    public function categories(): BelongsToMany
+    public function category(): BelongsTo
     {
-        return $this->belongsToMany(Category::class, 'category_ingredient')
-            ->withTimestamps();
+        return $this->belongsTo(Category::class);
     }
 
     public function scopeForCompany($query)
@@ -85,13 +84,11 @@ class Ingredient extends Model
             return $query;
         }
 
-        return $query->whereHas('categories', function ($q) use ($categoryIds) {
-            if (is_array($categoryIds)) {
-                $q->whereIn('categories.id', $categoryIds);
-            } else {
-                $q->where('categories.id', $categoryIds);
-            }
-        });
+        if (is_array($categoryIds)) {
+            return $query->whereIn('category_id', $categoryIds);
+        }
+
+        return $query->where('category_id', $categoryIds);
     }
 
     /**

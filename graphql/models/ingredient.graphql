@@ -19,7 +19,7 @@ type Ingredient {
     "The company that owns this ingredient."
     company: Company! @belongsTo
 
-    categories: [Category!]! @belongsToMany
+    category: Category! @belongsTo
 
     image_url: String
         @field(resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@imageUrl")

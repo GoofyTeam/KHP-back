@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MeasurementUnit;
-use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Services\ImageService;
+use App\Services\PerishableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,24 +27,17 @@ use Illuminate\Validation\ValidationException;
 class PreparationController extends Controller
 {
     /**
-     * Crée une nouvelle préparation.
+     * Cas métier : Création d'une préparation
      *
-     * Règles métier pour la méthode store() :
-     * - 'name' : obligatoire, chaîne de caractères, max 255, unique par société.
-     * - 'unit' : obligatoire, chaîne parmi MeasurementUnit::values().
-     * - 'entities' : obligatoire, tableau, au moins 2 éléments.
-     *     • entities.*.id : entier requis.
-     *     • entities.*.type : doit être 'ingredient' ou 'preparation'.
-     * - 'categories' : obligatoire, tableau, au moins 1 élément.
-     *     • categories.* : chaîne de caractères, max 255.
-     * - 'image' / 'image_url' : optionnels, mais mutuellement exclusifs.
-     *   • si 'image' fourni => upload S3 via ImageService
-     *   • si 'image_url' fourni => téléchargement + stockage S3 via ImageService
-     * - La préparation est automatiquement liée à la société de l'utilisateur.
-     * - Pour chaque entité fournie, un enregistrement PreparationEntity est créé.
+     * Use cases :
+     * - Définir une nouvelle recette composée d'ingrédients et/ou de sous-préparations
+     * - Associer une image illustrant la préparation
+     * - Catégoriser la préparation pour la gestion des stocks
      *
-     * Succès : HTTP 201 + JSON [ 'message', 'preparation' avec entités chargées ].
-     * Échec : HTTP 422 + détails des erreurs de validation.
+     * Règles métier :
+     * - 'name' unique par entreprise
+     * - Au moins deux entités doivent composer la préparation
+     * - Image et image_url sont mutuellement exclusifs
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -71,8 +64,10 @@ class PreparationController extends Controller
             'entities.*.id' => ['required', 'integer'],
             'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
 
-            'categories' => ['required', 'array', 'min:1'],
-            'categories.*' => ['string', 'max:255'],
+            'category_id' => [
+                'required',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
         ]);
 
         // Exclusivité XOR image/image_url
@@ -98,6 +93,7 @@ class PreparationController extends Controller
             'name' => $validated['name'],
             'unit' => $validated['unit'],
             'image_url' => $storedPath, // peut rester null
+            'category_id' => $validated['category_id'],
         ];
 
         $preparation = Preparation::create($data);
@@ -112,48 +108,19 @@ class PreparationController extends Controller
             ]);
         }
 
-        // Traitement des catégories
-        $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
-            $formattedName = ucfirst($categoryName);
-
-            return Category::firstOrCreate([
-                'name' => $formattedName,
-                'company_id' => $user->company_id,
-            ]);
-        });
-
-        // Association des catégories à la préparation
-        $preparation->categories()->attach($categories->pluck('id'));
-
         return response()->json([
             'message' => 'Préparation créée avec succès',
-            'preparation' => $preparation->load('entities.entity', 'categories'),
+            'preparation' => $preparation->load('entities.entity', 'category'),
         ], 201);
     }
 
     /**
-     * Met à jour une préparation existante.
+     * Cas métier : Mise à jour d'une préparation
      *
-     * On attend maintenant deux tableaux optionnels et un tableau de quantités :
-     * - 'entities_to_add'    : array d'entités à créer si elles n'existent pas encore
-     * - 'entities_to_remove' : array d'entités à supprimer
-     * - 'categories'         : array de catégories à associer (remplace les existantes)
-     * - 'quantities'         : array de quantités par emplacement
-     * - 'image' / 'image_url': optionnels et mutuellement exclusifs (MAJ de l'illustration)
-     *
-     * Règles métier pour update() :
-     * - La préparation doit appartenir à la même société que l'utilisateur (404 sinon).
-     * - 'name' et 'unit' restent facultatifs et validés comme avant.
-     * - 'entities_to_add' et 'entities_to_remove' sont chacun :
-     *     • facultatifs
-     *     • tableau d'objets { id:int, type:'ingredient'|'preparation' }
-     * - 'quantities' est un tableau d'objets { location_id:int, quantity:float }
-     * - Si on fournit 'entities_to_remove', on supprime **seulement** ces liens.
-     * - Si on fournit 'entities_to_add', on crée **seulement** les nouveaux liens qui n'existent pas.
-     * - Si on fournit 'quantities', on met à jour ou ajoute les quantités pour les emplacements spécifiés.
-     *
-     * Succès : HTTP 200 + JSON { message, preparation (avec entités chargées) }.
-     * Échec : HTTP 422 si validation, HTTP 404 si accès non autorisé.
+     * Use cases :
+     * - Ajouter ou retirer des composants de la recette
+     * - Ajuster les quantités disponibles par emplacement
+     * - Modifier l'image ou la catégorie associée
      *
      * @param  int  $id
      */
@@ -194,8 +161,10 @@ class PreparationController extends Controller
             'quantities.*.quantity' => ['required_with:quantities', 'numeric', 'min:0'],
             'quantities.*.location_id' => ['required_with:quantities', 'exists:locations,id'],
 
-            'categories' => ['sometimes', 'array'],
-            'categories.*' => ['string', 'max:255'],
+            'category_id' => [
+                'sometimes',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
         ]);
 
         // Exclusivité XOR image/image_url
@@ -256,16 +225,9 @@ class PreparationController extends Controller
             }
         }
 
-        // Mise à jour des catégories
-        if (isset($validated['categories'])) {
-            $categories = collect($validated['categories'])->map(function ($categoryName) use ($user) {
-                return Category::firstOrCreate([
-                    'name' => ucfirst($categoryName),
-                    'company_id' => $user->company_id,
-                ]);
-            });
-
-            $preparation->categories()->sync($categories->pluck('id'));
+        if (isset($validated['category_id'])) {
+            $preparation->category_id = $validated['category_id'];
+            $preparation->save();
         }
 
         // Gestion des quantités par emplacement
@@ -282,19 +244,16 @@ class PreparationController extends Controller
 
         return response()->json([
             'message' => 'Préparation mise à jour avec succès',
-            'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+            'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
         ], 200);
     }
 
     /**
-     * Supprime une préparation.
+     * Cas métier : Suppression d'une préparation
      *
-     * Règles métier pour destroy() :
-     * - La préparation doit appartenir à la même société que l'utilisateur (404 sinon).
-     * - La suppression est en cascade, donc toutes les entités liées sont également supprimées.
-     *
-     * Succès : HTTP 204 sans contenu.
-     * Échec : HTTP 404 si la préparation n'existe pas ou n'appartient pas à la société de l'utilisateur.
+     * Use cases :
+     * - Retirer une recette qui n'est plus utilisée
+     * - Corriger une préparation créée par erreur
      *
      * @param  int  $id
      */
@@ -312,19 +271,19 @@ class PreparationController extends Controller
     }
 
     /**
-     * Prépare une quantité d'une préparation en utilisant ses composants.
+     * Cas métier : Réalisation d'une préparation
      *
-     * Cette fonction:
-     * 1. Retire les quantités spécifiées des composants (ingrédients/préparations)
-     * 2. Ajoute la quantité produite à l'emplacement de destination
+     * Use cases :
+     * - Transformer des ingrédients en préparation finale
+     * - Déduire automatiquement les stocks utilisés
+     * - Augmenter la quantité disponible de la préparation produite
      *
-     * Pour chaque composant, on peut prélever des quantités depuis plusieurs emplacements.
-     * Si la quantité disponible est insuffisante, l'opération échoue.
-     * Les emplacements de type congélateur ne peuvent pas être utilisés.
+     * Les sources peuvent provenir de plusieurs emplacements et doivent respecter
+     * la disponibilité des stocks.
      *
      * @param  int  $id
      */
-    public function prepare(Request $request, $id): JsonResponse
+    public function prepare(Request $request, $id, PerishableService $perishableService): JsonResponse
     {
         $user = $request->user();
 
@@ -425,6 +384,10 @@ class PreparationController extends Controller
                         $source['location_id'],
                         ['quantity' => $pivot->quantity - $source['quantity']]
                     );
+
+                    if ($entity instanceof Ingredient) {
+                        $perishableService->remove($entity->id, $source['location_id'], $user->company_id, $source['quantity']);
+                    }
                 }
             }
 
@@ -453,7 +416,7 @@ class PreparationController extends Controller
 
             return response()->json([
                 'message' => "Préparation de {$validated['quantity']} {$preparation->unit->value} de {$preparation->name} effectuée avec succès",
-                'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+                'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -465,7 +428,11 @@ class PreparationController extends Controller
     }
 
     /**
-     * Ajuste la quantité d'une préparation pour un emplacement donné.
+     * Cas métier : Ajustement du stock d'une préparation
+     *
+     * Use cases :
+     * - Correction manuelle après inventaire
+     * - Production ou retrait hors processus standard
      */
     public function adjustQuantity(Request $request, $id): JsonResponse
     {
@@ -500,7 +467,7 @@ class PreparationController extends Controller
 
         return response()->json([
             'message' => 'Quantité de la préparation mise à jour avec succès',
-            'preparation' => $preparation->load('entities.entity', 'locations', 'categories'),
+            'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
         ], 200);
     }
 }
