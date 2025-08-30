@@ -10,9 +10,7 @@ use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
 class PerishableQuery
 {
-    public function __construct(private PerishableService $service)
-    {
-    }
+    public function __construct(private PerishableService $service) {}
 
     public function resolve(mixed $_, array $args, GraphQLContext $context, ResolveInfo $info)
     {
@@ -28,6 +26,7 @@ class PerishableQuery
 
         if ($filter === 'SOON') {
             $threshold = Carbon::now()->addHours(48);
+
             return $perishables->filter(fn ($p) => $this->service->expiration($p)->between(now(), $threshold));
         }
 

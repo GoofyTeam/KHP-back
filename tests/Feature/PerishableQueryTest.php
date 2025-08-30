@@ -14,8 +14,8 @@ use Tests\TestCase;
 
 class PerishableQueryTest extends TestCase
 {
-    use RefreshDatabase;
     use MakesGraphQLRequests;
+    use RefreshDatabase;
 
     /** Scenario: GraphQL perishables query lists active perishable stock. */
     public function test_it_lists_active_perishables(): void
@@ -64,4 +64,3 @@ class PerishableQueryTest extends TestCase
         $this->assertNotNull(data_get($response->json(), 'data.perishables.0.expiration_at'));
     }
 }
-
