@@ -54,6 +54,8 @@ return new class extends Migration
             $table->foreignId('location_id')->constrained()->onDelete('cascade')->nullable(false);
             $table->decimal('quantity', 8, 2)->default(0)->nullable(false);
             $table->timestamps();
+
+            $table->unique(['ingredient_id', 'location_id']);
         });
     }
 

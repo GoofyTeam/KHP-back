@@ -234,7 +234,9 @@ class LocationControllerTest extends TestCase
             'unit' => 'kg',
         ]);
 
-        $location->ingredients()->attach($ingredient->id);
+        $location->ingredients()->syncWithoutDetaching([
+            $ingredient->id => ['quantity' => 1],
+        ]);
 
         $response = $this->deleteJson("/api/location/{$location->id}");
 
