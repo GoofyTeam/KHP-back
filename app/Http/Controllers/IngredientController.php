@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
-use App\Models\Location;
 use App\Services\ImageService;
 use App\Services\PerishableService;
+use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -215,14 +215,9 @@ class IngredientController extends Controller
     }
 
     /**
-     * Cas métier : Ajustement de stock d'un ingrédient sur un emplacement
-     *
-     * Use cases :
-     * - Réception de nouvelle marchandise
-     * - Correction manuelle du stock
-     * - Consommation ou retrait d'ingrédients
+     * Cas métier : Ajout de stock d'un ingrédient sur un emplacement.
      */
-    public function adjustQuantity(Request $request, Ingredient $ingredient, PerishableService $perishableService): JsonResponse
+    public function addQuantity(Request $request, Ingredient $ingredient, StockService $stockService, PerishableService $perishableService): JsonResponse
     {
         $user = $request->user();
 
@@ -234,32 +229,51 @@ class IngredientController extends Controller
 
         $validated = $request->validate([
             'location_id' => ['required', 'integer', 'exists:locations,id'],
-            'quantity' => ['required', 'numeric'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
         ]);
 
-        $location = Location::where('id', $validated['location_id'])
-            ->where('company_id', $user->company_id)
-            ->firstOrFail();
+        $locationId = (int) $validated['location_id'];
+        $quantity = (float) $validated['quantity'];
 
-        $currentQuantity = (float) ($ingredient->locations()->find($location->id)?->pivot->quantity ?? 0);
-        $adjustment = (float) $validated['quantity'];
-        $newQuantity = $currentQuantity + $adjustment;
+        $stockService->add($ingredient, $locationId, $user->company_id, $quantity);
+        $perishableService->add($ingredient->id, $locationId, $user->company_id, $quantity);
 
-        if ($newQuantity < 0) {
+        return response()->json([
+            'message' => 'Ingredient quantity updated successfully',
+            'ingredient' => $ingredient->load('locations', 'category'),
+        ], 200);
+    }
+
+    /**
+     * Cas métier : Retrait de stock d'un ingrédient sur un emplacement.
+     */
+    public function removeQuantity(Request $request, Ingredient $ingredient, StockService $stockService, PerishableService $perishableService): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Ingredient not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+        ]);
+
+        $locationId = (int) $validated['location_id'];
+        $quantity = (float) $validated['quantity'];
+
+        try {
+            $stockService->remove($ingredient, $locationId, $user->company_id, $quantity);
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'message' => 'Quantity cannot be negative',
             ], 422);
         }
 
-        $ingredient->locations()->syncWithoutDetaching([
-            $location->id => ['quantity' => $newQuantity],
-        ]);
-
-        if ($adjustment > 0) {
-            $perishableService->add($ingredient->id, $location->id, $user->company_id, $adjustment);
-        } elseif ($adjustment < 0) {
-            $perishableService->remove($ingredient->id, $location->id, $user->company_id, abs($adjustment));
-        }
+        $perishableService->remove($ingredient->id, $locationId, $user->company_id, $quantity);
 
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',

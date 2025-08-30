@@ -43,12 +43,12 @@ class PerishableQueryTest extends TestCase
         $freshIngredient->locations()->updateExistingPivot($location->id, ['quantity' => 0]);
         $soonIngredient->locations()->updateExistingPivot($location->id, ['quantity' => 0]);
 
-        $this->actingAs($user)->postJson("/api/ingredients/{$freshIngredient->id}/adjust-quantity", [
+        $this->actingAs($user)->postJson("/api/ingredients/{$freshIngredient->id}/add-quantity", [
             'location_id' => $location->id,
             'quantity' => 7.5,
         ])->assertStatus(200);
 
-        $this->actingAs($user)->postJson("/api/ingredients/{$soonIngredient->id}/adjust-quantity", [
+        $this->actingAs($user)->postJson("/api/ingredients/{$soonIngredient->id}/add-quantity", [
             'location_id' => $location->id,
             'quantity' => 2,
         ])->assertStatus(200);
@@ -96,7 +96,7 @@ class PerishableQueryTest extends TestCase
         ]);
         $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 0]);
 
-        $this->actingAs($user)->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+        $this->actingAs($user)->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
             'location_id' => $location->id,
             'quantity' => 1,
         ])->assertStatus(200);
@@ -142,7 +142,7 @@ class PerishableQueryTest extends TestCase
         ]);
         $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 0]);
 
-        $this->actingAs($user)->postJson("/api/ingredients/{$ingredient->id}/adjust-quantity", [
+        $this->actingAs($user)->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
             'location_id' => $location->id,
             'quantity' => 2,
         ])->assertStatus(200);
