@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
 use App\Models\Location;
+use App\Services\PerishableService;
 use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,12 @@ use Illuminate\Validation\ValidationException;
 class IngredientController extends Controller
 {
     /**
-     * Store a newly created resource in storage.
+     * Cas métier : Création d'un nouvel ingrédient
+     *
+     * Use cases :
+     * - Ajouter un ingrédient au catalogue de l'entreprise
+     * - Référencer un produit avec sa catégorie et son unité
+     * - Initialiser des stocks sur un ou plusieurs emplacements
      */
     public function store(Request $request, ImageService $imageService)
     {
@@ -93,7 +99,12 @@ class IngredientController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Cas métier : Mise à jour d'un ingrédient existant
+     *
+     * Use cases :
+     * - Modifier le nom ou l'unité d'un ingrédient
+     * - Changer l'image associée
+     * - Recatégoriser un produit
      */
     public function update(Request $request, Ingredient $ingredient, ImageService $imageService)
     {
@@ -182,7 +193,11 @@ class IngredientController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Cas métier : Suppression d'un ingrédient
+     *
+     * Use cases :
+     * - Retirer un ingrédient obsolète du catalogue
+     * - Corriger une création erronée
      */
     public function destroy(Ingredient $ingredient)
     {
@@ -200,9 +215,14 @@ class IngredientController extends Controller
     }
 
     /**
-     * Adjust the quantity of an ingredient for a specific location.
+     * Cas métier : Ajustement de stock d'un ingrédient sur un emplacement
+     *
+     * Use cases :
+     * - Réception de nouvelle marchandise
+     * - Correction manuelle du stock
+     * - Consommation ou retrait d'ingrédients
      */
-    public function adjustQuantity(Request $request, Ingredient $ingredient): JsonResponse
+    public function adjustQuantity(Request $request, Ingredient $ingredient, PerishableService $perishableService): JsonResponse
     {
         $user = $request->user();
 
@@ -235,9 +255,15 @@ class IngredientController extends Controller
             $location->id => ['quantity' => $newQuantity],
         ]);
 
+        if ($adjustment > 0) {
+            $perishableService->add($ingredient->id, $location->id, $user->company_id, $adjustment);
+        } elseif ($adjustment < 0) {
+            $perishableService->remove($ingredient->id, $location->id, $user->company_id, abs($adjustment));
+        }
+
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',
-            'ingredient' => $ingredient->load('locations', 'categories'),
+            'ingredient' => $ingredient->load('locations', 'category'),
         ], 200);
     }
 }
