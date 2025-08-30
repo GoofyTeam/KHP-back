@@ -83,7 +83,7 @@ class PreparationSeeder extends Seeder
 
                 foreach ($usedLocations as $location) {
                     $locationData[$location->id] = [
-                        'quantity' => rand(1, 5) === 1 ? 0 : rand(1, 20) + (rand(0, 100) / 100), // 1/5 chance d'être out of stock, sinon entre 1.00 et 20.99
+                        'quantity' => rand(1, 10) === 1 ? 0 : rand(1, 20) + (rand(0, 100) / 100), // 1/10 chance d'être out of stock, sinon entre 1.00 et 20.99
                     ];
                 }
 
