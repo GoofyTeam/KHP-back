@@ -39,7 +39,7 @@ trait HasLosses
         $pivot = $locationEntity->pivot;
         $available = (float) $pivot->quantity;
 
-        $newQuantity = round($available - $quantity, 2);
+        $newQuantity = round($available - $quantity, 3);
 
         if ($newQuantity < 0) {
             throw new \RuntimeException('Insufficient stock at location');

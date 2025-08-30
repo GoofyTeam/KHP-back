@@ -150,6 +150,27 @@ class LossTrackingTest extends TestCase
     }
 
     /**
+     * Permet de retirer une quantité infime égale au stock disponible.
+     */
+    public function test_recording_loss_with_thousandth_precision(): void
+    {
+        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => 0.001]);
+
+        $loss = $this->ingredient->recordLoss($this->location, 0.001, 'Test');
+
+        $this->assertDatabaseHas('losses', [
+            'id' => $loss->id,
+            'quantity' => 0.001,
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $this->ingredient->id,
+            'location_id' => $this->location->id,
+            'quantity' => 0.0,
+        ]);
+    }
+
+    /**
      * Empêche l'enregistrement d'une perte si le stock est insuffisant.
      */
     public function test_recording_loss_with_insufficient_stock_returns_error(): void
