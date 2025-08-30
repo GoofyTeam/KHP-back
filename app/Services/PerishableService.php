@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Perishable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 class PerishableService
@@ -18,11 +20,13 @@ class PerishableService
             return null;
         }
 
-        $shelfLife = $ingredient->category
-            ->locationTypes()
+        /** @var Category|null $category */
+        $category = $ingredient->category;
+
+        $shelfLife = $category?->locationTypes()
             ->where('location_type_id', $location->location_type_id)
             ->first()
-            ?->pivot->shelf_life_hours;
+            ?->pivot?->getAttribute('shelf_life_hours');
 
         if (! $shelfLife) {
             return null;
@@ -63,14 +67,22 @@ class PerishableService
         }
     }
 
-    public function expiration(Perishable $perishable): Carbon
+    public function expiration(Perishable $perishable): CarbonInterface
     {
-        $locationTypeId = $perishable->location->location_type_id;
-        $shelfLife = $perishable->ingredient->category
-            ->locationTypes()
+        /** @var Location $location */
+        $location = $perishable->location;
+
+        /** @var Ingredient $ingredient */
+        $ingredient = $perishable->ingredient;
+
+        /** @var Category|null $category */
+        $category = $ingredient->category;
+
+        $locationTypeId = $location->location_type_id;
+        $shelfLife = $category?->locationTypes()
             ->where('location_type_id', $locationTypeId)
             ->first()
-            ?->pivot->shelf_life_hours;
+            ?->pivot?->getAttribute('shelf_life_hours');
 
         if (! $shelfLife) {
             return Carbon::create(9999, 12, 31, 23, 59, 59);
