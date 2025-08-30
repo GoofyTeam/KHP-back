@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
+use App\Models\Perishable;
 use App\Services\ImageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
@@ -91,10 +92,21 @@ class IngredientSeeder extends Seeder
         foreach ($ingredients as $ingredient) {
             $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
             foreach ($randomLocations as $location) {
+                $quantity = rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100);
+
                 $ingredient->locations()->attach($location->id, [
                     // 1/5 out of stock, sinon entre 0.50 et 15.99
-                    'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
+                    'quantity' => $quantity,
                 ]);
+
+                if ($quantity > 0) {
+                    Perishable::create([
+                        'ingredient_id' => $ingredient->id,
+                        'location_id' => $location->id,
+                        'company_id' => $company->id,
+                        'quantity' => $quantity,
+                    ]);
+                }
             }
         }
     }
@@ -109,9 +121,19 @@ class IngredientSeeder extends Seeder
                 foreach ($ingredients as $ingredient) {
                     $randomLocations = $company->locations->random(rand(1, $company->locations->count()));
                     foreach ($randomLocations as $location) {
+                        $quantity = rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100);
                         $ingredient->locations()->attach($location->id, [
-                            'quantity' => rand(1, 5) === 1 ? 0 : rand(0, 15) + (rand(50, 99) / 100),
+                            'quantity' => $quantity,
                         ]);
+
+                        if ($quantity > 0) {
+                            Perishable::create([
+                                'ingredient_id' => $ingredient->id,
+                                'location_id' => $location->id,
+                                'company_id' => $company->id,
+                                'quantity' => $quantity,
+                            ]);
+                        }
                     }
                 }
             });
