@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 
 class Perishable extends Model
 {
@@ -41,7 +41,7 @@ class Perishable extends Model
         return $query->where('company_id', auth()->user()->company_id);
     }
 
-    public function getExpirationAtAttribute(): Carbon
+    public function getExpirationAtAttribute(): CarbonInterface
     {
         return app(PerishableService::class)->expiration($this);
     }
