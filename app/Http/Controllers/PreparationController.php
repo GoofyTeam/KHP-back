@@ -8,8 +8,8 @@ use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
-use App\Services\PerishableService;
 use App\Services\ImageService;
+use App\Services\PerishableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -122,7 +122,7 @@ class PreparationController extends Controller
      * - Ajuster les quantités disponibles par emplacement
      * - Modifier l'image ou la catégorie associée
      *
-     * @param int $id
+     * @param  int  $id
      */
     public function update(Request $request, $id, ImageService $imageService): JsonResponse
     {
@@ -255,7 +255,7 @@ class PreparationController extends Controller
      * - Retirer une recette qui n'est plus utilisée
      * - Corriger une préparation créée par erreur
      *
-     * @param int $id
+     * @param  int  $id
      */
     public function destroy(Request $request, $id): JsonResponse
     {
@@ -281,7 +281,7 @@ class PreparationController extends Controller
      * Les sources peuvent provenir de plusieurs emplacements et doivent respecter
      * la disponibilité des stocks.
      *
-     * @param int $id
+     * @param  int  $id
      */
     public function prepare(Request $request, $id, PerishableService $perishableService): JsonResponse
     {
