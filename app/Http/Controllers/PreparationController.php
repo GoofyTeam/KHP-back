@@ -10,6 +10,7 @@ use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Services\ImageService;
 use App\Services\PerishableService;
+use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -428,13 +429,9 @@ class PreparationController extends Controller
     }
 
     /**
-     * Cas métier : Ajustement du stock d'une préparation
-     *
-     * Use cases :
-     * - Correction manuelle après inventaire
-     * - Production ou retrait hors processus standard
+     * Cas métier : Ajout de stock pour une préparation.
      */
-    public function adjustQuantity(Request $request, $id): JsonResponse
+    public function addQuantity(Request $request, $id, StockService $stockService): JsonResponse
     {
         $user = $request->user();
 
@@ -444,26 +441,40 @@ class PreparationController extends Controller
 
         $validated = $request->validate([
             'location_id' => ['required', 'integer', 'exists:locations,id'],
-            'quantity' => ['required', 'numeric'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
         ]);
 
-        $location = Location::where('id', $validated['location_id'])
+        $stockService->add($preparation, (int) $validated['location_id'], $user->company_id, (float) $validated['quantity']);
+
+        return response()->json([
+            'message' => 'Quantité de la préparation mise à jour avec succès',
+            'preparation' => $preparation->load('entities.entity', 'locations', 'category'),
+        ], 200);
+    }
+
+    /**
+     * Cas métier : Retrait de stock pour une préparation.
+     */
+    public function removeQuantity(Request $request, $id, StockService $stockService): JsonResponse
+    {
+        $user = $request->user();
+
+        $preparation = Preparation::where('id', $id)
             ->where('company_id', $user->company_id)
             ->firstOrFail();
 
-        $currentQuantity = (float) ($preparation->locations()->find($location->id)?->pivot->quantity ?? 0);
-        $adjustment = (float) $validated['quantity'];
-        $newQuantity = $currentQuantity + $adjustment;
+        $validated = $request->validate([
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+        ]);
 
-        if ($newQuantity < 0) {
+        try {
+            $stockService->remove($preparation, (int) $validated['location_id'], $user->company_id, (float) $validated['quantity']);
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'message' => 'Quantity cannot be negative',
             ], 422);
         }
-
-        $preparation->locations()->syncWithoutDetaching([
-            $location->id => ['quantity' => $newQuantity],
-        ]);
 
         return response()->json([
             'message' => 'Quantité de la préparation mise à jour avec succès',
