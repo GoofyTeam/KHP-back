@@ -133,7 +133,8 @@ class MenuController extends Controller
     /**
      * Vérifie l'unicité des éléments dans un menu.
      *
-     * @param array<array<string, mixed>> $items
+     * @param  array<array<string, mixed>>  $items
+     *
      * @throws ValidationException
      */
     private function ensureUniqueItems(array $items): void

@@ -59,7 +59,7 @@ class MenuControllerTest extends TestCase
         ];
 
         $response = $this->actingAs($user)
-            ->postJson('/api/menus/' . $menu->id . '/command', $orderPayload)
+            ->postJson('/api/menus/'.$menu->id.'/command', $orderPayload)
             ->assertStatus(201);
 
         $this->assertEquals(8, $ingredient->locations()->first()->pivot->quantity);
@@ -67,7 +67,7 @@ class MenuControllerTest extends TestCase
         $orderId = $response->json('order.id');
 
         $this->actingAs($user)
-            ->postJson('/api/menus/command/' . $orderId . '/cancel')
+            ->postJson('/api/menus/command/'.$orderId.'/cancel')
             ->assertStatus(200);
 
         $this->assertEquals(10, $ingredient->fresh()->locations()->first()->pivot->quantity);
@@ -103,7 +103,7 @@ class MenuControllerTest extends TestCase
 
         // Order within range
         $this->actingAs($user)
-            ->postJson('/api/menus/' . $menu->id . '/command', [
+            ->postJson('/api/menus/'.$menu->id.'/command', [
                 'location_id' => $location->id,
                 'status' => 'completed',
             ])
