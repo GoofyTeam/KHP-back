@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\LocationType;
+use App\Models\Perishable;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Models\User;
@@ -803,6 +804,59 @@ class PreparationControllerTest extends TestCase
 
         // Quantité destination
         $this->assertDatabaseHas('location_preparation', ['preparation_id' => $preparation->id, 'location_id' => $location2->id, 'quantity' => 2.5]);
+    }
+
+    /** Scénario : la préparation retire les quantités correspondantes dans les périssables. */
+    public function test_prepare_removes_perime_quantities(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $source = Location::factory()->create(['company_id' => $company->id]);
+        $destination = Location::factory()->create(['company_id' => $company->id]);
+
+        $ingredient->locations()->updateExistingPivot($source->id, ['quantity' => 5]);
+
+        Perishable::create([
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $source->id,
+            'company_id' => $company->id,
+            'quantity' => 5,
+        ]);
+
+        $preparation = Preparation::factory()->create(['company_id' => $company->id]);
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ingredient->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        $payload = [
+            'quantity' => 1,
+            'location_id' => $destination->id,
+            'components' => [
+                [
+                    'entity_id' => $ingredient->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 2,
+                    'sources' => [
+                        ['location_id' => $source->id, 'quantity' => 2],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/prepare", $payload)
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $source->id,
+            'company_id' => $company->id,
+            'quantity' => 3,
+        ]);
     }
 
     /** Scénario : préparation avec plusieurs emplacements sources. */

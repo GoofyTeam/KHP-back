@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use App\Models\Company;
+use App\Models\Category;
 use App\Models\Ingredient;
+use Illuminate\Support\Arr;
 use App\Services\ImageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
 class IngredientSeeder extends Seeder
@@ -65,7 +65,7 @@ class IngredientSeeder extends Seeder
         $picked = [];
         for ($i = 0; $i < $count; $i++) {
             $relative = Arr::random($all);
-            $absolute = method_exists($disk, 'path') ? $disk->path($relative) : storage_path('app/'.$relative);
+            $absolute = method_exists($disk, 'path') ? $disk->path($relative) : storage_path('app/' . $relative);
 
             // Crée un UploadedFile "test" (pas un upload réel)
             $mime = @mime_content_type($absolute) ?: 'image/jpeg';
