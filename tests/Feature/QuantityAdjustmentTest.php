@@ -164,4 +164,83 @@ class QuantityAdjustmentTest extends TestCase
             'quantity' => 3,
         ]);
     }
+
+    /** Scénario : déplacement de la quantité d'un ingrédient entre deux emplacements. */
+    public function test_it_moves_ingredient_quantity_between_locations(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $locationType = LocationType::factory()->create();
+        $from = Location::factory()->create(['company_id' => $company->id, 'location_type_id' => $locationType->id]);
+        $to = Location::factory()->create(['company_id' => $company->id, 'location_type_id' => $locationType->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+        $category->locationTypes()->attach($locationType->id, ['shelf_life_hours' => 24]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+        ]);
+        $ingredient->locations()->updateExistingPivot($from->id, ['quantity' => 5]);
+        $ingredient->locations()->updateExistingPivot($to->id, ['quantity' => 1]);
+        app(\App\Services\PerishableService::class)->add($ingredient->id, $from->id, $company->id, 5);
+
+        $this->actingAs($user)
+            ->postJson("/api/ingredients/{$ingredient->id}/move-quantity", [
+                'from_location_id' => $from->id,
+                'to_location_id' => $to->id,
+                'quantity' => 3,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $from->id,
+            'quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $to->id,
+            'quantity' => 4,
+        ]);
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $from->id,
+            'quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $to->id,
+            'quantity' => 3,
+        ]);
+    }
+
+    /** Scénario : déplacement de la quantité d'une préparation entre deux emplacements. */
+    public function test_it_moves_preparation_quantity_between_locations(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $from = Location::factory()->create(['company_id' => $company->id]);
+        $to = Location::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create(['company_id' => $company->id]);
+        $preparation->locations()->updateExistingPivot($from->id, ['quantity' => 5]);
+        $preparation->locations()->updateExistingPivot($to->id, ['quantity' => 1]);
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/move-quantity", [
+                'from_location_id' => $from->id,
+                'to_location_id' => $to->id,
+                'quantity' => 4,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $from->id,
+            'quantity' => 1,
+        ]);
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $to->id,
+            'quantity' => 5,
+        ]);
+    }
 }
