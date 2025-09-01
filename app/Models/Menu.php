@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $company_id
  * @property-read \Illuminate\Database\Eloquent\Collection<int, MenuItem> $items
-*/
+ */
 class Menu extends Model
 {
     use HasFactory;

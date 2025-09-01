@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
 use App\Models\Company;
+use App\Models\Menu;
 use App\Models\MenuOrder;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;

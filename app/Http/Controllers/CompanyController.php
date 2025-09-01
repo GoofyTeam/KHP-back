@@ -18,7 +18,7 @@ class CompanyController extends Controller
      * l'entreprise connectée, comme la complétion automatique des commandes de
      * menu.
      *
-     * @param Request $request La requête HTTP contenant les options à modifier
+     * @param  Request  $request  La requête HTTP contenant les options à modifier
      * @return JsonResponse Confirmation avec les options mises à jour
      */
     public function updateOptions(Request $request): JsonResponse
@@ -45,4 +45,3 @@ class CompanyController extends Controller
         ]);
     }
 }
-

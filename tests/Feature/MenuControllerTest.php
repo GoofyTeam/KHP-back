@@ -57,7 +57,7 @@ class MenuControllerTest extends TestCase
         $menu = Menu::where('name', 'Test Menu')->first();
 
         $response = $this->actingAs($user)
-            ->postJson('/api/menus/' . $menu->id . '/command')
+            ->postJson('/api/menus/'.$menu->id.'/command')
             ->assertStatus(201);
 
         $this->assertEquals(8, $ingredient->locations()->first()->pivot->quantity);
@@ -65,7 +65,7 @@ class MenuControllerTest extends TestCase
         $orderId = $response->json('order.id');
 
         $this->actingAs($user)
-            ->postJson('/api/menus/command/' . $orderId . '/cancel')
+            ->postJson('/api/menus/command/'.$orderId.'/cancel')
             ->assertStatus(200);
 
         $this->assertEquals(10, $ingredient->fresh()->locations()->first()->pivot->quantity);
@@ -99,7 +99,7 @@ class MenuControllerTest extends TestCase
         $menu = Menu::where('name', 'Pending Menu')->first();
 
         $response = $this->actingAs($user)
-            ->postJson('/api/menus/' . $menu->id . '/command')
+            ->postJson('/api/menus/'.$menu->id.'/command')
             ->assertStatus(201);
 
         $this->assertEquals(5, $ingredient->fresh()->locations()->first()->pivot->quantity);
@@ -107,7 +107,7 @@ class MenuControllerTest extends TestCase
         $orderId = $response->json('order.id');
 
         $this->actingAs($user)
-            ->putJson('/api/menus/command/' . $orderId . '/status', ['status' => 'completed'])
+            ->putJson('/api/menus/command/'.$orderId.'/status', ['status' => 'completed'])
             ->assertStatus(200);
 
         $this->assertEquals(4, $ingredient->fresh()->locations()->first()->pivot->quantity);
@@ -144,7 +144,7 @@ class MenuControllerTest extends TestCase
 
         // Order within range
         $this->actingAs($user)
-            ->postJson('/api/menus/' . $menu->id . '/command')
+            ->postJson('/api/menus/'.$menu->id.'/command')
             ->assertStatus(201);
 
         // Order outside range
@@ -203,7 +203,7 @@ class MenuControllerTest extends TestCase
 
         // Ajout d'un nouvel ingrédient sans renvoyer le premier
         $this->actingAs($user)
-            ->putJson('/api/menus/' . $menu->id, [
+            ->putJson('/api/menus/'.$menu->id, [
                 'items_to_add' => [
                     [
                         'entity_id' => $ingredientB->id,
@@ -219,7 +219,7 @@ class MenuControllerTest extends TestCase
 
         // Suppression du premier ingrédient sans renvoyer le second
         $this->actingAs($user)
-            ->putJson('/api/menus/' . $menu->id, [
+            ->putJson('/api/menus/'.$menu->id, [
                 'items_to_remove' => [
                     [
                         'entity_id' => $ingredientA->id,
@@ -258,7 +258,7 @@ class MenuControllerTest extends TestCase
         $menu = Menu::where('name', 'Quantity Menu')->first();
 
         $this->actingAs($user)
-            ->putJson('/api/menus/' . $menu->id, [
+            ->putJson('/api/menus/'.$menu->id, [
                 'items_to_update' => [
                     [
                         'entity_id' => $ingredient->id,

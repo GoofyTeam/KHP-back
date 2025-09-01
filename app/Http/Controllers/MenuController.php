@@ -37,7 +37,7 @@ class MenuController extends Controller
             'items.*.entity_type' => ['required', 'string', 'in:ingredient,preparation'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
-            'items.*.location_id' => ['required', Rule::exists('locations', 'id')->where(fn($q) => $q->where('company_id', $user->company_id))],
+            'items.*.location_id' => ['required', Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id))],
         ]);
 
         $this->ensureUniqueItems($validated['items']);
@@ -89,7 +89,7 @@ class MenuController extends Controller
             'items_to_add.*.entity_type' => ['required_with:items_to_add', 'string', 'in:ingredient,preparation'],
             'items_to_add.*.quantity' => ['required_with:items_to_add', 'numeric', 'min:0.01'],
             'items_to_add.*.unit' => ['required_with:items_to_add', 'string', Rule::in(MeasurementUnit::values())],
-            'items_to_add.*.location_id' => ['required_with:items_to_add', Rule::exists('locations', 'id')->where(fn($q) => $q->where('company_id', $user->company_id))],
+            'items_to_add.*.location_id' => ['required_with:items_to_add', Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id))],
             'items_to_remove' => ['sometimes', 'array', 'min:1'],
             'items_to_remove.*.entity_id' => ['required_with:items_to_remove', 'integer'],
             'items_to_remove.*.entity_type' => ['required_with:items_to_remove', 'string', 'in:ingredient,preparation'],
@@ -98,7 +98,7 @@ class MenuController extends Controller
             'items_to_update.*.entity_type' => ['required_with:items_to_update', 'string', 'in:ingredient,preparation'],
             'items_to_update.*.quantity' => ['required_with:items_to_update', 'numeric', 'min:0.01'],
             'items_to_update.*.unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
-            'items_to_update.*.location_id' => ['sometimes', Rule::exists('locations', 'id')->where(fn($q) => $q->where('company_id', $user->company_id))],
+            'items_to_update.*.location_id' => ['sometimes', Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id))],
         ]);
 
         if (array_key_exists('name', $validated)) {
@@ -107,7 +107,7 @@ class MenuController extends Controller
         $menu->save();
 
         // Remove specified items
-        if (!empty($validated['items_to_remove'])) {
+        if (! empty($validated['items_to_remove'])) {
             foreach ($validated['items_to_remove'] as $item) {
                 $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
                 $menu->items()
@@ -119,7 +119,7 @@ class MenuController extends Controller
         }
 
         // Add new items while ensuring no duplicates
-        if (!empty($validated['items_to_add'])) {
+        if (! empty($validated['items_to_add'])) {
             $this->ensureUniqueItems($validated['items_to_add']);
 
             foreach ($validated['items_to_add'] as $item) {
@@ -143,7 +143,7 @@ class MenuController extends Controller
         }
 
         // Update quantity or unit of existing items
-        if (!empty($validated['items_to_update'])) {
+        if (! empty($validated['items_to_update'])) {
             foreach ($validated['items_to_update'] as $item) {
                 $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
 
@@ -153,7 +153,7 @@ class MenuController extends Controller
                     ->where('entity_id', $item['entity_id'])
                     ->first();
 
-                if (!$menuItem) {
+                if (! $menuItem) {
                     throw ValidationException::withMessages([
                         'items_to_update' => ['Item not found in this menu.'],
                     ]);
@@ -195,7 +195,8 @@ class MenuController extends Controller
     /**
      * Vérifie l'unicité des éléments dans un menu.
      *
-     * @param array<array<string, mixed>> $items
+     * @param  array<array<string, mixed>>  $items
+     *
      * @throws ValidationException
      */
     private function ensureUniqueItems(array $items): void
