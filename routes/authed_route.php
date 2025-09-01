@@ -5,6 +5,8 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LocationTypeController;
 use App\Http\Controllers\LossController;
+use App\Http\Controllers\MenuController;
+use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\PreparationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -80,6 +82,17 @@ Route::get('/image-proxy/{bucket}/{path}', function ($bucket, $path) {
         return response()->json(['error' => 'Image not found'], 404);
     }
 })->where('path', '.*')->name('image-proxy');
+
+// Groupe de routes pour les menus et leurs commandes
+Route::prefix('menus')->name('menus.')->group(function () {
+    Route::post('/', [MenuController::class, 'store'])->name('store');
+    Route::put('/{id}', [MenuController::class, 'update'])->name('update');
+    Route::delete('/{id}', [MenuController::class, 'destroy'])->name('destroy');
+
+    Route::post('/{menu}/command', [MenuCommandController::class, 'store'])->name('command.store');
+    Route::put('/command/{id}/status', [MenuCommandController::class, 'updateStatus'])->name('command.update-status');
+    Route::post('/command/{id}/cancel', [MenuCommandController::class, 'cancel'])->name('command.cancel');
+});
 
 // Groupe de routes pour les catégories
 Route::prefix('categories')->name('categories.')->group(function () {
