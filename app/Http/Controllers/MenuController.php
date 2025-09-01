@@ -103,7 +103,7 @@ class MenuController extends Controller
         $menu->save();
 
         // Remove specified items
-        if (!empty($validated['items_to_remove'])) {
+        if (! empty($validated['items_to_remove'])) {
             foreach ($validated['items_to_remove'] as $item) {
                 $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
                 $menu->items()
@@ -115,7 +115,7 @@ class MenuController extends Controller
         }
 
         // Add new items while ensuring no duplicates
-        if (!empty($validated['items_to_add'])) {
+        if (! empty($validated['items_to_add'])) {
             $this->ensureUniqueItems($validated['items_to_add']);
 
             foreach ($validated['items_to_add'] as $item) {
@@ -138,7 +138,7 @@ class MenuController extends Controller
         }
 
         // Update quantity or unit of existing items
-        if (!empty($validated['items_to_update'])) {
+        if (! empty($validated['items_to_update'])) {
             foreach ($validated['items_to_update'] as $item) {
                 $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
 
@@ -148,7 +148,7 @@ class MenuController extends Controller
                     ->where('entity_id', $item['entity_id'])
                     ->first();
 
-                if (!$menuItem) {
+                if (! $menuItem) {
                     throw ValidationException::withMessages([
                         'items_to_update' => ['Item not found in this menu.'],
                     ]);
@@ -187,7 +187,8 @@ class MenuController extends Controller
     /**
      * Vérifie l'unicité des éléments dans un menu.
      *
-     * @param array<array<string, mixed>> $items
+     * @param  array<array<string, mixed>>  $items
+     *
      * @throws ValidationException
      */
     private function ensureUniqueItems(array $items): void
