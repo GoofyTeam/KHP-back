@@ -66,7 +66,7 @@ extend type Query @guard {
 "Options de tri pour les mouvements de stock."
 input StockMovementOrderByClause {
     "Champ sur lequel effectuer le tri."
-    field: StockMovementOrderByField!
+    column: StockMovementOrderByField!
 
     "Direction du tri."
     order: SortOrder!
