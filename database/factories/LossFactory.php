@@ -25,8 +25,8 @@ class LossFactory extends Factory
     public function definition(): array
     {
         return [
-            'lossable_id' => Ingredient::factory(),
-            'lossable_type' => Ingredient::class,
+            'loss_item_id' => Ingredient::factory(),
+            'loss_item_type' => Ingredient::class,
             'location_id' => Location::factory(),
             'company_id' => Company::factory(),
             'user_id' => User::factory(),
@@ -41,8 +41,8 @@ class LossFactory extends Factory
     public function preparation(): static
     {
         return $this->state(fn () => [
-            'lossable_id' => Preparation::factory(),
-            'lossable_type' => Preparation::class,
+            'loss_item_id' => Preparation::factory(),
+            'loss_item_type' => Preparation::class,
         ]);
     }
 }

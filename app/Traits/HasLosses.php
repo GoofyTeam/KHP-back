@@ -13,7 +13,7 @@ trait HasLosses
      */
     public function losses(): MorphMany
     {
-        return $this->morphMany(Loss::class, 'lossable');
+        return $this->morphMany(Loss::class, 'loss_item');
     }
 
     /**

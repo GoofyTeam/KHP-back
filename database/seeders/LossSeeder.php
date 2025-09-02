@@ -30,8 +30,8 @@ class LossSeeder extends Seeder
                         ]);
 
                         Loss::create([
-                            'lossable_id' => $ingredient->id,
-                            'lossable_type' => Ingredient::class,
+                            'loss_item_id' => $ingredient->id,
+                            'loss_item_type' => Ingredient::class,
                             'location_id' => $location->id,
                             'company_id' => $company->id,
                             'user_id' => $user?->id,
@@ -51,8 +51,8 @@ class LossSeeder extends Seeder
                         ]);
 
                         Loss::create([
-                            'lossable_id' => $preparation->id,
-                            'lossable_type' => Preparation::class,
+                            'loss_item_id' => $preparation->id,
+                            'loss_item_type' => Preparation::class,
                             'location_id' => $location->id,
                             'company_id' => $company->id,
                             'user_id' => $user?->id,
