@@ -2,19 +2,20 @@
 
 namespace Database\Seeders;
 
+use App\DTO\OpenFoodFactsDTO;
+use App\Enums\MeasurementUnit;
 use App\Models\Company;
 use App\Models\Ingredient;
-use App\Enums\MeasurementUnit;
-use App\Services\OpenFoodFactsService;
 use App\Services\ImageService;
-use App\DTO\OpenFoodFactsDTO;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
+use App\Services\OpenFoodFactsService;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class CompanySeeder extends Seeder
 {
     private OpenFoodFactsService $offService;
+
     private ImageService $imageService;
 
     public function __construct(OpenFoodFactsService $offService, ImageService $imageService)
@@ -22,6 +23,7 @@ class CompanySeeder extends Seeder
         $this->offService = $offService;
         $this->imageService = $imageService;
     }
+
     /**
      * Run the database seeds.
      */
@@ -176,6 +178,7 @@ class CompanySeeder extends Seeder
             ->flatMap(fn ($dir) => $disk->exists($dir) ? $disk->files($dir) : [])
             ->filter(function (string $path) {
                 $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
                 return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
             })
             ->values()
@@ -195,6 +198,7 @@ class CompanySeeder extends Seeder
 
         $indexed = array_map(function ($rel) {
             $base = pathinfo($rel, PATHINFO_FILENAME);
+
             return [
                 'rel' => $rel,
                 'base' => $base,
@@ -250,6 +254,7 @@ class CompanySeeder extends Seeder
         if ($first && $first !== $name) {
             $cands[] = $first;
         }
+
         return array_values(array_unique($cands));
     }
 
@@ -263,6 +268,7 @@ class CompanySeeder extends Seeder
         }
         $value = preg_replace('/[^a-z0-9]+/i', ' ', $value) ?? $value;
         $value = trim(preg_replace('/\s+/', ' ', $value) ?? $value);
+
         return $value;
     }
 }
