@@ -39,7 +39,7 @@ class LossController extends Controller
             'trackable_id' => ['required', 'integer'],
             'location_id' => ['required', 'integer'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
-            'reason' => ['nullable', 'string'],
+            'reason' => ['required', 'string'],
         ]);
 
         $modelClass = $validated['trackable_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
@@ -53,7 +53,7 @@ class LossController extends Controller
             ->firstOrFail();
 
         try {
-            $loss = $trackable->recordLoss($location, $validated['quantity'], $validated['reason'] ?? null);
+            $loss = $trackable->recordLoss($location, $validated['quantity'], $validated['reason']);
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),

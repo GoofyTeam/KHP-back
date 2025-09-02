@@ -18,6 +18,7 @@ class StockMovement extends Model
         'company_id',
         'user_id',
         'type',
+        'reason',
         'quantity',
         'quantity_before',
         'quantity_after',

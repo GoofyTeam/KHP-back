@@ -82,9 +82,12 @@ class Loss extends Model
 
         /** @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot */
         $pivot = $locationEntity->pivot;
-        $after = round((float) $pivot->quantity + $this->quantity, 2);
+        $before = (float) $pivot->quantity;
+        $after = round($before + $this->quantity, 2);
 
         $trackable->locations()->updateExistingPivot($location->id, ['quantity' => $after]);
+
+        $trackable->recordStockMovement($location, $before, $after, 'loss rollback');
 
         $this->delete();
     }

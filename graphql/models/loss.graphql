@@ -24,7 +24,7 @@ type Loss {
     quantity: Float!
 
     "Raison de la perte."
-    reason: String
+    reason: String!
 
     "Date et heure de création de la perte."
     created_at: DateTime!

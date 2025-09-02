@@ -82,6 +82,7 @@ class LossTrackingTest extends TestCase
         $this->assertEquals(10, $movement->quantity_before);
         $this->assertEquals(6.5, $movement->quantity_after);
         $this->assertEquals(3.5, $movement->quantity);
+        $this->assertEquals('Cassé', $movement->reason);
     }
 
     /**
@@ -122,6 +123,7 @@ class LossTrackingTest extends TestCase
         $this->assertEquals(5.0, $movement->quantity_before);
         $this->assertEquals(3.0, $movement->quantity_after);
         $this->assertEquals(2.0, $movement->quantity);
+        $this->assertEquals('Renversé', $movement->reason);
     }
 
     /**
@@ -137,6 +139,7 @@ class LossTrackingTest extends TestCase
             'trackable_id' => $this->ingredient->id,
             'location_id' => $this->location->id,
             'quantity' => 5,
+            'reason' => 'Erreur',
         ]);
 
         $response->assertStatus(400);
@@ -163,6 +166,7 @@ class LossTrackingTest extends TestCase
             'trackable_id' => $this->ingredient->id,
             'location_id' => $this->location->id,
             'quantity' => 2,
+            'reason' => 'Oubli',
         ]);
 
         $lossId = $storeResponse->json('loss.id');
@@ -179,7 +183,7 @@ class LossTrackingTest extends TestCase
 
         $movements = StockMovement::where('trackable_id', $this->ingredient->id)->get();
         $this->assertCount(2, $movements);
-        $this->assertNotNull($movements->firstWhere('type', 'withdrawal'));
-        $this->assertNotNull($movements->firstWhere('type', 'addition'));
+        $this->assertEquals('Oubli', $movements->firstWhere('type', 'withdrawal')->reason);
+        $this->assertEquals('loss rollback', $movements->firstWhere('type', 'addition')->reason);
     }
 }

@@ -211,6 +211,22 @@ class QuantityAdjustmentTest extends TestCase
             'location_id' => $to->id,
             'quantity' => 3,
         ]);
+
+        $reason = "Moved from {$from->name} to {$to->name}";
+        $this->assertDatabaseHas('stock_movements', [
+            'trackable_id' => $ingredient->id,
+            'trackable_type' => Ingredient::class,
+            'location_id' => $from->id,
+            'type' => 'withdrawal',
+            'reason' => $reason,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'trackable_id' => $ingredient->id,
+            'trackable_type' => Ingredient::class,
+            'location_id' => $to->id,
+            'type' => 'addition',
+            'reason' => $reason,
+        ]);
     }
 
     /** Scénario : déplacement de la quantité d'une préparation entre deux emplacements. */
@@ -241,6 +257,22 @@ class QuantityAdjustmentTest extends TestCase
             'preparation_id' => $preparation->id,
             'location_id' => $to->id,
             'quantity' => 5,
+        ]);
+
+        $reason = "Moved from {$from->name} to {$to->name}";
+        $this->assertDatabaseHas('stock_movements', [
+            'trackable_id' => $preparation->id,
+            'trackable_type' => Preparation::class,
+            'location_id' => $from->id,
+            'type' => 'withdrawal',
+            'reason' => $reason,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'trackable_id' => $preparation->id,
+            'trackable_type' => Preparation::class,
+            'location_id' => $to->id,
+            'type' => 'addition',
+            'reason' => $reason,
         ]);
     }
 }

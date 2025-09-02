@@ -21,6 +21,9 @@ type StockMovement {
     "Type de mouvement: 'addition' ou 'withdrawal'."
     type: String!
 
+    "Raison du mouvement."
+    reason: String
+
     "Quantité concernée par le mouvement (toujours positive)."
     quantity: Float!
 
