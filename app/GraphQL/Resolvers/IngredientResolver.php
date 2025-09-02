@@ -32,4 +32,25 @@ class IngredientResolver
 
         return $quantities;
     }
+
+    /**
+     * Retrieve stock movements for an ingredient with optional ordering.
+     *
+     * @param  array<string, mixed>  $args
+     */
+    public function stockMovements(Ingredient $ingredient, array $args)
+    {
+        $query = $ingredient->stockMovements();
+
+        $orders = $args['orderBy'] ?? [[
+            'column' => 'created_at',
+            'order' => 'DESC',
+        ]];
+
+        foreach ($orders as $order) {
+            $query->orderBy($order['column'], $order['order']);
+        }
+
+        return $query->get();
+    }
 }

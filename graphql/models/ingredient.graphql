@@ -25,7 +25,10 @@ type Ingredient {
         @field(resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@imageUrl")
 
     "Historique des mouvements de stock pour cet ingrédient"
-    stockMovements: [StockMovement!]! @morphMany
+    stockMovements(
+        orderBy: [StockMovementOrderByClause!]
+    ): [StockMovement!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@stockMovements")
 
     withdrawals_today_count: Int!
 
