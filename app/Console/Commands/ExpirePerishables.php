@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Location;
 use App\Models\Ingredient;
-use App\Models\Loss;
 use App\Models\Perishable;
-use App\Services\PerishableService;
 use Illuminate\Console\Command;
+use App\Services\PerishableService;
 
 class ExpirePerishables extends Command
 {
@@ -18,18 +18,15 @@ class ExpirePerishables extends Command
     {
         $perishables = Perishable::with(['ingredient.category.locationTypes', 'location'])
             ->get()
-            ->filter(fn ($p) => $service->expiration($p)->isPast());
+            ->filter(fn($p) => $service->expiration($p)->isPast());
 
         foreach ($perishables as $perishable) {
-            Loss::create([
-                'loss_item_id' => $perishable->ingredient_id,
-                'loss_item_type' => Ingredient::class,
-                'location_id' => $perishable->location_id,
-                'company_id' => $perishable->company_id,
-                'user_id' => null,
-                'quantity' => $perishable->quantity,
-                'reason' => 'expired',
-            ]);
+            $ingredient = Ingredient::find($perishable->ingredient_id);
+            $location = $perishable->location;
+
+            if ($ingredient && $location instanceof Location) {
+                $ingredient->recordLoss($location, $perishable->quantity, 'expired');
+            }
 
             $perishable->delete();
         }

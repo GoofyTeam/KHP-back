@@ -56,7 +56,8 @@ class HasStockMovementsTest extends TestCase
         $movement = $this->ingredient->recordStockMovement(
             $this->location,
             $quantityBefore,
-            $quantityAfter
+            $quantityAfter,
+            'Inventaire'
         );
 
         // Assertions
@@ -68,6 +69,7 @@ class HasStockMovementsTest extends TestCase
         $this->assertEquals($this->location->id, $movement->location_id);
         $this->assertEquals($this->user->id, $movement->user_id);
         $this->assertEquals($this->company->id, $movement->company_id);
+        $this->assertEquals('Inventaire', $movement->reason);
     }
 
     /**
@@ -83,7 +85,8 @@ class HasStockMovementsTest extends TestCase
         $movement = $this->ingredient->recordStockMovement(
             $this->location,
             $quantityBefore,
-            $quantityAfter
+            $quantityAfter,
+            'Retrait'
         );
 
         // Assertions
@@ -103,7 +106,8 @@ class HasStockMovementsTest extends TestCase
         $movement = $this->ingredient->recordStockMovement(
             $this->location,
             10.123,
-            15.456
+            15.456,
+            'Ajustement'
         );
 
         $this->assertEquals(10.12, $movement->quantity_before);
@@ -121,7 +125,8 @@ class HasStockMovementsTest extends TestCase
         $movement = $this->ingredient->recordStockMovement(
             $this->location,
             10.005,
-            10.009
+            10.009,
+            'Minuscule'
         );
 
         // Ne devrait pas créer de mouvement
@@ -139,7 +144,8 @@ class HasStockMovementsTest extends TestCase
         $movement = $this->preparation->recordStockMovement(
             $this->location,
             5.0,
-            8.0
+            8.0,
+            'Ajout'
         );
 
         $this->assertNotNull($movement);

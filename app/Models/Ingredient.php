@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\MeasurementUnit;
 use App\Traits\HasLosses;
 use App\Traits\HasSearchScope;
-use App\Traits\HasStockMovements;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Ingredient extends Model
 {
     /** @use HasFactory<\Database\Factories\IngredientFactory> */
-    use HasFactory, HasLosses, HasSearchScope, HasStockMovements;
+    use HasFactory, HasLosses, HasSearchScope;
 
     protected $guarded = [
         'id',

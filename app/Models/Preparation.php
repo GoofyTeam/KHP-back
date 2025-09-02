@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\MeasurementUnit;
 use App\Traits\HasLosses;
 use App\Traits\HasSearchScope;
-use App\Traits\HasStockMovements;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Preparation extends Model
 {
     /** @use HasFactory<\Database\Factories\PreparationFactory> */
-    use HasFactory, HasLosses, HasSearchScope, HasStockMovements;
+    use HasFactory, HasLosses, HasSearchScope;
 
     protected $guarded = [
         'id',
