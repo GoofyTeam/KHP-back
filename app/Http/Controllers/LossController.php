@@ -35,16 +35,16 @@ class LossController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'trackable_type' => ['required', 'string', 'in:ingredient,preparation'],
-            'trackable_id' => ['required', 'integer'],
+            'loss_item_type' => ['required', 'string', 'in:ingredient,preparation'],
+            'loss_item_id' => ['required', 'integer'],
             'location_id' => ['required', 'integer'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'reason' => ['nullable', 'string'],
         ]);
 
-        $modelClass = $validated['trackable_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+        $modelClass = $validated['loss_item_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
 
-        $trackable = $modelClass::where('id', $validated['trackable_id'])
+        $trackable = $modelClass::where('id', $validated['loss_item_id'])
             ->where('company_id', $user->company_id)
             ->firstOrFail();
 

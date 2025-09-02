@@ -23,7 +23,7 @@ return new class extends Migration
 
         // Create an index equivalent to the original morphs index
         Schema::table('losses', function (Blueprint $table) {
-            $table->index(['loss_item_type', 'loss_item_id'], 'loss_item_type_loss_item_id_index');
+            $table->index(['loss_item_type', 'loss_item_id']);
         });
 
         // Drop the old index and columns (use columns to infer correct index name)
@@ -48,7 +48,7 @@ return new class extends Migration
         ]);
 
         Schema::table('losses', function (Blueprint $table) {
-            $table->index(['lossable_type', 'lossable_id'], 'lossable_type_lossable_id_index');
+            $table->index(['lossable_type', 'lossable_id']);
         });
 
         Schema::table('losses', function (Blueprint $table) {
