@@ -5,12 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property bool $auto_complete_menu_orders
+ */
 class Company extends Model
 {
     use HasFactory;
 
     protected $guarded = [
         'id',
+    ];
+
+    protected $casts = [
+        'auto_complete_menu_orders' => 'bool',
     ];
 
     /**
