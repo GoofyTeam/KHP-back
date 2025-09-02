@@ -3,11 +3,10 @@
 namespace App\Traits;
 
 use App\Models\Ingredient;
-use App\Models\Location;
-use App\Models\Loss;
-use App\Models\Preparation;
 use App\Models\IngredientLocation;
+use App\Models\Location;
 use App\Models\LocationPreparation;
+use App\Models\Loss;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 trait HasLosses

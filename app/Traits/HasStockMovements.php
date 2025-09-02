@@ -23,7 +23,7 @@ trait HasStockMovements
      * @param  Location  $location  L'emplacement concerné
      * @param  float  $quantityBefore  Quantité avant le mouvement
      * @param  float  $quantityAfter  Quantité après le mouvement
-     * @param  string|null $reason Raison du mouvement
+     * @param  string|null  $reason  Raison du mouvement
      * @return StockMovement|null Le mouvement créé ou null si pas de différence significative
      */
     public function recordStockMovement(Location $location, float $quantityBefore, float $quantityAfter, ?string $reason = null): ?StockMovement
