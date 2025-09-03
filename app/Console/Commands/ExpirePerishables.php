@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Location;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\Perishable;
-use Illuminate\Console\Command;
 use App\Services\PerishableService;
+use Illuminate\Console\Command;
 
 class ExpirePerishables extends Command
 {
@@ -18,7 +18,7 @@ class ExpirePerishables extends Command
     {
         $perishables = Perishable::with(['ingredient.category.locationTypes', 'location'])
             ->get()
-            ->filter(fn($p) => $service->expiration($p)->isPast());
+            ->filter(fn ($p) => $service->expiration($p)->isPast());
 
         foreach ($perishables as $perishable) {
             $ingredient = Ingredient::find($perishable->ingredient_id);
