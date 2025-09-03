@@ -3,10 +3,6 @@
 namespace App\Providers;
 
 use App\Enums\MeasurementUnit;
-use App\Models\IngredientLocation;
-use App\Models\LocationPreparation;
-use App\Observers\IngredientLocationObserver;
-use App\Observers\LocationPreparationObserver;
 use App\Services\OpenFoodFactsService;
 use GraphQL\Type\Definition\EnumType;
 use Illuminate\Support\ServiceProvider;
@@ -28,8 +24,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app->singleton(OpenFoodFactsService::class);
-        IngredientLocation::observe(IngredientLocationObserver::class);
-        LocationPreparation::observe(LocationPreparationObserver::class);
 
         // Enregistre l'enum PHP directement dans Lighthouse TypeRegistry
         $typeRegistry = app(TypeRegistry::class);

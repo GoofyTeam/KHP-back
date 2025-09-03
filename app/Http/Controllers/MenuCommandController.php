@@ -126,7 +126,7 @@ class MenuCommandController extends Controller
                 continue;
             }
             $total = $item->quantity * $order->quantity;
-            $stockService->remove($entity, $item->location_id, $order->menu->company_id, $total);
+            $stockService->remove($entity, $item->location_id, $order->menu->company_id, $total, 'menu order');
         }
     }
 
@@ -143,7 +143,7 @@ class MenuCommandController extends Controller
                 continue;
             }
             $total = $item->quantity * $order->quantity;
-            $stockService->add($entity, $item->location_id, $order->menu->company_id, $total);
+            $stockService->add($entity, $item->location_id, $order->menu->company_id, $total, 'menu order cancellation');
         }
     }
 }

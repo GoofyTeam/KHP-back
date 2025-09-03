@@ -307,7 +307,7 @@ class PreparationController extends Controller
         ]);
 
         // Vérifier que l'emplacement de destination appartient à la même entreprise
-        Location::where('id', $validated['location_id'])
+        $destinationLocation = Location::where('id', $validated['location_id'])
             ->where('company_id', $user->company_id)
             ->firstOrFail();
 
@@ -381,10 +381,14 @@ class PreparationController extends Controller
                     }
 
                     // Réduire la quantité du composant à cet emplacement
+                    $before = $pivot->quantity;
+                    $after = $pivot->quantity - $source['quantity'];
                     $entity->locations()->updateExistingPivot(
                         $source['location_id'],
-                        ['quantity' => $pivot->quantity - $source['quantity']]
+                        ['quantity' => $after]
                     );
+
+                    $entity->recordStockMovement($sourceLocation, $before, $after, "Used for preparation {$preparation->name}");
 
                     if ($entity instanceof Ingredient) {
                         $perishableService->remove($entity->id, $source['location_id'], $user->company_id, $source['quantity']);
@@ -406,12 +410,16 @@ class PreparationController extends Controller
                 $existingQuantity = $pivot->quantity;
             }
 
+            $after = $existingQuantity + $validated['quantity'];
+
             // Mettre à jour ou ajouter la quantité
             $preparation->locations()->syncWithoutDetaching([
                 $validated['location_id'] => [
-                    'quantity' => $existingQuantity + $validated['quantity'],
+                    'quantity' => $after,
                 ],
             ]);
+
+            $preparation->recordStockMovement($destinationLocation, $existingQuantity, $after, "Preparation {$preparation->name} produced");
 
             DB::commit();
 

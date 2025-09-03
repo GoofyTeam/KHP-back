@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained();
             $table->foreignId('user_id')->nullable()->constrained();
             $table->decimal('quantity', 8, 2);
-            $table->string('reason')->nullable();
+            $table->string('reason');
             $table->timestamps();
         });
     }

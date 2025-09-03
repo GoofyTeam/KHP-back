@@ -2,12 +2,17 @@
 
 namespace App\Traits;
 
+use App\Models\Ingredient;
+use App\Models\IngredientLocation;
 use App\Models\Location;
+use App\Models\LocationPreparation;
 use App\Models\Loss;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 trait HasLosses
 {
+    use HasStockMovements;
+
     /**
      * Historique des pertes associées à cette entité.
      */
@@ -19,7 +24,7 @@ trait HasLosses
     /**
      * Enregistrer une perte et mettre à jour le stock.
      */
-    public function recordLoss(Location $location, float $quantity, ?string $reason = null): Loss
+    public function recordLoss(Location $location, float $quantity, string $reason): Loss
     {
         if ($quantity <= 0) {
             throw new \InvalidArgumentException('Quantity must be positive');
@@ -46,9 +51,15 @@ trait HasLosses
         $newQuantity = round($available - $quantity, 2);
 
         // Mettre à jour la quantité à l'emplacement
-        $this->locations()->updateExistingPivot($location->id, [
-            'quantity' => $newQuantity,
-        ]);
+        $pivotModel = $this instanceof Ingredient ? IngredientLocation::class : LocationPreparation::class;
+
+        $pivotModel::withoutEvents(function () use ($location, $newQuantity) {
+            $this->locations()->updateExistingPivot($location->id, [
+                'quantity' => $newQuantity,
+            ]);
+        });
+
+        $this->recordStockMovement($location, $available, $newQuantity, $reason);
 
         /** @var Loss $loss */
         $loss = $this->losses()->create([
