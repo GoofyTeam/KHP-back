@@ -43,6 +43,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
         ];
@@ -68,6 +69,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
             'image_url' => 'https://example.com/tomate.jpg',
@@ -99,6 +101,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [
                 ['location_id' => $loc1->id, 'quantity' => 10],
@@ -156,6 +159,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'TomateURL',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 3]],
             'image_url' => 'https://example.com/tomate.jpg',
@@ -184,6 +188,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/t.jpg',
@@ -219,6 +224,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Tomate',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/t.jpg',
@@ -245,6 +251,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'SansCat',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
             'image_url' => 'https://example.com/ok.jpg',
         ];
@@ -272,6 +279,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'BadMime',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/not-image',
@@ -304,6 +312,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'TooBig',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/too-big.jpg',
@@ -326,6 +335,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'Old',
             'unit' => 'kg',
             'base_quantity' => 1,
+            'base_unit' => 'kg',
         ]);
 
         $cat = Category::factory()->create(['company_id' => $company->id, 'name' => 'OldCat']);
@@ -352,7 +362,7 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
         $old = Category::factory()->create(['company_id' => $company->id, 'name' => 'OldCat']);
         $ing->category()->associate($old);
         $ing->save();
@@ -374,7 +384,7 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $payload = ['category_id' => null];
 
@@ -390,7 +400,7 @@ class IngredientControllerTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $loc1 = Location::factory()->create(['company_id' => $company->id]);
         $loc2 = Location::factory()->create(['company_id' => $company->id]);
@@ -420,7 +430,7 @@ class IngredientControllerTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'image_url' => null, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'image_url' => null, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $file = UploadedFile::fake()->image('new.jpg', 320, 320);
 
@@ -447,7 +457,7 @@ class IngredientControllerTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'image_url' => null, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'image_url' => null, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $payload = ['image_url' => 'https://example.com/new.png'];
 
@@ -468,7 +478,7 @@ class IngredientControllerTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $file = UploadedFile::fake()->image('x.jpg');
 
@@ -488,7 +498,7 @@ class IngredientControllerTest extends TestCase
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $this->actingAs($user)
             ->deleteJson("/api/ingredients/{$ing->id}")
@@ -504,7 +514,7 @@ class IngredientControllerTest extends TestCase
         $company2 = Company::factory()->create();
 
         $user = User::factory()->create(['company_id' => $company1->id]);
-        $ing = Ingredient::factory()->create(['company_id' => $company2->id, 'base_quantity' => 1]);
+        $ing = Ingredient::factory()->create(['company_id' => $company2->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
 
         $this->actingAs($user)
             ->deleteJson("/api/ingredients/{$ing->id}")
@@ -531,6 +541,7 @@ class IngredientControllerTest extends TestCase
             'name' => 'AvecMeta',
             'unit' => 'kg',
             'base_quantity' => 1.25,
+            'base_unit' => 'kg',
             'category_id' => $category->id,
             'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
             'barcode' => '123456789',
@@ -546,6 +557,7 @@ class IngredientControllerTest extends TestCase
             'id' => $resp['ingredient_id'],
             'barcode' => '123456789',
             'base_quantity' => 1.25,
+            'base_unit' => 'kg',
         ]);
     }
 }

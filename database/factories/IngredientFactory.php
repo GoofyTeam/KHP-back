@@ -151,6 +151,7 @@ class IngredientFactory extends Factory
             'name' => $this->faker->randomElement($ingredients).' '.$this->faker->numberBetween(1, 999),
             'unit' => $this->faker->randomElement(MeasurementUnit::values()),
             'base_quantity' => $this->faker->numberBetween(1, 1000),
+            'base_unit' => $this->faker->randomElement(MeasurementUnit::values()),
             'barcode' => $this->faker->unique()->ean13(),
             'company_id' => Company::factory(),
         ];
