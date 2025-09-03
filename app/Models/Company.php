@@ -75,6 +75,11 @@ class Company extends Model
         return $this->hasMany(LocationType::class);
     }
 
+    public function lossReasons()
+    {
+        return $this->hasMany(LossReason::class);
+    }
+
     protected static function booted()
     {
         static::created(function ($company) {
@@ -97,6 +102,17 @@ class Company extends Model
                 'name' => 'Réfrigérateur',
                 'location_type_id' => $locationTypes[1]->id,
             ]);
+
+            // Créer les raisons de perte par défaut
+            $company->lossReasons()->createMany(array_map(fn ($name) => ['name' => $name], [
+                'Expired',
+                'Broken',
+                'Spilled',
+                'Contaminated',
+                'Damaged',
+                'Lost',
+                'Other',
+            ]));
         });
     }
 }
