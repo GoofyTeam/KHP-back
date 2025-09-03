@@ -22,6 +22,7 @@ class Ingredient extends Model
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
+        'base_unit' => MeasurementUnit::class,
     ];
 
     public function company(): BelongsTo

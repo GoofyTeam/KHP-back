@@ -54,6 +54,7 @@ class IngredientController extends Controller
             'barcode' => 'nullable|string|max:255',
             // ⚠️ non nullable : requis au store
             'base_quantity' => 'required|numeric|min:0',
+            'base_unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
         ]);
 
         // Vérifier exclusivité : ne pas fournir "image" et "image_url" en même temps
@@ -80,6 +81,7 @@ class IngredientController extends Controller
             'image_url' => $imagePath, // direct si présent
             'barcode' => $request->input('barcode'),
             'base_quantity' => $request->input('base_quantity'), // requis
+            'base_unit' => $request->input('base_unit'),
             'category_id' => $request->input('category_id'),
         ]);
 
@@ -139,6 +141,7 @@ class IngredientController extends Controller
             'barcode' => 'sometimes|nullable|string|max:255',
             // non nullable côté DB, mais en update on n'oblige pas si non fourni
             'base_quantity' => 'sometimes|numeric|min:0',
+            'base_unit' => ['sometimes', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
         ]);
 
         // Vérifier exclusivité : ne pas fournir "image" et "image_url" en même temps
@@ -168,6 +171,9 @@ class IngredientController extends Controller
         }
         if ($request->has('base_quantity')) {
             $ingredient->base_quantity = $request->input('base_quantity');
+        }
+        if ($request->has('base_unit')) {
+            $ingredient->base_unit = $request->input('base_unit');
         }
         $ingredient->save();
 

@@ -11,6 +11,9 @@ type Ingredient {
     "Quantity for one unit of the ingredient."
     base_quantity: Float!
 
+    "Unit for the base quantity of the ingredient."
+    base_unit: UnitEnum!
+
     quantities: [IngredientQuantity!]!
         @field(
             resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@quantityByLocation"
