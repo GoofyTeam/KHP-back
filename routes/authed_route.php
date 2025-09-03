@@ -6,6 +6,7 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LocationTypeController;
 use App\Http\Controllers\LossController;
+use App\Http\Controllers\LossReasonController;
 use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PreparationController;
@@ -72,6 +73,13 @@ Route::prefix('location')->name('location.')->group(function () {
 Route::prefix('losses')->name('losses.')->group(function () {
     Route::post('/', [LossController::class, 'store'])->name('store');
     Route::delete('/rollback/{loss}', [LossController::class, 'rollback'])->name('rollback');
+});
+
+// Groupe de routes pour les raisons de perte
+Route::prefix('loss-reasons')->name('loss-reasons.')->group(function () {
+    Route::post('/', [LossReasonController::class, 'store'])->name('store');
+    Route::put('/{id}', [LossReasonController::class, 'update'])->name('update');
+    Route::delete('/{id}', [LossReasonController::class, 'destroy'])->name('destroy');
 });
 
 // Routes utilitaires

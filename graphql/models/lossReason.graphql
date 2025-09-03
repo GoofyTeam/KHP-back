@@ -1,0 +1,25 @@
+"""
+Raison de perte prédéfinie pour une entreprise.
+"""
+type LossReason {
+    "Identifiant unique."
+    id: ID!
+
+    "Nom de la raison."
+    name: String!
+
+    "Entreprise associée."
+    company: Company! @belongsTo
+
+    "Date de création."
+    created_at: DateTime!
+
+    "Date de mise à jour."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les raisons de perte de l'entreprise actuelle."
+    lossReasons: [LossReason!]! @all(scopes: ["forCompany"])
+}
+
