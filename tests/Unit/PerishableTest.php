@@ -103,7 +103,7 @@ class PerishableTest extends TestCase
         ]);
         $perishable->forceFill(['created_at' => now()->subHours(2), 'updated_at' => now()->subHours(2)])->save();
 
-        $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 4]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 4]]);
 
         $this->artisan('perishables:expire')->assertExitCode(0);
 

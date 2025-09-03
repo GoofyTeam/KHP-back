@@ -32,7 +32,7 @@ class QuantityAdjustmentTest extends TestCase
             'company_id' => $company->id,
             'category_id' => $category->id,
         ]);
-        $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 5]]);
 
         $this->actingAs($user)
             ->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
@@ -84,7 +84,7 @@ class QuantityAdjustmentTest extends TestCase
             'company_id' => $company->id,
             'category_id' => $category->id,
         ]);
-        $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 5]]);
 
         $this->actingAs($user)
             ->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
@@ -103,7 +103,7 @@ class QuantityAdjustmentTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
         $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
-        $ingredient->locations()->updateExistingPivot($location->id, ['quantity' => 5]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 5]]);
 
         $this->actingAs($user)
             ->postJson("/api/ingredients/{$ingredient->id}/remove-quantity", [
@@ -126,7 +126,7 @@ class QuantityAdjustmentTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
         $preparation = Preparation::factory()->create(['company_id' => $company->id]);
-        $preparation->locations()->updateExistingPivot($location->id, ['quantity' => 2]);
+        $preparation->locations()->syncWithoutDetaching([$location->id => ['quantity' => 2]]);
 
         $this->actingAs($user)
             ->postJson("/api/preparations/{$preparation->id}/add-quantity", [
@@ -149,7 +149,7 @@ class QuantityAdjustmentTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
         $preparation = Preparation::factory()->create(['company_id' => $company->id]);
-        $preparation->locations()->updateExistingPivot($location->id, ['quantity' => 3]);
+        $preparation->locations()->syncWithoutDetaching([$location->id => ['quantity' => 3]]);
 
         $this->actingAs($user)
             ->postJson("/api/preparations/{$preparation->id}/remove-quantity", [
@@ -179,8 +179,8 @@ class QuantityAdjustmentTest extends TestCase
             'company_id' => $company->id,
             'category_id' => $category->id,
         ]);
-        $ingredient->locations()->updateExistingPivot($from->id, ['quantity' => 5]);
-        $ingredient->locations()->updateExistingPivot($to->id, ['quantity' => 1]);
+        $ingredient->locations()->syncWithoutDetaching([$from->id => ['quantity' => 5]]);
+        $ingredient->locations()->syncWithoutDetaching([$to->id => ['quantity' => 1]]);
         app(\App\Services\PerishableService::class)->add($ingredient->id, $from->id, $company->id, 5);
 
         $this->actingAs($user)
@@ -237,8 +237,8 @@ class QuantityAdjustmentTest extends TestCase
         $from = Location::factory()->create(['company_id' => $company->id]);
         $to = Location::factory()->create(['company_id' => $company->id]);
         $preparation = Preparation::factory()->create(['company_id' => $company->id]);
-        $preparation->locations()->updateExistingPivot($from->id, ['quantity' => 5]);
-        $preparation->locations()->updateExistingPivot($to->id, ['quantity' => 1]);
+        $preparation->locations()->syncWithoutDetaching([$from->id => ['quantity' => 5]]);
+        $preparation->locations()->syncWithoutDetaching([$to->id => ['quantity' => 1]]);
 
         $this->actingAs($user)
             ->postJson("/api/preparations/{$preparation->id}/move-quantity", [

@@ -24,21 +24,6 @@ class Ingredient extends Model
         'unit' => MeasurementUnit::class,
     ];
 
-    protected static function booted()
-    {
-        static::created(function (Ingredient $ingredient) {
-            $locations = Location::where('company_id', $ingredient->company_id)->pluck('id');
-
-            $syncData = $locations
-                ->mapWithKeys(fn ($id) => [$id => ['quantity' => 0]])
-                ->toArray();
-
-            if (! empty($syncData)) {
-                $ingredient->locations()->syncWithoutDetaching($syncData);
-            }
-        });
-    }
-
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

@@ -25,21 +25,6 @@ class Preparation extends Model
         'unit' => MeasurementUnit::class,
     ];
 
-    protected static function booted()
-    {
-        static::created(function (Preparation $preparation) {
-            $locations = Location::where('company_id', $preparation->company_id)->pluck('id');
-
-            $syncData = $locations
-                ->mapWithKeys(fn ($id) => [$id => ['quantity' => 0]])
-                ->toArray();
-
-            if (! empty($syncData)) {
-                $preparation->locations()->syncWithoutDetaching($syncData);
-            }
-        });
-    }
-
     /**
      * Get the company that owns the preparation.
      *
