@@ -50,7 +50,7 @@ class LossTrackingTest extends TestCase
      */
     public function test_recording_ingredient_loss_updates_stock_and_logs_history(): void
     {
-        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => 10]);
+        $this->ingredient->locations()->syncWithoutDetaching([$this->location->id => ['quantity' => 10]]);
         StockMovement::query()->delete();
 
         $response = $this->postJson('/api/losses', [
@@ -91,7 +91,7 @@ class LossTrackingTest extends TestCase
      */
     public function test_recording_preparation_loss_updates_stock_and_logs_history(): void
     {
-        $this->preparation->locations()->updateExistingPivot($this->location->id, ['quantity' => 5]);
+        $this->preparation->locations()->syncWithoutDetaching([$this->location->id => ['quantity' => 5]]);
         StockMovement::query()->delete();
 
         $response = $this->postJson('/api/losses', [
@@ -131,7 +131,7 @@ class LossTrackingTest extends TestCase
      */
     public function test_recording_loss_with_insufficient_stock_returns_error(): void
     {
-        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => 2]);
+        $this->ingredient->locations()->syncWithoutDetaching([$this->location->id => ['quantity' => 2]]);
         StockMovement::query()->delete();
 
         $response = $this->postJson('/api/losses', [
@@ -158,7 +158,7 @@ class LossTrackingTest extends TestCase
      */
     public function test_cancelling_loss_restores_stock_and_logs_history(): void
     {
-        $this->ingredient->locations()->updateExistingPivot($this->location->id, ['quantity' => 5]);
+        $this->ingredient->locations()->syncWithoutDetaching([$this->location->id => ['quantity' => 5]]);
         StockMovement::query()->delete();
 
         $storeResponse = $this->postJson('/api/losses', [

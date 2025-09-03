@@ -499,7 +499,7 @@ class PreparationControllerTest extends TestCase
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         // Quantité initiale
-        $prep->locations()->updateExistingPivot($location->id, ['quantity' => 5.0]);
+        $prep->locations()->syncWithoutDetaching([$location->id => ['quantity' => 5.0]]);
 
         $payload = [
             'quantities' => [
@@ -692,7 +692,7 @@ class PreparationControllerTest extends TestCase
         ]);
 
         // Ajouter du stock
-        $ing->locations()->updateExistingPivot($source->id, ['quantity' => 10.0]);
+        $ing->locations()->syncWithoutDetaching([$source->id => ['quantity' => 10.0]]);
 
         // Créer une catégorie
         $category = Category::factory()->create([
@@ -766,8 +766,8 @@ class PreparationControllerTest extends TestCase
         $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
         // Stocks
-        $ing1->locations()->updateExistingPivot($location1->id, ['quantity' => 10.0]);
-        $ing2->locations()->updateExistingPivot($location1->id, ['quantity' => 8.0]);
+        $ing1->locations()->syncWithoutDetaching([$location1->id => ['quantity' => 10.0]]);
+        $ing2->locations()->syncWithoutDetaching([$location1->id => ['quantity' => 8.0]]);
 
         // Préparation
         $preparation = Preparation::factory()->create([
@@ -816,7 +816,7 @@ class PreparationControllerTest extends TestCase
         $source = Location::factory()->create(['company_id' => $company->id]);
         $destination = Location::factory()->create(['company_id' => $company->id]);
 
-        $ingredient->locations()->updateExistingPivot($source->id, ['quantity' => 5]);
+        $ingredient->locations()->syncWithoutDetaching([$source->id => ['quantity' => 5]]);
 
         Perishable::create([
             'ingredient_id' => $ingredient->id,
@@ -870,8 +870,8 @@ class PreparationControllerTest extends TestCase
         $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve 2']);
         $destination = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 5.0]);
-        $ing->locations()->updateExistingPivot($location2->id, ['quantity' => 3.0]);
+        $ing->locations()->syncWithoutDetaching([$location1->id => ['quantity' => 5.0]]);
+        $ing->locations()->syncWithoutDetaching([$location2->id => ['quantity' => 3.0]]);
 
         $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
         PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
@@ -905,7 +905,7 @@ class PreparationControllerTest extends TestCase
         $ing = Ingredient::factory()->create(['company_id' => $company->id, 'name' => 'Farine', 'unit' => 'kg']);
         $location1 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve']);
         $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
-        $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 2.0]);
+        $ing->locations()->syncWithoutDetaching([$location1->id => ['quantity' => 2.0]]);
 
         $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
         PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
@@ -940,7 +940,7 @@ class PreparationControllerTest extends TestCase
         $freezer = Location::factory()->create(['company_id' => $company->id, 'name' => 'Congélateur principal', 'location_type_id' => $freezerType->id]);
         $kitchen = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        $ing->locations()->updateExistingPivot($freezer->id, ['quantity' => 5.0]);
+        $ing->locations()->syncWithoutDetaching([$freezer->id => ['quantity' => 5.0]]);
 
         $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Préparation de viande', 'unit' => 'kg']);
         PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
@@ -974,8 +974,8 @@ class PreparationControllerTest extends TestCase
         $location2 = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve 2']);
         $destination = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        $ing->locations()->updateExistingPivot($location1->id, ['quantity' => 5.0]);
-        $ing->locations()->updateExistingPivot($location2->id, ['quantity' => 3.0]);
+        $ing->locations()->syncWithoutDetaching([$location1->id => ['quantity' => 5.0]]);
+        $ing->locations()->syncWithoutDetaching([$location2->id => ['quantity' => 3.0]]);
 
         $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
         PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
@@ -1010,13 +1010,13 @@ class PreparationControllerTest extends TestCase
         $source = Location::factory()->create(['company_id' => $company->id, 'name' => 'Réserve']);
         $destination = Location::factory()->create(['company_id' => $company->id, 'name' => 'Cuisine']);
 
-        $ing->locations()->updateExistingPivot($source->id, ['quantity' => 10.0]);
+        $ing->locations()->syncWithoutDetaching([$source->id => ['quantity' => 10.0]]);
 
         $preparation = Preparation::factory()->create(['company_id' => $company->id, 'name' => 'Simple preparation', 'unit' => 'kg']);
         PreparationEntity::create(['preparation_id' => $preparation->id, 'entity_id' => $ing->id, 'entity_type' => Ingredient::class]);
 
         // quantité initiale
-        $preparation->locations()->updateExistingPivot($destination->id, ['quantity' => 1.5]);
+        $preparation->locations()->syncWithoutDetaching([$destination->id => ['quantity' => 1.5]]);
 
         $payload = [
             'quantity' => 2.5,
