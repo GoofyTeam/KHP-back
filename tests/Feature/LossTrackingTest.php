@@ -54,8 +54,8 @@ class LossTrackingTest extends TestCase
         StockMovement::query()->delete();
 
         $response = $this->postJson('/api/losses', [
-            'trackable_type' => 'ingredient',
-            'trackable_id' => $this->ingredient->id,
+            'loss_item_type' => 'ingredient',
+            'loss_item_id' => $this->ingredient->id,
             'location_id' => $this->location->id,
             'quantity' => 3.5,
             'reason' => 'Cassé',
@@ -64,8 +64,8 @@ class LossTrackingTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('losses', [
-            'lossable_id' => $this->ingredient->id,
-            'lossable_type' => Ingredient::class,
+            'loss_item_id' => $this->ingredient->id,
+            'loss_item_type' => Ingredient::class,
             'location_id' => $this->location->id,
             'quantity' => 3.5,
             'reason' => 'Cassé',
@@ -94,8 +94,8 @@ class LossTrackingTest extends TestCase
         StockMovement::query()->delete();
 
         $response = $this->postJson('/api/losses', [
-            'trackable_type' => 'preparation',
-            'trackable_id' => $this->preparation->id,
+            'loss_item_type' => 'preparation',
+            'loss_item_id' => $this->preparation->id,
             'location_id' => $this->location->id,
             'quantity' => 2,
             'reason' => 'Renversé',
@@ -104,8 +104,8 @@ class LossTrackingTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('losses', [
-            'lossable_id' => $this->preparation->id,
-            'lossable_type' => Preparation::class,
+            'loss_item_id' => $this->preparation->id,
+            'loss_item_type' => Preparation::class,
             'location_id' => $this->location->id,
             'quantity' => 2.0,
             'reason' => 'Renversé',
@@ -133,8 +133,8 @@ class LossTrackingTest extends TestCase
         StockMovement::query()->delete();
 
         $response = $this->postJson('/api/losses', [
-            'trackable_type' => 'ingredient',
-            'trackable_id' => $this->ingredient->id,
+            'loss_item_type' => 'ingredient',
+            'loss_item_id' => $this->ingredient->id,
             'location_id' => $this->location->id,
             'quantity' => 5,
         ]);
@@ -159,8 +159,8 @@ class LossTrackingTest extends TestCase
         StockMovement::query()->delete();
 
         $storeResponse = $this->postJson('/api/losses', [
-            'trackable_type' => 'ingredient',
-            'trackable_id' => $this->ingredient->id,
+            'loss_item_type' => 'ingredient',
+            'loss_item_id' => $this->ingredient->id,
             'location_id' => $this->location->id,
             'quantity' => 2,
         ]);

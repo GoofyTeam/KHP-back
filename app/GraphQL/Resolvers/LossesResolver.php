@@ -27,12 +27,12 @@ class LossesResolver
 
         $ingredient = Loss::forCompany()
             ->whereBetween('created_at', [$start, $end])
-            ->where('lossable_type', Ingredient::class)
+            ->where('loss_item_type', Ingredient::class)
             ->sum('quantity');
 
         $preparation = Loss::forCompany()
             ->whereBetween('created_at', [$start, $end])
-            ->where('lossable_type', Preparation::class)
+            ->where('loss_item_type', Preparation::class)
             ->sum('quantity');
 
         return [

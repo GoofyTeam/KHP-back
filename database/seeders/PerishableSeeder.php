@@ -41,8 +41,8 @@ class PerishableSeeder extends Seeder
                 $perishable->save();
 
                 Loss::create([
-                    'lossable_id' => $perishable->ingredient_id,
-                    'lossable_type' => Ingredient::class,
+                    'loss_item_id' => $perishable->ingredient_id,
+                    'loss_item_type' => Ingredient::class,
                     'location_id' => $perishable->location_id,
                     'company_id' => $perishable->company_id,
                     'user_id' => null,

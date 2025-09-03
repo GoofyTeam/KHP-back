@@ -107,8 +107,8 @@ class PerishableTest extends TestCase
 
         $this->assertSoftDeleted('perishables', ['id' => $perishable->id]);
         $this->assertDatabaseHas('losses', [
-            'lossable_id' => $ingredient->id,
-            'lossable_type' => Ingredient::class,
+            'loss_item_id' => $ingredient->id,
+            'loss_item_type' => Ingredient::class,
             'location_id' => $location->id,
             'company_id' => $company->id,
             'quantity' => 4,

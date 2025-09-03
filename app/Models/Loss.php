@@ -23,8 +23,8 @@ class Loss extends Model
     use HasFactory;
 
     protected $fillable = [
-        'lossable_id',
-        'lossable_type',
+        'loss_item_id',
+        'loss_item_type',
         'location_id',
         'company_id',
         'user_id',
@@ -34,7 +34,7 @@ class Loss extends Model
 
     public function lossable(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo('loss_item');
     }
 
     public function location(): BelongsTo
