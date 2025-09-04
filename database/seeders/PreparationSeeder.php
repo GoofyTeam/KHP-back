@@ -147,7 +147,7 @@ class PreparationSeeder extends Seeder
                 if (! isset($ingredientIds[$ingName])) {
                     continue;
                 }
-                PreparationEntity::firstOrCreate([
+                PreparationEntity::factory()->create([
                     'preparation_id' => $prep->id,
                     'entity_id' => $ingredientIds[$ingName],
                     'entity_type' => Ingredient::class,
