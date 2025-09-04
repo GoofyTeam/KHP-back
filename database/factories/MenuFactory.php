@@ -15,6 +15,10 @@ class MenuFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'name' => $this->faker->unique()->word(),
+            'description' => $this->faker->sentence(),
+            'image_url' => null,
+            'is_a_la_carte' => $this->faker->boolean(),
+            'is_available' => true,
         ];
     }
 }
