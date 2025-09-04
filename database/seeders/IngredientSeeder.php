@@ -10,6 +10,7 @@ use App\Services\ImageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 class IngredientSeeder extends Seeder
 {
@@ -38,6 +39,9 @@ class IngredientSeeder extends Seeder
             ->all();
         $fallbackCategoryId = $categoriesByName['Ingrédients Divers']
             ?? (reset($categoriesByName) ?: null);
+
+        // Pré-liste les images locales disponibles pour matcher par nom
+        $localImages = $this->listLocalImageFiles();
 
         $items = [
             // Produits carnés & poisson
@@ -112,12 +116,29 @@ class IngredientSeeder extends Seeder
             $catName = $this->guessCategoryNameForItem($item['name']);
             $categoryId = $categoriesByName[$catName] ?? $fallbackCategoryId;
 
+            // Associe une image locale correspondant au nom
+            $imageUrl = null;
+            $matched = $this->findLocalImagePath($item['name'], $localImages);
+            if ($matched) {
+                try {
+                    $absolute = method_exists(Storage::disk('local'), 'path')
+                        ? Storage::disk('local')->path($matched)
+                        : storage_path('app/'.$matched);
+                    $mime = @mime_content_type($absolute) ?: 'image/jpeg';
+                    $upload = new UploadedFile($absolute, basename($absolute), $mime, null, true);
+                    $imageUrl = $this->imageService->store($upload, 'ingredients');
+                } catch (\Throwable $e) {
+                    // ignore, on tentera OFF plus bas si possible
+                    $imageUrl = null;
+                }
+            }
+
             $ingredient = Ingredient::factory()->create([
                 'company_id' => $company->id,
                 'name' => $item['name'],
                 'unit' => $item['unit']->value,
                 'base_quantity' => $item['qty'],
-                'image_url' => null,
+                'image_url' => $imageUrl,
                 'barcode' => $item['barcode'] ?? null,
                 'category_id' => $categoryId,
             ]);
@@ -127,7 +148,7 @@ class IngredientSeeder extends Seeder
                 $ingredient->update(['category_id' => $categoryId]);
             }
 
-            // Si un code-barres Open Food Facts est présent, tenter de récupérer et stocker l'image distante
+            // Si pas d'image locale et qu'un code-barres est présent, tenter OFF
             $barcode = $ingredient->barcode;
             if (! empty($barcode) && empty($ingredient->image_url)) {
                 $offUrl = "https://world.openfoodfacts.org/api/v0/product/{$barcode}.json";
@@ -203,8 +224,6 @@ class IngredientSeeder extends Seeder
 
     /**
      * Liste les images locales possibles dans storage.
-     * Recherche dans storage/app/private/seeders/images puis storage/app/seeders/images.
-     * Retourne des chemins relatifs.
      */
     protected function listLocalImageFiles(): array
     {

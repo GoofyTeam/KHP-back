@@ -33,14 +33,14 @@ class PreparationSeeder extends Seeder
         $localImages = $this->listLocalImageFiles();
 
         // Ajoute uniquement 10 préparations nommées basées sur la liste d'IngredientSeeder
-        $this->seedGoofyTeamSpecificPreparations($company);
+        $this->seedGoofyTeamSpecificPreparations($company, $localImages);
     }
 
     /**
      * Crée 10 préparations nommées en utilisant exclusivement des ingrédients
      * présents dans la liste de GoofyTeam (IngredientSeeder) et des catégories existantes.
      */
-    private function seedGoofyTeamSpecificPreparations(Company $company): void
+    private function seedGoofyTeamSpecificPreparations(Company $company, array $localImages): void
     {
         $categories = Category::where('company_id', $company->id)->pluck('id', 'name')->all();
 
@@ -113,12 +113,28 @@ class PreparationSeeder extends Seeder
                 continue;
             }
 
-            $prep = Preparation::firstOrCreate([
+            // Ajoute une image locale correspondant au nom si elle est présente
+            $imageUrl = null;
+            $matched = $this->findLocalImagePath($recipe['name'], $localImages);
+            if ($matched) {
+                try {
+                    $absolute = method_exists(Storage::disk('local'), 'path')
+                        ? Storage::disk('local')->path($matched)
+                        : storage_path('app/'.$matched);
+                    $mime = @mime_content_type($absolute) ?: 'image/jpeg';
+                    $upload = new UploadedFile($absolute, basename($absolute), $mime, null, true);
+                    $imageUrl = $this->imageService->store($upload, 'preparations');
+                } catch (\Throwable $e) {
+                    $imageUrl = null;
+                }
+            }
+
+            $prep = Preparation::factory()->create([
                 'company_id' => $company->id,
                 'name' => $recipe['name'],
-            ], [
                 'category_id' => $categoryId,
                 'unit' => $recipe['unit']->value,
+                'image_url' => $imageUrl,
             ]);
 
             // Lier les ingrédients par nom s'ils existent pour la société
@@ -137,35 +153,9 @@ class PreparationSeeder extends Seeder
                     'entity_type' => Ingredient::class,
                 ]);
             }
-
-            // Associer une image locale selon le nom si disponible
-            $this->attachLocalImageByName($prep, $this->listLocalImageFiles());
         }
     }
 
-    private function attachLocalImageByName(Preparation $preparation, array $localImages): void
-    {
-        if (! empty($preparation->image_url)) {
-            return;
-        }
-
-        $matched = $this->findLocalImagePath($preparation->name, $localImages);
-        if (! $matched) {
-            return;
-        }
-
-        try {
-            $absolute = method_exists(Storage::disk('local'), 'path')
-                ? Storage::disk('local')->path($matched)
-                : storage_path('app/'.$matched);
-            $mime = @mime_content_type($absolute) ?: 'image/jpeg';
-            $upload = new UploadedFile($absolute, basename($absolute), $mime, null, true);
-            $storedPath = $this->imageService->store($upload, 'preparations');
-            $preparation->update(['image_url' => $storedPath]);
-        } catch (\Throwable $e) {
-            $this->command?->warn('Image locale non affectée pour la préparation "'.$preparation->name.'"');
-        }
-    }
 
     // Helpers d’images locales (similaires à IngredientSeeder)
     protected function listLocalImageFiles(): array

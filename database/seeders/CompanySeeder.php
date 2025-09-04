@@ -12,10 +12,7 @@ class CompanySeeder extends Seeder
      */
     public function run(): void
     {
-        // Ensure the main company exists
         Company::factory()->create(['name' => 'GoofyTeam']);
-
-        // Create additional companies if needed
         Company::factory()->count(9)->create();
     }
 }
