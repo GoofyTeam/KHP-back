@@ -32,6 +32,12 @@ class MenuCommandController extends Controller
 
         $quantity = $validated['quantity'] ?? 1;
 
+        if (! $menu->hasSufficientStock($quantity)) {
+            return response()->json([
+                'message' => 'Insufficient stock for this menu order',
+            ], 422);
+        }
+
         /** @var Company $company */
         $company = $user->company;
         $status = $company->auto_complete_menu_orders ? 'completed' : 'pending';
@@ -44,6 +50,7 @@ class MenuCommandController extends Controller
 
         if ($status === 'completed') {
             $this->applyOrder($order, $stockService);
+            $menu->refreshAvailability();
         }
 
         return response()->json([
@@ -78,6 +85,7 @@ class MenuCommandController extends Controller
 
         if ($previous !== 'completed' && $order->status === 'completed') {
             $this->applyOrder($order, $stockService);
+            $order->menu->refreshAvailability();
         }
 
         return response()->json([
@@ -102,6 +110,7 @@ class MenuCommandController extends Controller
 
         if ($order->status === 'completed') {
             $this->revertOrder($order, $stockService);
+            $order->menu->refreshAvailability();
         }
 
         $order->status = 'canceled';
