@@ -17,6 +17,11 @@ class Menu extends Model
 
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'is_a_la_carte' => 'boolean',
+        'is_available' => 'boolean',
+    ];
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
@@ -35,5 +40,29 @@ class Menu extends Model
     public function scopeForCompany($query)
     {
         return $query->where('company_id', auth()->user()->company_id);
+    }
+
+    public function hasSufficientStock(int $quantity = 1): bool
+    {
+        $this->loadMissing('items');
+        foreach ($this->items as $item) {
+            $entityClass = $item->entity_type;
+            $entity = $entityClass::find($item->entity_id);
+            if (! $entity) {
+                return false;
+            }
+            $available = (float) ($entity->locations()->find($item->location_id)?->pivot->quantity ?? 0);
+            if ($available < $item->quantity * $quantity) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function refreshAvailability(): void
+    {
+        $this->is_available = $this->hasSufficientStock();
+        $this->save();
     }
 }

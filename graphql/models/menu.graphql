@@ -1,6 +1,10 @@
 type Menu {
     id: ID!
     name: String!
+    description: String
+    image_url: String @field(resolver: "App\\GraphQL\\Resolvers\\MenuResolver@imageUrl")
+    is_a_la_carte: Boolean!
+    is_available: Boolean!
     items: [MenuItem!]! @hasMany
     created_at: DateTime!
     updated_at: DateTime!

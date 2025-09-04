@@ -304,4 +304,36 @@ class MenuControllerTest extends TestCase
             ->postJson('/api/menus', $payload)
             ->assertStatus(422);
     }
+
+    /** Vérifie qu'une commande échoue si le stock est insuffisant. */
+    public function test_cannot_order_when_stock_insufficient(): void
+    {
+        $company = Company::factory()->create(['auto_complete_menu_orders' => true]);
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $location = Location::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+
+        $ingredient->locations()->sync([$location->id => ['quantity' => 1]]);
+
+        $this->actingAs($user)
+            ->postJson('/api/menus', [
+                'name' => 'Limited Menu',
+                'items' => [
+                    [
+                        'entity_id' => $ingredient->id,
+                        'entity_type' => 'ingredient',
+                        'quantity' => 2,
+                        'unit' => 'unit',
+                        'location_id' => $location->id,
+                    ],
+                ],
+            ])
+            ->assertStatus(201);
+
+        $menu = Menu::where('name', 'Limited Menu')->first();
+
+        $this->actingAs($user)
+            ->postJson('/api/menus/'.$menu->id.'/command')
+            ->assertStatus(422);
+    }
 }
