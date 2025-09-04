@@ -8,9 +8,9 @@ use App\Models\Company;
 use App\Models\Ingredient;
 use App\Services\ImageService;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
 
 class IngredientSeeder extends Seeder
 {

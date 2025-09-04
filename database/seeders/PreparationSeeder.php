@@ -156,7 +156,6 @@ class PreparationSeeder extends Seeder
         }
     }
 
-
     // Helpers d’images locales (similaires à IngredientSeeder)
     protected function listLocalImageFiles(): array
     {
