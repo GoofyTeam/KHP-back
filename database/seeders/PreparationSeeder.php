@@ -43,6 +43,8 @@ class PreparationSeeder extends Seeder
     private function seedGoofyTeamSpecificPreparations(Company $company, array $localImages): void
     {
         $categories = Category::where('company_id', $company->id)->pluck('id', 'name')->all();
+        // Liste des emplacements pour pouvoir y attribuer des stocks initiaux
+        $locationIds = $company->locations()->pluck('id')->all();
 
         $recipes = [
             [
@@ -152,6 +154,24 @@ class PreparationSeeder extends Seeder
                     'entity_id' => $ingredientIds[$ingName],
                     'entity_type' => Ingredient::class,
                 ]);
+            }
+
+            // Attache la préparation à quelques emplacements avec quantités
+            if (! empty($locationIds)) {
+                // Sélectionne aléatoirement jusqu'à 3 emplacements de stockage
+                $take = rand(1, min(3, count($locationIds)));
+                $selected = collect($locationIds)->shuffle()->take($take);
+                foreach ($selected as $locId) {
+                    // ~15 % des stocks démarrent à zéro pour simuler une rupture
+                    if (rand(1, 100) <= 15) {
+                        $qty = 0;
+                    } else {
+                        $qty = $prep->unit === MeasurementUnit::UNIT
+                            ? round(rand(2, 6) / 2, 2)
+                            : round(rand(10, 150) / 10, 2);
+                    }
+                    $prep->locations()->attach($locId, ['quantity' => $qty]);
+                }
             }
         }
     }
