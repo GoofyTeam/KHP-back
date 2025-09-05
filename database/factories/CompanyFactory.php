@@ -18,6 +18,7 @@ class CompanyFactory extends Factory
     {
         return [
             'name' => $this->faker->unique()->company(),
+            'open_food_facts_language' => 'fr',
         ];
     }
 }
