@@ -43,6 +43,10 @@ class IngredientSeeder extends Seeder
         // Pré-liste les images locales disponibles pour matcher par nom
         $localImages = $this->listLocalImageFiles();
 
+        // Récupère les emplacements disponibles pour l'entreprise
+        // afin de pouvoir répartir des quantités initiales de stock
+        $locationIds = $company->locations()->pluck('id')->all();
+
         $items = [
             // Produits carnés & poisson
             ['name' => 'Poitrine de poulet', 'qty' => 10.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '7290006739353'],
@@ -163,6 +167,18 @@ class IngredientSeeder extends Seeder
                         $storedPath = $this->imageService->storeFromUrl($img, 'ingredients');
                         $ingredient->update(['image_url' => $storedPath]);
                     }
+                }
+            }
+
+            // Attache l'ingrédient à quelques emplacements avec quantités
+            if (! empty($locationIds)) {
+                // Sélectionne aléatoirement jusqu'à 3 emplacements
+                $take = rand(1, min(3, count($locationIds)));
+                $selected = collect($locationIds)->shuffle()->take($take);
+                foreach ($selected as $locId) {
+                    // Environ 15 % des entrées auront une quantité nulle (rupture)
+                    $qty = rand(1, 100) <= 15 ? 0 : round(rand(10, 200) / 10, 2);
+                    $ingredient->locations()->attach($locId, ['quantity' => $qty]);
                 }
             }
         }
