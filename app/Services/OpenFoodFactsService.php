@@ -32,8 +32,12 @@ class OpenFoodFactsService
      */
     public function searchByBarcode(string $barcode): ?array
     {
+        $language = auth()->user()?->company->open_food_facts_language ?? 'fr';
+
         $response = $this->client()
-            ->get("/api/v2/product/{$barcode}.json");
+            ->get("/api/v2/product/{$barcode}.json", [
+                'lc' => $language,
+            ]);
 
         if ($response->successful()) {
             return $response->json();
@@ -49,11 +53,14 @@ class OpenFoodFactsService
      */
     public function searchByKeyword(string $query, int $page = 1, int $pageSize = 20): array
     {
+        $language = auth()->user()?->company->open_food_facts_language ?? 'fr';
+
         $response = $this->client()
             ->get('/api/v2/search', [
                 'search_terms' => $query,
                 'page' => $page,
                 'page_size' => $pageSize,
+                'lc' => $language,
             ]);
 
         return $response->successful() ? $response->json() : [];

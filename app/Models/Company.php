@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property bool $auto_complete_menu_orders
+ * @property string $open_food_facts_language
  */
 class Company extends Model
 {
@@ -18,6 +19,7 @@ class Company extends Model
 
     protected $casts = [
         'auto_complete_menu_orders' => 'bool',
+        'open_food_facts_language' => 'string',
     ];
 
     /**
