@@ -163,7 +163,13 @@ class PreparationSeeder extends Seeder
                 $selected = collect($locationIds)->shuffle()->take($take);
                 foreach ($selected as $locId) {
                     // ~15 % des stocks démarrent à zéro pour simuler une rupture
-                    $qty = rand(1, 100) <= 15 ? 0 : round(rand(10, 150) / 10, 2);
+                    if (rand(1, 100) <= 15) {
+                        $qty = 0;
+                    } else {
+                        $qty = $prep->unit === MeasurementUnit::UNIT
+                            ? round(rand(2, 6) / 2, 2)
+                            : round(rand(10, 150) / 10, 2);
+                    }
                     $prep->locations()->attach($locId, ['quantity' => $qty]);
                 }
             }

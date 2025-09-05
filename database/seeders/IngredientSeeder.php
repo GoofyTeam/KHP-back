@@ -111,8 +111,8 @@ class IngredientSeeder extends Seeder
             ['name' => 'Eau minérale', 'qty' => 50.0, 'unit' => MeasurementUnit::LITRE, 'barcode' => '3274080005003'],
             ['name' => 'Chocolat pâtissier', 'qty' => 4.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '0643435040823'],
             ['name' => 'Levure boulangère', 'qty' => 500.0, 'unit' => MeasurementUnit::GRAM, 'barcode' => '3564700440377'],
-            // 20 douzaines = 240 unités
-            ['name' => 'Œufs frais', 'qty' => 240.0, 'unit' => MeasurementUnit::UNIT, 'barcode' => '3245412846991'],
+            // Quantités en unité limitées à de petites valeurs
+            ['name' => 'Œufs frais', 'qty' => 3.0, 'unit' => MeasurementUnit::UNIT, 'barcode' => '3245412846991'],
         ];
 
         foreach ($items as $item) {
@@ -177,7 +177,13 @@ class IngredientSeeder extends Seeder
                 $selected = collect($locationIds)->shuffle()->take($take);
                 foreach ($selected as $locId) {
                     // Environ 15 % des entrées auront une quantité nulle (rupture)
-                    $qty = rand(1, 100) <= 15 ? 0 : round(rand(10, 200) / 10, 2);
+                    if (rand(1, 100) <= 15) {
+                        $qty = 0;
+                    } else {
+                        $qty = $ingredient->unit === MeasurementUnit::UNIT
+                            ? round(rand(2, 6) / 2, 2)
+                            : round(rand(10, 200) / 10, 2);
+                    }
                     $ingredient->locations()->attach($locId, ['quantity' => $qty]);
                 }
             }
