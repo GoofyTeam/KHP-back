@@ -31,10 +31,11 @@ class OpenFoodFactsResolver
                 ->first();
 
             if ($ingredient) {
+                $language = $user->company->open_food_facts_language ?? 'fr';
 
                 return new OpenFoodFactsDTO([
                     'code' => $ingredient->barcode,
-                    'product_name_fr' => $ingredient->name,
+                    'product_name_'.$language => $ingredient->name,
                     'product_quantity' => $ingredient->base_quantity,
                     'product_quantity_unit' => $ingredient->base_unit->value,
                     /** @phpstan-ignore-next-line */

@@ -32,7 +32,9 @@ class OpenFoodFactsDTO
 
         $this->barcode = $product['code'] ?? '';
 
-        $name = $product['product_name_fr'] ?? $product['product_name'] ?? '';
+        $language = auth()->user()?->company->open_food_facts_language ?? 'fr';
+
+        $name = $product['product_name_'.$language] ?? $product['product_name'] ?? '';
         $brand = $product['brands'] ?? '';
 
         $this->product_name = $name;
