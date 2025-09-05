@@ -39,4 +39,8 @@ extend type Query @guard {
         "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
         name: String @where(operator: "like")
     ): [User!]! @paginate(defaultCount: 10)
+
+    "The currently authenticated user."
+    me: User!
+        @first(scopes: ["forCurrentUser"])
 }
