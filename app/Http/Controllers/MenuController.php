@@ -10,6 +10,7 @@ use App\Models\Preparation;
 use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -38,7 +39,20 @@ class MenuController extends Controller
             'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
             'image_url' => ['sometimes', 'nullable', 'url'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.entity_id' => ['required', 'integer'],
+            'items.*.entity_id' => [
+                'required',
+                'integer',
+                function ($attribute, $value, $fail) use ($request, $user) {
+                    $index = explode('.', $attribute)[1] ?? null;
+                    $entityType = $request->input("items.$index.entity_type");
+                    $table = $entityType === 'ingredient' ? 'ingredients' : 'preparations';
+
+                    $rule = Rule::exists($table, 'id')->where(fn ($q) => $q->where('company_id', $user->company_id));
+                    if (! Validator::make(['entity_id' => $value], ['entity_id' => [$rule]])->passes()) {
+                        $fail('The selected entity_id is invalid.');
+                    }
+                },
+            ],
             'items.*.entity_type' => ['required', 'string', 'in:ingredient,preparation'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
@@ -71,6 +85,13 @@ class MenuController extends Controller
 
         foreach ($validated['items'] as $item) {
             $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+
+            if (! $entityClass::where('id', $item['entity_id'])->where('company_id', $user->company_id)->exists()) {
+                throw ValidationException::withMessages([
+                    'items' => ['The selected entity does not belong to this company.'],
+                ]);
+            }
+
             MenuItem::create([
                 'menu_id' => $menu->id,
                 'entity_id' => $item['entity_id'],
@@ -113,7 +134,20 @@ class MenuController extends Controller
             'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
             'image_url' => ['sometimes', 'nullable', 'url'],
             'items_to_add' => ['sometimes', 'array', 'min:1'],
-            'items_to_add.*.entity_id' => ['required_with:items_to_add', 'integer'],
+            'items_to_add.*.entity_id' => [
+                'required_with:items_to_add',
+                'integer',
+                function ($attribute, $value, $fail) use ($request, $user) {
+                    $index = explode('.', $attribute)[1] ?? null;
+                    $entityType = $request->input("items_to_add.$index.entity_type");
+                    $table = $entityType === 'ingredient' ? 'ingredients' : 'preparations';
+
+                    $rule = Rule::exists($table, 'id')->where(fn ($q) => $q->where('company_id', $user->company_id));
+                    if (! Validator::make(['entity_id' => $value], ['entity_id' => [$rule]])->passes()) {
+                        $fail('The selected entity_id is invalid.');
+                    }
+                },
+            ],
             'items_to_add.*.entity_type' => ['required_with:items_to_add', 'string', 'in:ingredient,preparation'],
             'items_to_add.*.quantity' => ['required_with:items_to_add', 'numeric', 'min:0.01'],
             'items_to_add.*.unit' => ['required_with:items_to_add', 'string', Rule::in(MeasurementUnit::values())],
@@ -122,7 +156,20 @@ class MenuController extends Controller
             'items_to_remove.*.entity_id' => ['required_with:items_to_remove', 'integer'],
             'items_to_remove.*.entity_type' => ['required_with:items_to_remove', 'string', 'in:ingredient,preparation'],
             'items_to_update' => ['sometimes', 'array', 'min:1'],
-            'items_to_update.*.entity_id' => ['required_with:items_to_update', 'integer'],
+            'items_to_update.*.entity_id' => [
+                'required_with:items_to_update',
+                'integer',
+                function ($attribute, $value, $fail) use ($request, $user) {
+                    $index = explode('.', $attribute)[1] ?? null;
+                    $entityType = $request->input("items_to_update.$index.entity_type");
+                    $table = $entityType === 'ingredient' ? 'ingredients' : 'preparations';
+
+                    $rule = Rule::exists($table, 'id')->where(fn ($q) => $q->where('company_id', $user->company_id));
+                    if (! Validator::make(['entity_id' => $value], ['entity_id' => [$rule]])->passes()) {
+                        $fail('The selected entity_id is invalid.');
+                    }
+                },
+            ],
             'items_to_update.*.entity_type' => ['required_with:items_to_update', 'string', 'in:ingredient,preparation'],
             'items_to_update.*.quantity' => ['required_with:items_to_update', 'numeric', 'min:0.01'],
             'items_to_update.*.unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
@@ -178,6 +225,12 @@ class MenuController extends Controller
                     ]);
                 }
 
+                if (! $entityClass::where('id', $item['entity_id'])->where('company_id', $user->company_id)->exists()) {
+                    throw ValidationException::withMessages([
+                        'items_to_add' => ['The selected entity does not belong to this company.'],
+                    ]);
+                }
+
                 MenuItem::create([
                     'menu_id' => $menu->id,
                     'entity_id' => $item['entity_id'],
@@ -193,6 +246,12 @@ class MenuController extends Controller
         if (! empty($validated['items_to_update'])) {
             foreach ($validated['items_to_update'] as $item) {
                 $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+
+                if (! $entityClass::where('id', $item['entity_id'])->where('company_id', $user->company_id)->exists()) {
+                    throw ValidationException::withMessages([
+                        'items_to_update' => ['The selected entity does not belong to this company.'],
+                    ]);
+                }
 
                 /** @var MenuItem|null $menuItem */
                 $menuItem = $menu->items()
