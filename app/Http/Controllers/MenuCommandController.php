@@ -8,6 +8,8 @@ use App\Models\MenuOrder;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class MenuCommandController extends Controller
@@ -127,15 +129,24 @@ class MenuCommandController extends Controller
      */
     private function applyOrder(MenuOrder $order, StockService $stockService): void
     {
-        $order->load('menu.items');
-        foreach ($order->menu->items as $item) {
-            $entityClass = $item->entity_type;
-            $entity = $entityClass::find($item->entity_id);
-            if (! $entity) {
-                continue;
-            }
-            $total = $item->quantity * $order->quantity;
-            $stockService->remove($entity, $item->location_id, $order->menu->company_id, $total, 'menu order');
+        try {
+            DB::transaction(function () use ($order, $stockService) {
+                $order->load('menu.items.entity');
+                foreach ($order->menu->items as $item) {
+                    $entity = $item->entity;
+                    if (! $entity) {
+                        continue;
+                    }
+                    $total = $item->quantity * $order->quantity;
+                    $stockService->remove($entity, $item->location_id, $order->menu->company_id, $total, 'menu order');
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to apply menu order', [
+                'order_id' => $order->id,
+                'exception' => $e,
+            ]);
+            abort(500, 'Failed to apply menu order: ' . $e->getMessage());
         }
     }
 
@@ -144,15 +155,24 @@ class MenuCommandController extends Controller
      */
     private function revertOrder(MenuOrder $order, StockService $stockService): void
     {
-        $order->load('menu.items');
-        foreach ($order->menu->items as $item) {
-            $entityClass = $item->entity_type;
-            $entity = $entityClass::find($item->entity_id);
-            if (! $entity) {
-                continue;
-            }
-            $total = $item->quantity * $order->quantity;
-            $stockService->add($entity, $item->location_id, $order->menu->company_id, $total, 'menu order cancellation');
+        try {
+            DB::transaction(function () use ($order, $stockService) {
+                $order->load('menu.items.entity');
+                foreach ($order->menu->items as $item) {
+                    $entity = $item->entity;
+                    if (! $entity) {
+                        continue;
+                    }
+                    $total = $item->quantity * $order->quantity;
+                    $stockService->add($entity, $item->location_id, $order->menu->company_id, $total, 'menu order cancellation');
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to revert menu order', [
+                'order_id' => $order->id,
+                'exception' => $e,
+            ]);
+            abort(500, 'Failed to revert menu order: ' . $e->getMessage());
         }
     }
 }
