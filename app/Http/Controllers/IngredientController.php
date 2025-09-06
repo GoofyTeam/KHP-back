@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Services\ImageService;
 use App\Services\PerishableService;
 use App\Services\StockService;
@@ -49,7 +50,10 @@ class IngredientController extends Controller
 
             'quantities' => 'required|array|min:1',
             'quantities.*.quantity' => 'required|numeric|min:0',
-            'quantities.*.location_id' => 'required|exists:locations,id',
+            'quantities.*.location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'barcode' => 'nullable|string|max:255',
             // ⚠️ non nullable : requis au store
@@ -86,9 +90,17 @@ class IngredientController extends Controller
         ]);
 
         // Quantités par location
-        foreach ($request->input('quantities') as $quantityData) {
+        foreach ($request->input('quantities') as $i => $quantityData) {
+            $locationId = $quantityData['location_id'];
+
+            if (! Location::where('id', $locationId)->where('company_id', $user->company_id)->exists()) {
+                throw ValidationException::withMessages([
+                    "quantities.$i.location_id" => 'Invalid location.',
+                ]);
+            }
+
             $ingredient->locations()->syncWithoutDetaching([
-                $quantityData['location_id'] => [
+                $locationId => [
                     'quantity' => $quantityData['quantity'],
                 ],
             ]);
@@ -136,7 +148,10 @@ class IngredientController extends Controller
 
             'quantities' => 'sometimes|array|min:0',
             'quantities.*.quantity' => 'required|numeric|min:0',
-            'quantities.*.location_id' => 'required|exists:locations,id',
+            'quantities.*.location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'barcode' => 'sometimes|nullable|string|max:255',
             // non nullable côté DB, mais en update on n'oblige pas si non fourni
@@ -184,9 +199,17 @@ class IngredientController extends Controller
 
         // Mettre à jour les quantités seulement si fournies
         if ($request->has('quantities')) {
-            foreach ($request->input('quantities') as $quantityData) {
+            foreach ($request->input('quantities') as $i => $quantityData) {
+                $locationId = $quantityData['location_id'];
+
+                if (! Location::where('id', $locationId)->where('company_id', $user->company_id)->exists()) {
+                    throw ValidationException::withMessages([
+                        "quantities.$i.location_id" => 'Invalid location.',
+                    ]);
+                }
+
                 $ingredient->locations()->syncWithoutDetaching([
-                    $quantityData['location_id'] => [
+                    $locationId => [
                         'quantity' => $quantityData['quantity'],
                     ],
                 ]);
