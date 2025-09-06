@@ -32,7 +32,7 @@ class ImageService
      * Renvoie le chemin S3.
      *
      * @throws \Illuminate\Validation\ValidationException
-    */
+     */
     public function storeFromUrl(string $url, string $folder, int $maxBytes = 2_048_000): string
     {
         $this->assertPublicUrl($url);
