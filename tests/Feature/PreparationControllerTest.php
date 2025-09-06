@@ -139,6 +139,31 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
+    /** Scénario : création échoue si une entité appartient à une autre entreprise. */
+    public function test_it_fails_to_create_with_entity_from_another_company(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $foreignIngredient = Ingredient::factory()->create(['company_id' => $otherCompany->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'Invalid Entity',
+            'unit' => 'g',
+            'entities' => [
+                ['id' => $foreignIngredient->id, 'type' => 'ingredient'],
+                ['id' => Ingredient::factory()->create(['company_id' => $company->id])->id, 'type' => 'ingredient'],
+            ],
+            'category_id' => $category->id,
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/preparations', $payload)
+            ->assertStatus(404);
+    }
+
     /** Scénario : création mixte (1 ingrédient + 1 préparation). */
     public function test_it_creates_with_mixed_entities(): void
     {
@@ -442,6 +467,26 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
+    /** Scénario : ajout échoue si l'entité provient d'une autre entreprise. */
+    public function test_it_fails_to_add_entity_from_another_company_on_update(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $foreignIng = Ingredient::factory()->create(['company_id' => $otherCompany->id]);
+        $payload = [
+            'entities_to_add' => [
+                ['id' => $foreignIng->id, 'type' => 'ingredient'],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(404);
+    }
+
     /** Scénario : suppression et ajout simultanés. */
     public function test_it_adds_and_removes_entities_on_update(): void
     {
@@ -516,6 +561,27 @@ class PreparationControllerTest extends TestCase
             'location_id' => $location->id,
             'quantity' => 10.0,
         ]);
+    }
+
+    /** Scénario : mise à jour échoue si l'emplacement appartient à une autre entreprise. */
+    public function test_it_fails_to_update_quantities_with_foreign_location(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $prep = Preparation::factory()->create(['company_id' => $company->id]);
+
+        $foreignLocation = Location::factory()->create(['company_id' => $otherCompany->id]);
+
+        $payload = [
+            'quantities' => [
+                ['location_id' => $foreignLocation->id, 'quantity' => 5.0],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$prep->id}", $payload)
+            ->assertStatus(422);
     }
 
     /** Scénario : entities_to_remove présent mais vide -> ne fait rien. */

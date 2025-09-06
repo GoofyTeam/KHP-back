@@ -102,6 +102,12 @@ class PreparationController extends Controller
         // Création des liens vers les entités
         foreach ($validated['entities'] as $entity) {
             $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+
+            // Vérifier que l'entité appartient à la même entreprise
+            $entityClass::where('id', $entity['id'])
+                ->where('company_id', $user->company_id)
+                ->firstOrFail();
+
             PreparationEntity::create([
                 'preparation_id' => $preparation->id,
                 'entity_id' => $entity['id'],
@@ -160,7 +166,10 @@ class PreparationController extends Controller
 
             'quantities' => ['sometimes', 'array'],
             'quantities.*.quantity' => ['required_with:quantities', 'numeric', 'min:0'],
-            'quantities.*.location_id' => ['required_with:quantities', 'exists:locations,id'],
+            'quantities.*.location_id' => [
+                'required_with:quantities',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'category_id' => [
                 'sometimes',
@@ -196,6 +205,11 @@ class PreparationController extends Controller
         if (! empty($validated['entities_to_remove'] ?? [])) {
             foreach ($validated['entities_to_remove'] as $entity) {
                 $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+                // Vérifier que l'entité appartient à la même entreprise
+                $entityClass::where('id', $entity['id'])
+                    ->where('company_id', $user->company_id)
+                    ->firstOrFail();
+
                 PreparationEntity::where('preparation_id', $preparation->id)
                     ->where('entity_id', $entity['id'])
                     ->where('entity_type', $entityClass) // précision du type
@@ -216,6 +230,11 @@ class PreparationController extends Controller
                 $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
                 $key = $entityClass.'#'.$entity['id'];
 
+                // Vérifier que l'entité appartient à la même entreprise
+                $entityClass::where('id', $entity['id'])
+                    ->where('company_id', $user->company_id)
+                    ->firstOrFail();
+
                 if (! in_array($key, $existing, true)) {
                     PreparationEntity::create([
                         'preparation_id' => $preparation->id,
@@ -234,6 +253,11 @@ class PreparationController extends Controller
         // Gestion des quantités par emplacement
         if (! empty($validated['quantities'] ?? [])) {
             foreach ($validated['quantities'] as $quantityData) {
+                // Vérifier que l'emplacement appartient à la même entreprise
+                Location::where('id', $quantityData['location_id'])
+                    ->where('company_id', $user->company_id)
+                    ->firstOrFail();
+
                 // Mise à jour ou ajout des quantités par emplacement
                 $preparation->locations()->syncWithoutDetaching([
                     $quantityData['location_id'] => [
