@@ -148,7 +148,7 @@ class MenuControllerTest extends TestCase
             ->assertStatus(201);
 
         // Order outside range
-        MenuOrder::create([
+        MenuOrder::forceCreate([
             'menu_id' => $menu->id,
             'status' => 'completed',
             'quantity' => 1,

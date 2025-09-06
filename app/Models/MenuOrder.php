@@ -17,9 +17,9 @@ class MenuOrder extends Model
         'menu_id',
         'status',
         'quantity',
-        'created_at',
-        'updated_at',
     ];
+
+    public $timestamps = true;
 
     public function menu(): BelongsTo
     {
