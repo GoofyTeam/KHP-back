@@ -10,6 +10,7 @@ use App\Services\PerishableService;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -109,6 +110,118 @@ class IngredientController extends Controller
         return response()->json([
             'message' => 'Ingredient created successfully',
             'ingredient_id' => $ingredient->id,
+        ], 201);
+    }
+
+    /**
+     * Cas métier : Création de plusieurs ingrédients en une seule requête.
+     *
+     * Cette méthode applique les mêmes validations et logique métier que la
+     * méthode store() mais pour un tableau d'ingrédients. Chaque entrée doit
+     * respecter les mêmes règles (image ou image_url, quantités, etc.).
+     */
+    public function bulkStore(Request $request, ImageService $imageService)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'ingredients' => 'required|array|min:1',
+            'ingredients.*.name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('ingredients')->where(function ($query) use ($user) {
+                    return $query->where('company_id', $user->company_id);
+                }),
+            ],
+            'ingredients.*.unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+            'ingredients.*.image' => 'nullable|image|max:2048|required_without:ingredients.*.image_url',
+            'ingredients.*.image_url' => 'nullable|url|required_without:ingredients.*.image',
+            'ingredients.*.category_id' => [
+                'required',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'ingredients.*.quantities' => 'required|array|min:1',
+            'ingredients.*.quantities.*.quantity' => 'required|numeric|min:0',
+            'ingredients.*.quantities.*.location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'ingredients.*.barcode' => 'nullable|string|max:255',
+            'ingredients.*.base_quantity' => 'required|numeric|min:0',
+            'ingredients.*.base_unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+        ]);
+
+        // Détecte les noms dupliqués dans le même payload pour éviter une violation de contrainte unique
+        $names = array_map(fn ($ing) => mb_strtolower($ing['name']), $request->input('ingredients'));
+        $duplicates = array_keys(array_filter(array_count_values($names), fn ($count) => $count > 1));
+        if ($duplicates) {
+            $errors = [];
+            foreach ($duplicates as $dup) {
+                foreach ($names as $index => $name) {
+                    if ($name === $dup) {
+                        $errors["ingredients.$index.name"] = 'Duplicate ingredient name in payload.';
+                    }
+                }
+            }
+            throw ValidationException::withMessages($errors);
+        }
+
+        $createdIds = DB::transaction(function () use ($request, $user, $imageService) {
+            $ids = [];
+
+            foreach ($request->input('ingredients') as $index => $data) {
+                // Vérifier exclusivité image / image_url
+                if (isset($data['image']) && ! empty($data['image']) && ! empty($data['image_url'])) {
+                    throw ValidationException::withMessages([
+                        "ingredients.$index.image" => 'Ne fournissez pas "image" et "image_url" en même temps.',
+                        "ingredients.$index.image_url" => 'Ne fournissez pas "image" et "image_url" en même temps.',
+                    ]);
+                }
+
+                $imagePath = null;
+                if (! empty($data['image'])) {
+                    $imagePath = $imageService->store($data['image'], 'ingredients');
+                } elseif (! empty($data['image_url'])) {
+                    $imagePath = $imageService->storeFromUrl($data['image_url'], 'ingredients');
+                }
+
+                $ingredient = Ingredient::create([
+                    'name' => $data['name'],
+                    'unit' => $data['unit'],
+                    'company_id' => $user->company_id,
+                    'image_url' => $imagePath,
+                    'barcode' => $data['barcode'] ?? null,
+                    'base_quantity' => $data['base_quantity'],
+                    'base_unit' => $data['base_unit'],
+                    'category_id' => $data['category_id'],
+                ]);
+
+                foreach ($data['quantities'] as $i => $quantityData) {
+                    $locationId = $quantityData['location_id'];
+
+                    if (! Location::where('id', $locationId)->where('company_id', $user->company_id)->exists()) {
+                        throw ValidationException::withMessages([
+                            "ingredients.$index.quantities.$i.location_id" => 'Invalid location.',
+                        ]);
+                    }
+
+                    $ingredient->locations()->syncWithoutDetaching([
+                        $locationId => [
+                            'quantity' => $quantityData['quantity'],
+                        ],
+                    ]);
+                }
+
+                $ids[] = $ingredient->id;
+            }
+
+            return $ids;
+        });
+
+        return response()->json([
+            'message' => 'Ingredients created successfully',
+            'ingredient_ids' => $createdIds,
         ], 201);
     }
 
