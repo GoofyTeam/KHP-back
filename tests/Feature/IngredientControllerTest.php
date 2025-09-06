@@ -174,6 +174,151 @@ class IngredientControllerTest extends TestCase
         $this->assertTrue(Storage::disk('s3')->exists($ingredient->image_url));
     }
 
+    /** Création multiple d'ingrédients via endpoint bulk. */
+    public function test_it_creates_multiple_ingredients_at_once(): void
+    {
+        Storage::fake('s3');
+
+        $imageBytes = random_bytes(1280);
+        Http::fake([
+            'example.com/*' => Http::response($imageBytes, 200, [
+                'Content-Type' => 'image/jpeg',
+                'Content-Length' => strlen($imageBytes),
+            ]),
+        ]);
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'name' => 'TomateBulk',
+                    'unit' => 'kg',
+                    'base_quantity' => 1,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 5]],
+                    'image_url' => 'https://example.com/tomate1.jpg',
+                ],
+                [
+                    'name' => 'OignonBulk',
+                    'unit' => 'kg',
+                    'base_quantity' => 2,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 7]],
+                    'image_url' => 'https://example.com/oignon.jpg',
+                ],
+            ],
+        ];
+
+        $resp = $this->actingAs($user)
+            ->postJson('/api/ingredients/bulk', $payload)
+            ->assertStatus(201)
+            ->json();
+
+        $this->assertCount(2, $resp['ingredient_ids']);
+        $this->assertDatabaseHas('ingredients', ['name' => 'TomateBulk']);
+        $this->assertDatabaseHas('ingredients', ['name' => 'OignonBulk']);
+    }
+
+    /** Vérifie que la création multiple est annulée si un ingrédient échoue. */
+    public function test_bulk_creation_rolls_back_when_one_fails(): void
+    {
+        Storage::fake('s3');
+        Http::fake([
+            'example.com/good.jpg' => Http::response(random_bytes(64), 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+            'example.com/not-image' => Http::response('<html></html>', 200, [
+                'Content-Type' => 'text/html',
+            ]),
+        ]);
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'name' => 'TomateRollback',
+                    'unit' => 'kg',
+                    'base_quantity' => 1,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 5]],
+                    'image_url' => 'https://example.com/good.jpg',
+                ],
+                [
+                    'name' => 'OignonRollback',
+                    'unit' => 'kg',
+                    'base_quantity' => 2,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 7]],
+                    // URL qui renvoie un contenu non image pour déclencher une ValidationException après création du premier ingrédient
+                    'image_url' => 'https://example.com/not-image',
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/ingredients/bulk', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['image_url']);
+
+        $this->assertDatabaseCount('ingredients', 0);
+    }
+
+    /** Échoue si deux ingrédients du payload portent le même nom. */
+    public function test_bulk_creation_fails_when_names_are_duplicated(): void
+    {
+        Storage::fake('s3');
+        Http::fake([
+            'example.com/*' => Http::response(random_bytes(64), 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'name' => 'Duplicata',
+                    'unit' => 'kg',
+                    'base_quantity' => 1,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
+                    'image_url' => 'https://example.com/img1.jpg',
+                ],
+                [
+                    'name' => 'Duplicata',
+                    'unit' => 'kg',
+                    'base_quantity' => 2,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
+                    'image_url' => 'https://example.com/img2.jpg',
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/ingredients/bulk', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['ingredients.0.name', 'ingredients.1.name']);
+
+        $this->assertDatabaseCount('ingredients', 0);
+    }
+
     /** Unicité du nom par société : échec même nom dans même company. */
     public function test_it_enforces_unique_name_per_company(): void
     {
