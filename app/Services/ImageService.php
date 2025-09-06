@@ -32,9 +32,11 @@ class ImageService
      * Renvoie le chemin S3.
      *
      * @throws \Illuminate\Validation\ValidationException
-     */
+    */
     public function storeFromUrl(string $url, string $folder, int $maxBytes = 2_048_000): string
     {
+        $this->assertPublicUrl($url);
+
         // 1) Récupérer le contenu distant
         try {
             $response = Http::timeout(10)->get($url);
@@ -103,6 +105,49 @@ class ImageService
         Storage::disk('s3')->put($path, $contents);
 
         return $path;
+    }
+
+    /**
+     * Vérifie que l'URL ne pointe pas vers une adresse interne.
+     * TODO: envisager une liste blanche de domaines ou l'utilisation d'un proxy dédié.
+     */
+    private function assertPublicUrl(string $url): void
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! $host || in_array(strtolower($host), ['localhost'])) {
+            throw ValidationException::withMessages([
+                'image_url' => 'Domaine ou URL non autorisé.',
+            ]);
+        }
+
+        $ips = [];
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips[] = $host;
+        } else {
+            $records = @dns_get_record($host, DNS_A + DNS_AAAA) ?: [];
+            foreach ($records as $rec) {
+                if (isset($rec['ip'])) {
+                    $ips[] = $rec['ip'];
+                }
+                if (isset($rec['ipv6'])) {
+                    $ips[] = $rec['ipv6'];
+                }
+            }
+        }
+
+        foreach ($ips as $ip) {
+            if ($this->isPrivateIp($ip)) {
+                throw ValidationException::withMessages([
+                    'image_url' => 'Domaine ou URL non autorisé.',
+                ]);
+            }
+        }
+    }
+
+    private function isPrivateIp(string $ip): bool
+    {
+        return ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
     }
 
     public function exists(string $path): bool
