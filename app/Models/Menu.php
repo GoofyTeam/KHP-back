@@ -15,7 +15,14 @@ class Menu extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'company_id',
+        'name',
+        'description',
+        'image_url',
+        'is_a_la_carte',
+        'is_available',
+    ];
 
     protected $casts = [
         'is_a_la_carte' => 'boolean',

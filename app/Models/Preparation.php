@@ -17,8 +17,12 @@ class Preparation extends Model
     /** @use HasFactory<\Database\Factories\PreparationFactory> */
     use HasFactory, HasLosses, HasSearchScope;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'company_id',
+        'category_id',
+        'name',
+        'unit',
+        'image_url',
     ];
 
     protected $casts = [

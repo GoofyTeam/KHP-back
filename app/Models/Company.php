@@ -13,8 +13,10 @@ class Company extends Model
 {
     use HasFactory;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'name',
+        'auto_complete_menu_orders',
+        'open_food_facts_language',
     ];
 
     protected $casts = [

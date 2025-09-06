@@ -13,8 +13,9 @@ class Category extends Model
     /** @use HasFactory<\Database\Factories\CategoryFactory> */
     use HasFactory, HasSearchScope;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'name',
+        'company_id',
     ];
 
     public function ingredients(): HasMany

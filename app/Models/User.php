@@ -14,8 +14,11 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'company_id',
     ];
 
     /**

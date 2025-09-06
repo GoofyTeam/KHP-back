@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class PreparationEntity extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'preparation_id',
+        'entity_id',
+        'entity_type',
+    ];
 
     public function entity()
     {

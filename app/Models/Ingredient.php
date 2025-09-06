@@ -16,8 +16,15 @@ class Ingredient extends Model
     /** @use HasFactory<\Database\Factories\IngredientFactory> */
     use HasFactory, HasLosses, HasSearchScope;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'name',
+        'company_id',
+        'category_id',
+        'image_url',
+        'unit',
+        'base_quantity',
+        'barcode',
+        'base_unit',
     ];
 
     protected $casts = [

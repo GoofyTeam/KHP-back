@@ -10,7 +10,10 @@ class LossReason extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'name',
+        'company_id',
+    ];
 
     public function company(): BelongsTo
     {
