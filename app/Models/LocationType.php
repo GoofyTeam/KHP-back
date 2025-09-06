@@ -17,8 +17,10 @@ class LocationType extends Model
     /** @use HasFactory<\Database\Factories\LocationTypeFactory> */
     use HasFactory, HasSearchScope;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'name',
+        'company_id',
+        'is_default',
     ];
 
     /**

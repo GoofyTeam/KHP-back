@@ -16,7 +16,14 @@ class MenuItem extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'menu_id',
+        'entity_id',
+        'entity_type',
+        'location_id',
+        'quantity',
+        'unit',
+    ];
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
