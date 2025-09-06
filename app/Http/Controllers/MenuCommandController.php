@@ -146,7 +146,7 @@ class MenuCommandController extends Controller
                 'order_id' => $order->id,
                 'exception' => $e,
             ]);
-            abort(500, 'Failed to apply menu order: ' . $e->getMessage());
+            abort(500, 'Failed to apply menu order: '.$e->getMessage());
         }
     }
 
@@ -172,7 +172,7 @@ class MenuCommandController extends Controller
                 'order_id' => $order->id,
                 'exception' => $e,
             ]);
-            abort(500, 'Failed to revert menu order: ' . $e->getMessage());
+            abort(500, 'Failed to revert menu order: '.$e->getMessage());
         }
     }
 }
