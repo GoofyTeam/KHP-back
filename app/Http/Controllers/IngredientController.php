@@ -112,6 +112,12 @@ class IngredientController extends Controller
     {
         $user = auth()->user();
 
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Unauthorized action',
+            ], 403);
+        }
+
         $request->validate([
             'name' => [
                 'sometimes',
