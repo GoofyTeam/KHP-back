@@ -17,42 +17,52 @@ class StockService
 
     public function add(Ingredient|Preparation $model, int $locationId, int $companyId, float $quantity, ?string $reason = null): float
     {
-        $location = Location::where('id', $locationId)
-            ->where('company_id', $companyId)
-            ->firstOrFail();
+        return DB::transaction(function () use ($model, $locationId, $companyId, $quantity, $reason) {
+            $location = Location::where('id', $locationId)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
 
-        $current = (float) ($model->locations()->find($location->id)?->pivot->quantity ?? 0);
-        $newQuantity = $current + $quantity;
+            $pivotQuery = $model->locations()->newPivotStatementForId($location->id);
+            $pivot = $pivotQuery->lockForUpdate()->first();
+            $current = (float) ($pivot->quantity ?? 0);
 
-        $model->locations()->syncWithoutDetaching([
-            $location->id => ['quantity' => $newQuantity],
-        ]);
+            if ($pivot) {
+                $pivotQuery->increment('quantity', $quantity);
+            } else {
+                $model->locations()->attach($location->id, ['quantity' => $quantity]);
+            }
 
-        $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_ADD_REASON);
+            $newQuantity = $current + $quantity;
+            $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_ADD_REASON);
 
-        return $newQuantity;
+            return $newQuantity;
+        });
     }
 
     public function remove(Ingredient|Preparation $model, int $locationId, int $companyId, float $quantity, ?string $reason = null): float
     {
-        $location = Location::where('id', $locationId)
-            ->where('company_id', $companyId)
-            ->firstOrFail();
+        return DB::transaction(function () use ($model, $locationId, $companyId, $quantity, $reason) {
+            $location = Location::where('id', $locationId)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
 
-        $current = (float) ($model->locations()->find($location->id)?->pivot->quantity ?? 0);
-        $newQuantity = $current - $quantity;
+            $pivotQuery = $model->locations()->newPivotStatementForId($location->id);
+            $pivot = $pivotQuery->lockForUpdate()->first();
+            $current = (float) ($pivot->quantity ?? 0);
+            $newQuantity = $current - $quantity;
 
-        if ($newQuantity < 0) {
-            throw new \InvalidArgumentException('Quantity cannot be negative');
-        }
+            if ($newQuantity < 0) {
+                throw new \InvalidArgumentException('Quantity cannot be negative');
+            }
 
-        $model->locations()->syncWithoutDetaching([
-            $location->id => ['quantity' => $newQuantity],
-        ]);
+            if ($pivot) {
+                $pivotQuery->decrement('quantity', $quantity);
+            }
 
-        $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_REMOVE_REASON);
+            $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_REMOVE_REASON);
 
-        return $newQuantity;
+            return $newQuantity;
+        });
     }
 
     public function move(Ingredient|Preparation $model, int $fromLocationId, int $toLocationId, int $companyId, float $quantity): void
