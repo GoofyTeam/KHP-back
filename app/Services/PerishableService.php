@@ -20,6 +20,10 @@ class PerishableService
             return null;
         }
 
+        if ($ingredient->company_id !== $companyId || $location->company_id !== $companyId) {
+            return null;
+        }
+
         /** @var Category|null $category */
         $category = $ingredient->category;
 
@@ -42,6 +46,17 @@ class PerishableService
 
     public function remove(int $ingredientId, int $locationId, int $companyId, float $quantity): void
     {
+        $ingredient = Ingredient::find($ingredientId);
+        $location = Location::find($locationId);
+
+        if (! $ingredient || ! $location) {
+            return;
+        }
+
+        if ($ingredient->company_id !== $companyId || $location->company_id !== $companyId) {
+            return;
+        }
+
         $perishables = Perishable::with(['ingredient.category.locationTypes', 'location'])
             ->where('ingredient_id', $ingredientId)
             ->where('location_id', $locationId)
