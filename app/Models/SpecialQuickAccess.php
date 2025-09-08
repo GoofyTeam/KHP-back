@@ -15,8 +15,8 @@ class SpecialQuickAccess extends Model
         'id',
     ];
 
-    public function user()
+    public function company()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Company::class);
     }
 }

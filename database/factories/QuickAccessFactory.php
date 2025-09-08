@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\QuickAccess;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,7 +19,7 @@ class QuickAccessFactory extends Factory
         $color = $this->faker->numberBetween(1, 4);
 
         return [
-            'user_id' => User::factory(),
+            'company_id' => Company::factory(),
             'index' => $this->faker->numberBetween(1, 4),
             'name' => $this->faker->words(2, true),
             'icon' => $this->faker->randomElement($icons),

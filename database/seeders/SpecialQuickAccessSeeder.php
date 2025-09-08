@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Models\SpecialQuickAccess;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class SpecialQuickAccessSeeder extends Seeder
@@ -15,9 +15,9 @@ class SpecialQuickAccessSeeder extends Seeder
             'url' => '/movequantity',
         ];
 
-        User::all()->each(function (User $user) use ($default) {
+        Company::all()->each(function (Company $company) use ($default) {
             SpecialQuickAccess::updateOrCreate(
-                ['user_id' => $user->id],
+                ['company_id' => $company->id],
                 $default
             );
         });

@@ -58,20 +58,4 @@ class User extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token));
     }
-
-    /**
-     * Get the quick access buttons for the user.
-     */
-    public function quickAccesses()
-    {
-        return $this->hasMany(QuickAccess::class);
-    }
-
-    /**
-     * Get the special quick access (5th button).
-     */
-    public function specialQuickAccess()
-    {
-        return $this->hasOne(SpecialQuickAccess::class);
-    }
 }

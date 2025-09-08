@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Models\QuickAccess;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class QuickAccessSeeder extends Seeder
@@ -41,11 +41,11 @@ class QuickAccessSeeder extends Seeder
             ],
         ];
 
-        User::all()->each(function (User $user) use ($defaults) {
+        Company::all()->each(function (Company $company) use ($defaults) {
             foreach ($defaults as $row) {
                 QuickAccess::updateOrCreate(
                     [
-                        'user_id' => $user->id,
+                        'company_id' => $company->id,
                         'index' => $row['index'],
                     ],
                     [

@@ -10,30 +10,12 @@ use Illuminate\Validation\Rule;
 class QuickAccessController extends Controller
 {
     /**
-     * Lister les 5 boutons quick access pour l'utilisateur authentifié.
-     */
-    public function index(Request $request)
-    {
-        $user = $request->user();
-
-        $items = QuickAccess::where('user_id', $user->id)
-            ->orderBy('index')
-            ->get();
-
-        $special = SpecialQuickAccess::where('user_id', $user->id)->first();
-
-        return response()->json([
-            'quick_accesses' => $items,
-            'special_quick_access' => $special,
-        ]);
-    }
-
-    /**
-     * Met à jour une quick access par sa position (1..5) pour l'utilisateur authentifié.
+     * Met à jour une quick access par sa position (1..5) pour la société de l'utilisateur authentifié.
      */
     public function update(Request $request, int $position)
     {
         $user = $request->user();
+        $companyId = $user->company_id;
 
         if ($position < 1 || $position > 5) {
             return response()->json(['message' => 'Position must be between 1 and 5'], 422);
@@ -46,10 +28,10 @@ class QuickAccessController extends Controller
                 'url' => ['sometimes', 'string'],
             ]);
 
-            $item = SpecialQuickAccess::where('user_id', $user->id)->first();
+            $item = SpecialQuickAccess::where('company_id', $companyId)->first();
             if (! $item) {
                 $item = SpecialQuickAccess::factory()->create([
-                    'user_id' => $user->id,
+                    'company_id' => $companyId,
                     'name' => $data['name'] ?? 'Move Quantity',
                     'url' => $data['url'] ?? '/movequantity',
                 ]);
@@ -69,7 +51,7 @@ class QuickAccessController extends Controller
         ];
         $data = $request->validate($rules);
 
-        $item = QuickAccess::where('user_id', $user->id)
+        $item = QuickAccess::where('company_id', $companyId)
             ->where('index', $position)
             ->first();
 
@@ -81,7 +63,7 @@ class QuickAccessController extends Controller
             ]);
 
             $item = QuickAccess::create([
-                'user_id' => $user->id,
+                'company_id' => $companyId,
                 'index' => $position,
                 'name' => $data['name'] ?? 'Button '.$position,
                 'url' => $data['url'] ?? '/',
@@ -96,11 +78,12 @@ class QuickAccessController extends Controller
     }
 
     /**
-     * Réinitialise les 5 boutons de quick access par défaut pour l'utilisateur authentifié.
+     * Réinitialise les 5 boutons de quick access par défaut pour la société de l'utilisateur authentifié.
      */
     public function reset(Request $request)
     {
         $user = $request->user();
+        $companyId = $user->company_id;
 
         $defaults = [
             1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 1, 'url' => '/stock/add'],
@@ -111,18 +94,18 @@ class QuickAccessController extends Controller
 
         foreach ($defaults as $pos => $payload) {
             QuickAccess::updateOrCreate(
-                ['user_id' => $user->id, 'index' => $pos],
+                ['company_id' => $companyId, 'index' => $pos],
                 $payload
             );
         }
 
         SpecialQuickAccess::updateOrCreate(
-            ['user_id' => $user->id],
+            ['company_id' => $companyId],
             ['name' => 'Move Quantity', 'url' => '/movequantity']
         );
 
-        $items = QuickAccess::where('user_id', $user->id)->orderBy('index')->get();
-        $special = SpecialQuickAccess::where('user_id', $user->id)->first();
+        $items = QuickAccess::where('company_id', $companyId)->orderBy('index')->get();
+        $special = SpecialQuickAccess::where('company_id', $companyId)->first();
 
         return response()->json([
             'message' => 'Quick access reset',

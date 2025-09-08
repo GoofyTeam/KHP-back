@@ -126,7 +126,6 @@ Route::prefix('menu-categories')->name('menu-categories.')->group(function () {
 });
 // Groupe de routes pour les Quick Access
 Route::prefix('quick-access')->name('quick-access.')->group(function () {
-    Route::get('/', [QuickAccessController::class, 'index'])->name('index');
     Route::put('/{position}', [QuickAccessController::class, 'update'])->name('update');
     Route::post('/reset', [QuickAccessController::class, 'reset'])->name('reset');
 });

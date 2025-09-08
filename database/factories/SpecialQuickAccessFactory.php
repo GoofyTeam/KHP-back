@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\SpecialQuickAccess;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,7 +16,7 @@ class SpecialQuickAccessFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'company_id' => Company::factory(),
             'name' => $this->faker->words(2, true),
             'url' => '/'.$this->faker->slug(),
         ];

@@ -10,12 +10,12 @@ return new class extends Migration
     {
         Schema::create('special_quick_accesses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->string('name', 26);
             $table->string('url');
             $table->timestamps();
 
-            $table->unique(['user_id']);
+            $table->unique(['company_id']);
         });
     }
 

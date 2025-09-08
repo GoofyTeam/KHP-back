@@ -84,6 +84,16 @@ class Company extends Model
         return $this->hasMany(LossReason::class);
     }
 
+    public function quickAccesses()
+    {
+        return $this->hasMany(QuickAccess::class);
+    }
+
+    public function specialQuickAccess()
+    {
+        return $this->hasOne(SpecialQuickAccess::class);
+    }
+
     protected static function booted()
     {
         static::created(function ($company) {

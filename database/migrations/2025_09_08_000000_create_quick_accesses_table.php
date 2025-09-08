@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('quick_accesses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            // Position 1..4 per user
+            $table->foreignId('company_id')->constrained()->onDelete('cascade');
+            // Position 1..4 per company
             $table->unsignedTinyInteger('index');
             $table->string('name', 26);
             $table->string('icon'); // Plus, Notebook, Minus, Calendar, Check
@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('url');
             $table->timestamps();
 
-            $table->unique(['user_id', 'index']);
+            $table->unique(['company_id', 'index']);
         });
     }
 
