@@ -18,7 +18,7 @@ type StockMovement {
     "L'utilisateur qui a effectué l'opération."
     user: User @belongsTo
 
-    "Type de mouvement: 'addition' ou 'withdrawal'."
+    "Type de mouvement: 'addition', 'withdrawal' ou 'movement'."
     type: String!
 
     "Raison du mouvement."
