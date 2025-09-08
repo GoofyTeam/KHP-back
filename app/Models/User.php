@@ -58,4 +58,9 @@ class User extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    public function scopeForCurrentUser($query)
+    {
+        return $query->whereKey(auth()->id())->with('company');
+    }
 }
