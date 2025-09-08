@@ -58,10 +58,12 @@ class StockServiceTest extends TestCase
 
         $reason = "Moved from {$from->name} to {$to->name}";
 
-        $withdrawal = StockMovement::where('type', 'withdrawal')->first();
-        $this->assertEquals($reason, $withdrawal->reason);
-
-        $addition = StockMovement::where('type', 'addition')->first();
-        $this->assertEquals($reason, $addition->reason);
+        $movement = StockMovement::first();
+        $this->assertNotNull($movement);
+        $this->assertEquals('addition', $movement->type);
+        $this->assertEquals($reason, $movement->reason);
+        $this->assertEquals(0, $movement->quantity_before);
+        $this->assertEquals(2, $movement->quantity_after);
+        $this->assertEquals(1, StockMovement::count());
     }
 }
