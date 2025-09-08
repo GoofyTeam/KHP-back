@@ -87,7 +87,7 @@ class Loss extends Model
 
         $trackable->locations()->updateExistingPivot($location->id, ['quantity' => $after]);
 
-        $trackable->recordStockMovement($location, $before, $after, 'loss rollback');
+        $trackable->recordStockMovement($location, $before, $after, 'Loss Rollback');
 
         $this->delete();
     }
