@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class StockService
 {
-    public const DEFAULT_ADD_REASON = 'manual addition';
+    public const DEFAULT_ADD_REASON = 'Manual Addition';
 
-    public const DEFAULT_REMOVE_REASON = 'manual withdrawal';
+    public const DEFAULT_REMOVE_REASON = 'Manual Withdrawal';
 
     public function __construct(private PerishableService $perishableService) {}
 

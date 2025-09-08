@@ -254,16 +254,28 @@ class PreparationController extends Controller
         if (! empty($validated['quantities'] ?? [])) {
             foreach ($validated['quantities'] as $quantityData) {
                 // Vérifier que l'emplacement appartient à la même entreprise
-                Location::where('id', $quantityData['location_id'])
+                $location = Location::where('id', $quantityData['location_id'])
                     ->where('company_id', $user->company_id)
                     ->firstOrFail();
 
+                $existing = $preparation->locations()->where('locations.id', $location->id)->first();
+                /** @var (\Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float})|null $pivot */
+                $pivot = $existing?->pivot;
+                $before = $pivot ? (float) $pivot->quantity : 0.0;
+
                 // Mise à jour ou ajout des quantités par emplacement
                 $preparation->locations()->syncWithoutDetaching([
-                    $quantityData['location_id'] => [
+                    $location->id => [
                         'quantity' => $quantityData['quantity'],
                     ],
                 ]);
+
+                $preparation->recordStockMovement(
+                    $location,
+                    $before,
+                    (float) $quantityData['quantity'],
+                    'Quantity Manually Adjusted'
+                );
             }
         }
 
@@ -412,7 +424,7 @@ class PreparationController extends Controller
                         ['quantity' => $after]
                     );
 
-                    $entity->recordStockMovement($sourceLocation, $before, $after, "Used for preparation {$preparation->name}");
+                    $entity->recordStockMovement($sourceLocation, $before, $after, "Used for Preparation {$preparation->name}");
 
                     if ($entity instanceof Ingredient) {
                         $perishableService->remove($entity->id, $source['location_id'], $user->company_id, $source['quantity']);
@@ -443,7 +455,7 @@ class PreparationController extends Controller
                 ],
             ]);
 
-            $preparation->recordStockMovement($destinationLocation, $existingQuantity, $after, "Preparation {$preparation->name} produced");
+            $preparation->recordStockMovement($destinationLocation, $existingQuantity, $after, "Preparation {$preparation->name} Produced");
 
             DB::commit();
 

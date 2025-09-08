@@ -94,7 +94,11 @@ class IngredientController extends Controller
         foreach ($request->input('quantities') as $i => $quantityData) {
             $locationId = $quantityData['location_id'];
 
-            if (! Location::where('id', $locationId)->where('company_id', $user->company_id)->exists()) {
+            $location = Location::where('id', $locationId)
+                ->where('company_id', $user->company_id)
+                ->first();
+
+            if (! $location) {
                 throw ValidationException::withMessages([
                     "quantities.$i.location_id" => 'Invalid location.',
                 ]);
@@ -105,6 +109,13 @@ class IngredientController extends Controller
                     'quantity' => $quantityData['quantity'],
                 ],
             ]);
+
+            $ingredient->recordStockMovement(
+                $location,
+                0,
+                (float) $quantityData['quantity'],
+                'Initial Quantity Set'
+            );
         }
 
         return response()->json([
@@ -200,7 +211,11 @@ class IngredientController extends Controller
                 foreach ($data['quantities'] as $i => $quantityData) {
                     $locationId = $quantityData['location_id'];
 
-                    if (! Location::where('id', $locationId)->where('company_id', $user->company_id)->exists()) {
+                    $location = Location::where('id', $locationId)
+                        ->where('company_id', $user->company_id)
+                        ->first();
+
+                    if (! $location) {
                         throw ValidationException::withMessages([
                             "ingredients.$index.quantities.$i.location_id" => 'Invalid location.',
                         ]);
@@ -211,6 +226,13 @@ class IngredientController extends Controller
                             'quantity' => $quantityData['quantity'],
                         ],
                     ]);
+
+                    $ingredient->recordStockMovement(
+                        $location,
+                        0,
+                        (float) $quantityData['quantity'],
+                        'Initial Quantity Set'
+                    );
                 }
 
                 $ids[] = $ingredient->id;
@@ -321,17 +343,33 @@ class IngredientController extends Controller
             foreach ($request->input('quantities') as $i => $quantityData) {
                 $locationId = $quantityData['location_id'];
 
-                if (! Location::where('id', $locationId)->where('company_id', $user->company_id)->exists()) {
+                $location = Location::where('id', $locationId)
+                    ->where('company_id', $user->company_id)
+                    ->first();
+
+                if (! $location) {
                     throw ValidationException::withMessages([
                         "quantities.$i.location_id" => 'Invalid location.',
                     ]);
                 }
+
+                $existing = $ingredient->locations()->where('locations.id', $locationId)->first();
+                /** @var (\Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float})|null $pivot */
+                $pivot = $existing?->pivot;
+                $before = $pivot ? (float) $pivot->quantity : 0.0;
 
                 $ingredient->locations()->syncWithoutDetaching([
                     $locationId => [
                         'quantity' => $quantityData['quantity'],
                     ],
                 ]);
+
+                $ingredient->recordStockMovement(
+                    $location,
+                    $before,
+                    (float) $quantityData['quantity'],
+                    'Quantity Manually Adjusted'
+                );
             }
         }
 

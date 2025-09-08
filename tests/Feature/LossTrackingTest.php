@@ -184,6 +184,6 @@ class LossTrackingTest extends TestCase
         $movements = StockMovement::where('trackable_id', $this->ingredient->id)->get();
         $this->assertCount(2, $movements);
         $this->assertEquals('Oubli', $movements->firstWhere('type', 'withdrawal')->reason);
-        $this->assertEquals('loss rollback', $movements->firstWhere('type', 'addition')->reason);
+        $this->assertEquals('Loss Rollback', $movements->firstWhere('type', 'addition')->reason);
     }
 }
