@@ -3,3 +3,5 @@
 !seeders/
 !seeders/images/
 !seeders/images/*
+!images/
+!images/*
