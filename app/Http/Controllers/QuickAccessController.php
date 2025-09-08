@@ -10,6 +10,25 @@ use Illuminate\Validation\Rule;
 class QuickAccessController extends Controller
 {
     /**
+     * Lister les 5 boutons quick access pour l'utilisateur authentifié.
+     */
+    public function index(Request $request)
+    {
+        $companyId = $request->user()->company_id;
+
+        $items = QuickAccess::where('company_id', $companyId)
+            ->orderBy('index')
+            ->get();
+
+        $special = SpecialQuickAccess::where('company_id', $companyId)->first();
+
+        return response()->json([
+            'quick_accesses' => $items,
+            'special_quick_access' => $special,
+        ]);
+    }
+
+    /**
      * Met à jour une quick access par sa position (1..5) pour la société de l'utilisateur authentifié.
      */
     public function update(Request $request, int $position)
