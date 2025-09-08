@@ -17,7 +17,7 @@ use Tests\TestCase;
  * Class IngredientControllerTest
  *
  * Use cases couverts :
- * - Création : avec fichier image, avec URL d’image, sans image (échec), avec les deux (échec),
+ * - Création : avec fichier image, avec URL d’image, sans image (placeholder), avec les deux (échec),
  *   unicité du nom par société, même nom dans une autre société (OK), sans catégorie (échec),
  *   normalisation de la catégorie (ucfirst), enregistrement de barcode/base_quantity,
  *   stockage S3 + chemin renvoyé.
@@ -31,9 +31,11 @@ class IngredientControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Création échoue sans image ni image_url. */
-    public function test_it_fails_to_create_without_image_nor_url(): void
+    /** Création réussie sans image : utilise un placeholder. */
+    public function test_it_creates_with_placeholder_when_no_image_provided(): void
     {
+        Storage::fake('s3');
+
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
@@ -48,10 +50,42 @@ class IngredientControllerTest extends TestCase
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
         ];
 
-        $this->actingAs($user)
+        $resp = $this->actingAs($user)
             ->postJson('/api/ingredients', $payload)
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['image', 'image_url']);
+            ->assertStatus(201)
+            ->json();
+
+        $ingredient = Ingredient::find($resp['ingredient_id']);
+        $this->assertEquals('private/images/placeholder.svg', $ingredient->image_url);
+        Storage::disk('s3')->assertExists('private/images/placeholder.svg');
+    }
+
+    /** Le proxy d'image renvoie bien le placeholder. */
+    public function test_image_proxy_returns_placeholder(): void
+    {
+        Storage::fake('s3');
+
+        $path = 'private/images/placeholder.svg';
+        $local = storage_path('app/'.$path);
+        Storage::disk('s3')->put($path, file_get_contents($local));
+        $fullPath = Storage::disk('s3')->path($path);
+
+        $disk = \Mockery::mock(Storage::disk('s3'))->makePartial();
+        $disk->shouldReceive('temporaryUrl')
+            ->with($path, \Mockery::type('DateTimeInterface'))
+            ->andReturn($fullPath);
+        Storage::shouldReceive('disk')->with('s3')->andReturn($disk);
+
+        $user = User::factory()->create();
+
+        $resp = $this->actingAs($user)
+            ->get('/api/image-proxy/private/images/placeholder.svg')
+            ->assertStatus(200);
+
+        $this->assertSame(
+            Storage::disk('s3')->get($path),
+            $resp->getContent()
+        );
     }
 
     /** Création échoue avec fichier + URL (mutual exclusivity). */
@@ -223,6 +257,39 @@ class IngredientControllerTest extends TestCase
         $this->assertCount(2, $resp['ingredient_ids']);
         $this->assertDatabaseHas('ingredients', ['name' => 'TomateBulk']);
         $this->assertDatabaseHas('ingredients', ['name' => 'OignonBulk']);
+    }
+
+    /** Création multiple : placeholder utilisé quand aucune image n'est fournie. */
+    public function test_bulk_creates_with_placeholder_when_no_image(): void
+    {
+        Storage::fake('s3');
+
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'name' => 'PlaceholderBulk',
+                    'unit' => 'kg',
+                    'base_quantity' => 1,
+                    'base_unit' => 'kg',
+                    'category_id' => $category->id,
+                    'quantities' => [['location_id' => $loc->id, 'quantity' => 3]],
+                ],
+            ],
+        ];
+
+        $resp = $this->actingAs($user)
+            ->postJson('/api/ingredients/bulk', $payload)
+            ->assertStatus(201)
+            ->json();
+
+        $ingredient = Ingredient::find($resp['ingredient_ids'][0]);
+        $this->assertEquals('private/images/placeholder.svg', $ingredient->image_url);
+        Storage::disk('s3')->assertExists('private/images/placeholder.svg');
     }
 
     /** Vérifie que la création multiple est annulée si un ingrédient échoue. */

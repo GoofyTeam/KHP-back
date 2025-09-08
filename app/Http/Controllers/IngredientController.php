@@ -40,9 +40,9 @@ class IngredientController extends Controller
             // Valide contre les valeurs de l'enum
             'unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
 
-            // Fichier OU URL (au moins l’un des deux)
-            'image' => 'nullable|image|max:2048|required_without:image_url',
-            'image_url' => 'nullable|url|required_without:image',
+            // Fichier OU URL (optionnels mais mutuellement exclusifs)
+            'image' => 'nullable|image|max:2048',
+            'image_url' => 'nullable|url',
 
             'category_id' => [
                 'required',
@@ -70,12 +70,14 @@ class IngredientController extends Controller
             ]);
         }
 
-        // Déterminer le chemin d'image si fourni (upload ou URL)
+        // Déterminer le chemin d'image (upload, URL ou placeholder)
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $imageService->store($request->file('image'), 'ingredients');
         } elseif ($request->filled('image_url')) {
             $imagePath = $imageService->storeFromUrl($request->input('image_url'), 'ingredients');
+        } else {
+            $imagePath = $imageService->storePlaceholder();
         }
 
         // Créer l’ingrédient
@@ -146,8 +148,8 @@ class IngredientController extends Controller
                 }),
             ],
             'ingredients.*.unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
-            'ingredients.*.image' => 'nullable|image|max:2048|required_without:ingredients.*.image_url',
-            'ingredients.*.image_url' => 'nullable|url|required_without:ingredients.*.image',
+            'ingredients.*.image' => 'nullable|image|max:2048',
+            'ingredients.*.image_url' => 'nullable|url',
             'ingredients.*.category_id' => [
                 'required',
                 Rule::exists('categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
@@ -195,6 +197,8 @@ class IngredientController extends Controller
                     $imagePath = $imageService->store($data['image'], 'ingredients');
                 } elseif (! empty($data['image_url'])) {
                     $imagePath = $imageService->storeFromUrl($data['image_url'], 'ingredients');
+                } else {
+                    $imagePath = $imageService->storePlaceholder();
                 }
 
                 $ingredient = Ingredient::create([
