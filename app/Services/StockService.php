@@ -65,8 +65,13 @@ class StockService
         });
     }
 
-    public function move(Ingredient|Preparation $model, int $fromLocationId, int $toLocationId, int $companyId, float $quantity): void
-    {
+    public function move(
+        Ingredient|Preparation $model,
+        int $fromLocationId,
+        int $toLocationId,
+        int $companyId,
+        float $quantity
+    ): void {
         DB::transaction(function () use ($model, $fromLocationId, $toLocationId, $companyId, $quantity) {
             $from = Location::where('id', $fromLocationId)
                 ->where('company_id', $companyId)
@@ -77,8 +82,31 @@ class StockService
 
             $reason = "Moved from {$from->name} to {$to->name}";
 
-            $this->remove($model, $fromLocationId, $companyId, $quantity, $reason);
-            $this->add($model, $toLocationId, $companyId, $quantity, $reason);
+            $fromPivotQuery = $model->locations()->newPivotStatementForId($from->id);
+            $fromPivot = $fromPivotQuery->lockForUpdate()->first();
+            $fromCurrent = (float) ($fromPivot->quantity ?? 0);
+            $fromNew = $fromCurrent - $quantity;
+
+            if ($fromNew < 0) {
+                throw new \InvalidArgumentException('Quantity cannot be negative');
+            }
+
+            if ($fromPivot) {
+                $fromPivotQuery->decrement('quantity', $quantity);
+            }
+
+            $toPivotQuery = $model->locations()->newPivotStatementForId($to->id);
+            $toPivot = $toPivotQuery->lockForUpdate()->first();
+            $toCurrent = (float) ($toPivot->quantity ?? 0);
+
+            if ($toPivot) {
+                $toPivotQuery->increment('quantity', $quantity);
+            } else {
+                $model->locations()->attach($to->id, ['quantity' => $quantity]);
+            }
+
+            $toNew = $toCurrent + $quantity;
+            $model->recordStockMovement($to, $toCurrent, $toNew, $reason);
 
             if ($model instanceof Ingredient) {
                 $this->perishableService->remove($model->id, $fromLocationId, $companyId, $quantity);
