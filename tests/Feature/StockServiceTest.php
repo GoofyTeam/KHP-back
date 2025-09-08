@@ -58,12 +58,21 @@ class StockServiceTest extends TestCase
 
         $reason = "Moved from {$from->name} to {$to->name}";
 
-        $movement = StockMovement::first();
-        $this->assertNotNull($movement);
-        $this->assertEquals('addition', $movement->type);
-        $this->assertEquals($reason, $movement->reason);
-        $this->assertEquals(0, $movement->quantity_before);
-        $this->assertEquals(2, $movement->quantity_after);
-        $this->assertEquals(1, StockMovement::count());
+        $movements = StockMovement::orderBy('id')->get();
+        $this->assertCount(2, $movements);
+
+        $sourceMovement = $movements->firstWhere('location_id', $from->id);
+        $this->assertNotNull($sourceMovement);
+        $this->assertEquals('movement', $sourceMovement->type);
+        $this->assertEquals($reason, $sourceMovement->reason);
+        $this->assertEquals(5, $sourceMovement->quantity_before);
+        $this->assertEquals(3, $sourceMovement->quantity_after);
+
+        $destMovement = $movements->firstWhere('location_id', $to->id);
+        $this->assertNotNull($destMovement);
+        $this->assertEquals('movement', $destMovement->type);
+        $this->assertEquals($reason, $destMovement->reason);
+        $this->assertEquals(0, $destMovement->quantity_before);
+        $this->assertEquals(2, $destMovement->quantity_after);
     }
 }

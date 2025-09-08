@@ -24,9 +24,10 @@ trait HasStockMovements
      * @param  float  $quantityBefore  Quantité avant le mouvement
      * @param  float  $quantityAfter  Quantité après le mouvement
      * @param  string|null  $reason  Raison du mouvement
+     * @param  string|null  $type  Type de mouvement forcé (addition, withdrawal, movement)
      * @return StockMovement|null Le mouvement créé ou null si pas de différence significative
      */
-    public function recordStockMovement(Location $location, float $quantityBefore, float $quantityAfter, ?string $reason = null): ?StockMovement
+    public function recordStockMovement(Location $location, float $quantityBefore, float $quantityAfter, ?string $reason = null, ?string $type = null): ?StockMovement
     {
 
         // Validation: Les quantités ne doivent pas être négatives
@@ -52,7 +53,7 @@ trait HasStockMovements
             return null;
         }
 
-        $type = $difference > 0 ? 'addition' : 'withdrawal';
+        $type = $type ?? ($difference > 0 ? 'addition' : 'withdrawal');
 
         /** @var StockMovement */
         $stockMovement = $this->stockMovements()->create([

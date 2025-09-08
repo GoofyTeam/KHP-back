@@ -95,6 +95,8 @@ class StockService
                 $fromPivotQuery->decrement('quantity', $quantity);
             }
 
+            $model->recordStockMovement($from, $fromCurrent, $fromNew, $reason, 'movement');
+
             $toPivotQuery = $model->locations()->newPivotStatementForId($to->id);
             $toPivot = $toPivotQuery->lockForUpdate()->first();
             $toCurrent = (float) ($toPivot->quantity ?? 0);
@@ -106,7 +108,7 @@ class StockService
             }
 
             $toNew = $toCurrent + $quantity;
-            $model->recordStockMovement($to, $toCurrent, $toNew, $reason);
+            $model->recordStockMovement($to, $toCurrent, $toNew, $reason, 'movement');
 
             if ($model instanceof Ingredient) {
                 $this->perishableService->remove($model->id, $fromLocationId, $companyId, $quantity);

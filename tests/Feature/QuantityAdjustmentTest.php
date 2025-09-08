@@ -213,16 +213,18 @@ class QuantityAdjustmentTest extends TestCase
         ]);
 
         $reason = "Moved from {$from->name} to {$to->name}";
-        $this->assertDatabaseMissing('stock_movements', [
+        $this->assertDatabaseHas('stock_movements', [
             'trackable_id' => $ingredient->id,
             'trackable_type' => Ingredient::class,
-            'type' => 'withdrawal',
+            'location_id' => $from->id,
+            'type' => 'movement',
+            'reason' => $reason,
         ]);
         $this->assertDatabaseHas('stock_movements', [
             'trackable_id' => $ingredient->id,
             'trackable_type' => Ingredient::class,
             'location_id' => $to->id,
-            'type' => 'addition',
+            'type' => 'movement',
             'reason' => $reason,
         ]);
     }
@@ -258,16 +260,18 @@ class QuantityAdjustmentTest extends TestCase
         ]);
 
         $reason = "Moved from {$from->name} to {$to->name}";
-        $this->assertDatabaseMissing('stock_movements', [
+        $this->assertDatabaseHas('stock_movements', [
             'trackable_id' => $preparation->id,
             'trackable_type' => Preparation::class,
-            'type' => 'withdrawal',
+            'location_id' => $from->id,
+            'type' => 'movement',
+            'reason' => $reason,
         ]);
         $this->assertDatabaseHas('stock_movements', [
             'trackable_id' => $preparation->id,
             'trackable_type' => Preparation::class,
             'location_id' => $to->id,
-            'type' => 'addition',
+            'type' => 'movement',
             'reason' => $reason,
         ]);
     }

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('location_id')->constrained();
             $table->foreignId('company_id')->constrained();
             $table->foreignId('user_id')->nullable()->constrained();
-            $table->enum('type', ['addition', 'withdrawal'])->comment('Type de mouvement: ajout ou retrait');
+            $table->enum('type', ['addition', 'withdrawal', 'movement'])->comment('Type de mouvement: ajout, retrait ou déplacement');
             $table->decimal('quantity', 8, 2);
             $table->decimal('quantity_before', 8, 2)->nullable();
             $table->decimal('quantity_after', 8, 2)->nullable();
