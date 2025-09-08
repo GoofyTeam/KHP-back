@@ -29,7 +29,7 @@ class QuickAccessController extends Controller
     }
 
     /**
-    * Met à jour une quick access par sa position (1..5) pour l'utilisateur authentifié.
+     * Met à jour une quick access par sa position (1..5) pour l'utilisateur authentifié.
      */
     public function update(Request $request, int $position)
     {
@@ -96,7 +96,7 @@ class QuickAccessController extends Controller
     }
 
     /**
-    * Réinitialise les 5 boutons de quick access par défaut pour l'utilisateur authentifié.
+     * Réinitialise les 5 boutons de quick access par défaut pour l'utilisateur authentifié.
      */
     public function reset(Request $request)
     {

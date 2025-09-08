@@ -24,7 +24,7 @@ class QuickAccessFactory extends Factory
             'name' => $this->faker->words(2, true),
             'icon' => $this->faker->randomElement($icons),
             'icon_color' => $color,
-            'url' => '/' . $this->faker->slug(),
+            'url' => '/'.$this->faker->slug(),
         ];
     }
 }

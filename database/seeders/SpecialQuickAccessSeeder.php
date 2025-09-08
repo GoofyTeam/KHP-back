@@ -23,4 +23,3 @@ class SpecialQuickAccessSeeder extends Seeder
         });
     }
 }
-
