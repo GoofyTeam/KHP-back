@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
             MenuSeeder::class,
             StockMovementSeeder::class,
             LossSeeder::class,
+            QuickAccessSeeder::class,
+            SpecialQuickAccessSeeder::class,
         ]);
     }
 }
