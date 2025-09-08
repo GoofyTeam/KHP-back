@@ -105,6 +105,23 @@ class ImageService
         return $path;
     }
 
+    /**
+     * S'assure qu'une image locale (par défaut le placeholder Laravel) est
+     * présente sur S3 et renvoie son chemin.
+     */
+    public function storePlaceholder(string $path = 'private/images/placeholder.svg'): string
+    {
+        if ($this->exists($path)) {
+            return $path;
+        }
+
+        $localPath = storage_path('app/'.$path);
+        $contents = file_get_contents($localPath);
+        Storage::disk('s3')->put($path, $contents);
+
+        return $path;
+    }
+
     public function exists(string $path): bool
     {
         return Storage::disk('s3')->exists($path);
