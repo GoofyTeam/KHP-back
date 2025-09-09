@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AllergenController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\IngredientController;
@@ -83,8 +82,6 @@ Route::prefix('loss-reasons')->name('loss-reasons.')->group(function () {
     Route::put('/{id}', [LossReasonController::class, 'update'])->name('update');
     Route::delete('/{id}', [LossReasonController::class, 'destroy'])->name('destroy');
 });
-
-Route::get('/allergens', [AllergenController::class, 'index'])->name('allergens.index');
 
 // Routes utilitaires
 Route::get('/image-proxy/{bucket}/{path}', function ($bucket, $path) {

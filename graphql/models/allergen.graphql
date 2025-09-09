@@ -1,0 +1,6 @@
+extend type Query @guard {
+    "Liste les allergènes disponibles"
+    allergens: [AllergenEnum!]!
+        @field(resolver: "App\\GraphQL\\Queries\\AllergensQuery@resolve")
+}
+
