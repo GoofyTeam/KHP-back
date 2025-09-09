@@ -116,6 +116,33 @@ class Preparation extends Model
             ->all();
     }
 
+    public function scopeAllergen($query, $allergens)
+    {
+        if (empty($allergens)) {
+            return $query;
+        }
+
+        $allergens = is_array($allergens) ? $allergens : [$allergens];
+
+        return $query->where(function ($q) use ($allergens) {
+            foreach ($allergens as $allergen) {
+                $q->orWhereHas('entities', function ($entityQuery) use ($allergen) {
+                    $entityQuery->where(function ($sub) use ($allergen) {
+                        $sub->whereHasMorph('entity', [\App\Models\Ingredient::class], function ($ingredientQuery) use ($allergen) {
+                            $ingredientQuery->whereJsonContains('allergens', $allergen);
+                        })->orWhereHasMorph('entity', [self::class], function ($prepQuery) use ($allergen) {
+                            $prepQuery->whereHas('entities', function ($inner) use ($allergen) {
+                                $inner->whereHasMorph('entity', [\App\Models\Ingredient::class], function ($ingredientQuery) use ($allergen) {
+                                    $ingredientQuery->whereJsonContains('allergens', $allergen);
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+        });
+    }
+
     /**
      * Injecte trois alias de compteurs de retraits pour tri et affichage.
      */

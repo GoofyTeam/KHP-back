@@ -22,6 +22,9 @@ type MenuItem {
 union MenuItemEntity = Ingredient | Preparation
 
 extend type Query @guard {
-    menus: [Menu!]! @all(scopes: ["forCompany"])
+    menus(
+        "Filtrer par un ou plusieurs allergènes."
+        allergens: [AllergenEnum!] @scope(name: "allergen")
+    ): [Menu!]! @all(scopes: ["forCompany"])
     menu(id: ID!): Menu @find(scopes: ["forCompany"])
 }

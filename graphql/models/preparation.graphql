@@ -82,6 +82,9 @@ extend type Query @guard {
         "Filtrer par une ou plusieurs catégories."
         categoryIds: [ID!] @scope(name: "categoryId")
 
+        "Filtrer par un ou plusieurs allergènes."
+        allergens: [AllergenEnum!] @scope(name: "allergen")
+
         "Options de tri des préparations"
         orderBy: [PreparationOrderByClause!] @orderBy
     ): [Preparation!]!
