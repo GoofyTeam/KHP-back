@@ -8,6 +8,9 @@ type Preparation {
     "Unit of measurement for the preparation."
     unit: UnitEnum!
 
+    "Allergens contained in this preparation."
+    allergens: [AllergenEnum!]!
+
     "The company that produces this preparation."
     company: Company! @belongsTo
 
@@ -78,6 +81,9 @@ extend type Query @guard {
 
         "Filtrer par une ou plusieurs catégories."
         categoryIds: [ID!] @scope(name: "categoryId")
+
+        "Filtrer par un ou plusieurs allergènes."
+        allergens: [AllergenEnum!] @scope(name: "allergen")
 
         "Options de tri des préparations"
         orderBy: [PreparationOrderByClause!] @orderBy

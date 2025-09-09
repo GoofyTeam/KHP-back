@@ -25,11 +25,17 @@ class Ingredient extends Model
         'base_quantity',
         'barcode',
         'base_unit',
+        'allergens',
     ];
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
         'base_unit' => MeasurementUnit::class,
+        'allergens' => 'array',
+    ];
+
+    protected $attributes = [
+        'allergens' => '[]',
     ];
 
     public function company(): BelongsTo
@@ -81,6 +87,21 @@ class Ingredient extends Model
         }
 
         return $query->where('category_id', $categoryIds);
+    }
+
+    public function scopeAllergen($query, $allergens)
+    {
+        if (empty($allergens)) {
+            return $query;
+        }
+
+        $allergens = is_array($allergens) ? $allergens : [$allergens];
+
+        return $query->where(function ($q) use ($allergens) {
+            foreach ($allergens as $allergen) {
+                $q->orWhereJsonContains('allergens', $allergen);
+            }
+        });
     }
 
     /**

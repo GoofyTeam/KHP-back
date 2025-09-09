@@ -44,6 +44,46 @@ class Menu extends Model
         return $this->hasMany(MenuOrder::class);
     }
 
+    public function getAllergensAttribute(): array
+    {
+        $this->loadMissing('items.entity');
+
+        return $this->items
+            ->pluck('entity')
+            ->filter(fn ($entity) => $entity && isset($entity->allergens))
+            ->flatMap(fn ($entity) => $entity->allergens)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function scopeAllergen($query, $allergens)
+    {
+        if (empty($allergens)) {
+            return $query;
+        }
+
+        $allergens = is_array($allergens) ? $allergens : [$allergens];
+
+        return $query->where(function ($q) use ($allergens) {
+            foreach ($allergens as $allergen) {
+                $q->orWhereHas('items', function ($itemQuery) use ($allergen) {
+                    $itemQuery->where(function ($sub) use ($allergen) {
+                        $sub->whereHasMorph('entity', [Ingredient::class], function ($ingredientQuery) use ($allergen) {
+                            $ingredientQuery->whereJsonContains('allergens', $allergen);
+                        })->orWhereHasMorph('entity', [Preparation::class], function ($prepQuery) use ($allergen) {
+                            $prepQuery->whereHas('entities', function ($inner) use ($allergen) {
+                                $inner->whereHasMorph('entity', [Ingredient::class], function ($ingredientQuery) use ($allergen) {
+                                    $ingredientQuery->whereJsonContains('allergens', $allergen);
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+        });
+    }
+
     public function scopeForCompany($query)
     {
         return $query->where('company_id', auth()->user()->company_id);

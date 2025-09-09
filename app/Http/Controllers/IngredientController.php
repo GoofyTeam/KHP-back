@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -60,6 +61,8 @@ class IngredientController extends Controller
             // ⚠️ non nullable : requis au store
             'base_quantity' => 'required|numeric|min:0',
             'base_unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+            'allergens' => 'sometimes|array',
+            'allergens.*' => Rule::in(Allergen::values()),
         ]);
 
         // Vérifier exclusivité : ne pas fournir "image" et "image_url" en même temps
@@ -90,6 +93,7 @@ class IngredientController extends Controller
             'base_quantity' => $request->input('base_quantity'), // requis
             'base_unit' => $request->input('base_unit'),
             'category_id' => $request->input('category_id'),
+            'allergens' => $request->input('allergens', []),
         ]);
 
         // Quantités par location
@@ -163,6 +167,8 @@ class IngredientController extends Controller
             'ingredients.*.barcode' => 'nullable|string|max:255',
             'ingredients.*.base_quantity' => 'required|numeric|min:0',
             'ingredients.*.base_unit' => ['required', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+            'ingredients.*.allergens' => 'sometimes|array',
+            'ingredients.*.allergens.*' => Rule::in(Allergen::values()),
         ]);
 
         // Détecte les noms dupliqués dans le même payload pour éviter une violation de contrainte unique
@@ -210,6 +216,7 @@ class IngredientController extends Controller
                     'base_quantity' => $data['base_quantity'],
                     'base_unit' => $data['base_unit'],
                     'category_id' => $data['category_id'],
+                    'allergens' => $data['allergens'] ?? [],
                 ]);
 
                 foreach ($data['quantities'] as $i => $quantityData) {
@@ -302,6 +309,8 @@ class IngredientController extends Controller
             // non nullable côté DB, mais en update on n'oblige pas si non fourni
             'base_quantity' => 'sometimes|numeric|min:0',
             'base_unit' => ['sometimes', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
+            'allergens' => 'sometimes|array',
+            'allergens.*' => Rule::in(Allergen::values()),
         ]);
 
         // Vérifier exclusivité : ne pas fournir "image" et "image_url" en même temps
@@ -334,6 +343,9 @@ class IngredientController extends Controller
         }
         if ($request->has('base_unit')) {
             $ingredient->base_unit = $request->input('base_unit');
+        }
+        if ($request->has('allergens')) {
+            $ingredient->allergens = $request->input('allergens');
         }
         $ingredient->save();
 

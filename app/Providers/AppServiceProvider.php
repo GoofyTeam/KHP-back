@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Services\OpenFoodFactsService;
 use GraphQL\Type\Definition\EnumType;
@@ -32,7 +33,15 @@ class AppServiceProvider extends ServiceProvider
             'name' => 'UnitEnum',
             'values' => collect(MeasurementUnit::cases())
                 ->mapWithKeys(fn ($c) => [
-                    $c->value => ['value' => $c], // literal name = "dL", internal value = enum case
+                    $c->value => ['value' => $c],
+                ])->all(),
+        ]));
+
+        $typeRegistry->register(new EnumType([
+            'name' => 'AllergenEnum',
+            'values' => collect(Allergen::cases())
+                ->mapWithKeys(fn ($c) => [
+                    $c->value => ['value' => $c->value],
                 ])->all(),
         ]));
     }

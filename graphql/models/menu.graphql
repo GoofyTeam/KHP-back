@@ -5,6 +5,7 @@ type Menu {
     image_url: String @field(resolver: "App\\GraphQL\\Resolvers\\MenuResolver@imageUrl")
     is_a_la_carte: Boolean!
     is_available: Boolean!
+    allergens: [AllergenEnum!]!
     items: [MenuItem!]! @hasMany
     created_at: DateTime!
     updated_at: DateTime!
@@ -21,6 +22,9 @@ type MenuItem {
 union MenuItemEntity = Ingredient | Preparation
 
 extend type Query @guard {
-    menus: [Menu!]! @all(scopes: ["forCompany"])
+    menus(
+        "Filtrer par un ou plusieurs allergènes."
+        allergens: [AllergenEnum!] @scope(name: "allergen")
+    ): [Menu!]! @all(scopes: ["forCompany"])
     menu(id: ID!): Menu @find(scopes: ["forCompany"])
 }

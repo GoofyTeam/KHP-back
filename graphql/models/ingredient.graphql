@@ -14,6 +14,9 @@ type Ingredient {
     "Unit for the base quantity of the ingredient."
     base_unit: UnitEnum!
 
+    "Allergens contained in the ingredient."
+    allergens: [AllergenEnum!]!
+
     quantities: [IngredientQuantity!]!
         @field(
             resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@quantityByLocation"
@@ -84,6 +87,9 @@ extend type Query @guard {
 
         "Filtrer par une ou plusieurs catégories."
         categoryIds: [ID!] @scope(name: "categoryId")
+
+        "Filtrer par un ou plusieurs allergènes."
+        allergens: [AllergenEnum!] @scope(name: "allergen")
 
         "Options de tri des ingrédients"
         orderBy: [IngredientOrderByClause!] @orderBy

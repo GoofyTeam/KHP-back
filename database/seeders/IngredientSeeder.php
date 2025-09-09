@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Company;
@@ -52,9 +53,9 @@ class IngredientSeeder extends Seeder
             ['name' => 'Poitrine de poulet', 'qty' => 10.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '7290006739353'],
             ['name' => 'Entrecôte de bœuf', 'qty' => 8.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '20199845'],
             ['name' => 'Filet de porc', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3095759062017'],
-            ['name' => 'Saumon frais (filet)', 'qty' => 7.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '20842161'],
-            ['name' => 'Thon (frais ou surgelé)', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '6111162000181'],
-            ['name' => 'Moules', 'qty' => 8.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8422107001308'],
+            ['name' => 'Saumon frais (filet)', 'qty' => 7.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '20842161', 'allergens' => [Allergen::FISH->value]],
+            ['name' => 'Thon (frais ou surgelé)', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '6111162000181', 'allergens' => [Allergen::FISH->value]],
+            ['name' => 'Moules', 'qty' => 8.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8422107001308', 'allergens' => [Allergen::MOLLUSCS->value]],
             ['name' => 'Jambon cru', 'qty' => 2.5, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8001665714587'],
 
             // Légumes & fruits frais
@@ -72,17 +73,17 @@ class IngredientSeeder extends Seeder
             ['name' => 'Oranges', 'qty' => 8.0, 'unit' => MeasurementUnit::KILOGRAM],
 
             // Produits laitiers
-            ['name' => 'Lait entier', 'qty' => 15.0, 'unit' => MeasurementUnit::LITRE, 'barcode' => '6111242100220'],
-            ['name' => 'Crème fraîche', 'qty' => 6.0, 'unit' => MeasurementUnit::LITRE, 'barcode' => '7622300685782'],
-            ['name' => 'Beurre doux', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3451790988677'],
-            ['name' => 'Fromage râpé (emmental, parmesan)', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3228021170046'],
-            ['name' => 'Fromages affinés (camembert, chèvre, bleu, etc.)', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3123930650064'],
+            ['name' => 'Lait entier', 'qty' => 15.0, 'unit' => MeasurementUnit::LITRE, 'barcode' => '6111242100220', 'allergens' => [Allergen::MILK->value]],
+            ['name' => 'Crème fraîche', 'qty' => 6.0, 'unit' => MeasurementUnit::LITRE, 'barcode' => '7622300685782', 'allergens' => [Allergen::MILK->value]],
+            ['name' => 'Beurre doux', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3451790988677', 'allergens' => [Allergen::MILK->value]],
+            ['name' => 'Fromage râpé (emmental, parmesan)', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3228021170046', 'allergens' => [Allergen::MILK->value]],
+            ['name' => 'Fromages affinés (camembert, chèvre, bleu, etc.)', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3123930650064', 'allergens' => [Allergen::MILK->value]],
 
             // Épicerie sèche
-            ['name' => 'Pâtes (fusilli, penne, spaghetti)', 'qty' => 12.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8076809529433'],
+            ['name' => 'Pâtes (fusilli, penne, spaghetti)', 'qty' => 12.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8076809529433', 'allergens' => [Allergen::GLUTEN->value, Allergen::EGGS->value]],
             ['name' => 'Riz basmati et riz arborio', 'qty' => 10.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3038359007224'],
             ['name' => 'Lentilles vertes', 'qty' => 4.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '5051790270581'],
-            ['name' => 'Farine T55', 'qty' => 15.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3245414662926'],
+            ['name' => 'Farine T55', 'qty' => 15.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3245414662926', 'allergens' => [Allergen::GLUTEN->value]],
             ['name' => 'Sucre semoule', 'qty' => 10.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3165430520003'],
             ['name' => 'Sel fin', 'qty' => 3.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3183280001800'],
             ['name' => 'Poivre noir en grains', 'qty' => 1.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3166296203482'],
@@ -98,9 +99,9 @@ class IngredientSeeder extends Seeder
             ['name' => 'Frites surgelées', 'qty' => 20.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8710438123692'],
 
             // Condiments & assaisonnements
-            ['name' => 'Moutarde de Dijon', 'qty' => 2.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8720182556738'],
+            ['name' => 'Moutarde de Dijon', 'qty' => 2.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8720182556738', 'allergens' => [Allergen::MUSTARD->value]],
             ['name' => 'Ketchup', 'qty' => 3.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '5449000131805'],
-            ['name' => 'Mayonnaise', 'qty' => 3.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8711200548002'],
+            ['name' => 'Mayonnaise', 'qty' => 3.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '8711200548002', 'allergens' => [Allergen::EGGS->value, Allergen::MUSTARD->value]],
             ['name' => 'Herbes de Provence', 'qty' => 500.0, 'unit' => MeasurementUnit::GRAM, 'barcode' => '3166291010610'],
             ['name' => 'Basilic frais', 'qty' => 1.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '3547130084540'],
             ['name' => 'Thym', 'qty' => 500.0, 'unit' => MeasurementUnit::GRAM, 'barcode' => '3011360005557'],
@@ -109,11 +110,16 @@ class IngredientSeeder extends Seeder
 
             // Boissons & autres
             ['name' => 'Eau minérale', 'qty' => 50.0, 'unit' => MeasurementUnit::LITRE, 'barcode' => '3274080005003'],
-            ['name' => 'Chocolat pâtissier', 'qty' => 4.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '0643435040823'],
+            ['name' => 'Chocolat pâtissier', 'qty' => 4.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '0643435040823', 'allergens' => [Allergen::MILK->value, Allergen::TREE_NUTS->value]],
             ['name' => 'Levure boulangère', 'qty' => 500.0, 'unit' => MeasurementUnit::GRAM, 'barcode' => '3564700440377'],
             // Quantités en unité limitées à de petites valeurs
-            ['name' => 'Œufs frais', 'qty' => 3.0, 'unit' => MeasurementUnit::UNIT, 'barcode' => '3245412846991'],
+            ['name' => 'Œufs frais', 'qty' => 3.0, 'unit' => MeasurementUnit::UNIT, 'barcode' => '3245412846991', 'allergens' => [Allergen::EGGS->value]],
         ];
+
+        $items = array_map(
+            fn ($item) => $item + ['allergens' => $item['allergens'] ?? []],
+            $items
+        );
 
         foreach ($items as $item) {
             // Déduire une catégorie à partir du nom
@@ -145,6 +151,7 @@ class IngredientSeeder extends Seeder
                 'image_url' => $imageUrl,
                 'barcode' => $item['barcode'] ?? null,
                 'category_id' => $categoryId,
+                'allergens' => $item['allergens'] ?? [],
             ]);
 
             // Met à jour une catégorie manquante
