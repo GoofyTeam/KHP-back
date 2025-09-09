@@ -89,6 +89,21 @@ class Ingredient extends Model
         return $query->where('category_id', $categoryIds);
     }
 
+    public function scopeAllergen($query, $allergens)
+    {
+        if (empty($allergens)) {
+            return $query;
+        }
+
+        $allergens = is_array($allergens) ? $allergens : [$allergens];
+
+        return $query->where(function ($q) use ($allergens) {
+            foreach ($allergens as $allergen) {
+                $q->orWhereJsonContains('allergens', $allergen);
+            }
+        });
+    }
+
     /**
      * Filtre par code-barres exact.
      */

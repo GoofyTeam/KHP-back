@@ -5,7 +5,7 @@ namespace App\Enums;
 enum Allergen: string
 {
     case GLUTEN = 'gluten';
-    case TREE_NUTS = 'fruits a coque';
+    case TREE_NUTS = 'fruits_a_coque';
     case CRUSTACEANS = 'crustaces';
     case CELERY = 'celeri';
     case EGGS = 'oeufs';

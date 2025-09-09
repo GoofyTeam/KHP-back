@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
             'name' => 'AllergenEnum',
             'values' => collect(Allergen::cases())
                 ->mapWithKeys(fn ($c) => [
-                    $c->name => ['value' => $c->value],
+                    $c->value => ['value' => $c->value],
                 ])->all(),
         ]));
     }
