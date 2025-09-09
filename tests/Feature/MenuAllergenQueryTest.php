@@ -18,7 +18,7 @@ class MenuAllergenQueryTest extends TestCase
     use MakesGraphQLRequests;
     use RefreshDatabase;
 
-    public function test_it_filters_menus_by_allergen(): void
+    public function test_it_filters_menus_by_any_of_multiple_allergens(): void
     {
         $user = User::factory()->create();
         $location = Location::factory()->for($user->company)->create();
@@ -31,9 +31,13 @@ class MenuAllergenQueryTest extends TestCase
             'allergens' => [Allergen::GLUTEN->value],
         ]);
 
-        $menuWithMilk = Menu::factory()->for($user->company)->create();
+        $eggs = Ingredient::factory()->for($user->company)->create([
+            'allergens' => [Allergen::EGGS->value],
+        ]);
+
+        $menuMilk = Menu::factory()->for($user->company)->create();
         MenuItem::create([
-            'menu_id' => $menuWithMilk->id,
+            'menu_id' => $menuMilk->id,
             'entity_id' => $milk->id,
             'entity_type' => Ingredient::class,
             'location_id' => $location->id,
@@ -41,10 +45,38 @@ class MenuAllergenQueryTest extends TestCase
             'unit' => MeasurementUnit::UNIT->value,
         ]);
 
-        $menuWithGluten = Menu::factory()->for($user->company)->create();
+        $menuGluten = Menu::factory()->for($user->company)->create();
         MenuItem::create([
-            'menu_id' => $menuWithGluten->id,
+            'menu_id' => $menuGluten->id,
             'entity_id' => $gluten->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT->value,
+        ]);
+
+        $menuBoth = Menu::factory()->for($user->company)->create();
+        MenuItem::create([
+            'menu_id' => $menuBoth->id,
+            'entity_id' => $milk->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT->value,
+        ]);
+        MenuItem::create([
+            'menu_id' => $menuBoth->id,
+            'entity_id' => $gluten->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT->value,
+        ]);
+
+        $menuEgg = Menu::factory()->for($user->company)->create();
+        MenuItem::create([
+            'menu_id' => $menuEgg->id,
+            'entity_id' => $eggs->id,
             'entity_type' => Ingredient::class,
             'location_id' => $location->id,
             'quantity' => 1,
@@ -55,28 +87,18 @@ class MenuAllergenQueryTest extends TestCase
             query ($allergens: [AllergenEnum!]) {
                 menus(allergens: $allergens) {
                     id
-                    allergens
                 }
             }
         ';
 
         $response = $this->actingAs($user)->graphQL($query, [
-            'allergens' => [Allergen::MILK->value],
+            'allergens' => [Allergen::MILK->value, Allergen::GLUTEN->value],
         ]);
 
-        $response->assertJson([
-            'data' => [
-                'menus' => [
-                    [
-                        'id' => (string) $menuWithMilk->id,
-                        'allergens' => [Allergen::MILK->value],
-                    ],
-                ],
-            ],
-        ]);
-
-        $response->assertJsonMissing([
-            'id' => (string) $menuWithGluten->id,
-        ]);
+        $response->assertJsonCount(3, 'data.menus');
+        $response->assertJsonFragment(['id' => (string) $menuMilk->id]);
+        $response->assertJsonFragment(['id' => (string) $menuGluten->id]);
+        $response->assertJsonFragment(['id' => (string) $menuBoth->id]);
+        $response->assertJsonMissing(['id' => (string) $menuEgg->id]);
     }
 }

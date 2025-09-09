@@ -16,7 +16,7 @@ class PreparationAllergenQueryTest extends TestCase
     use MakesGraphQLRequests;
     use RefreshDatabase;
 
-    public function test_it_filters_preparations_by_allergen(): void
+    public function test_it_filters_preparations_by_any_of_multiple_allergens(): void
     {
         $user = User::factory()->create();
 
@@ -28,17 +28,40 @@ class PreparationAllergenQueryTest extends TestCase
             'allergens' => [Allergen::GLUTEN->value],
         ]);
 
-        $prepWithMilk = Preparation::factory()->for($user->company)->create();
+        $eggs = Ingredient::factory()->for($user->company)->create([
+            'allergens' => [Allergen::EGGS->value],
+        ]);
+
+        $prepMilk = Preparation::factory()->for($user->company)->create();
         PreparationEntity::create([
-            'preparation_id' => $prepWithMilk->id,
+            'preparation_id' => $prepMilk->id,
             'entity_id' => $milk->id,
             'entity_type' => Ingredient::class,
         ]);
 
-        $prepWithGluten = Preparation::factory()->for($user->company)->create();
+        $prepGluten = Preparation::factory()->for($user->company)->create();
         PreparationEntity::create([
-            'preparation_id' => $prepWithGluten->id,
+            'preparation_id' => $prepGluten->id,
             'entity_id' => $gluten->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        $prepBoth = Preparation::factory()->for($user->company)->create();
+        PreparationEntity::create([
+            'preparation_id' => $prepBoth->id,
+            'entity_id' => $milk->id,
+            'entity_type' => Ingredient::class,
+        ]);
+        PreparationEntity::create([
+            'preparation_id' => $prepBoth->id,
+            'entity_id' => $gluten->id,
+            'entity_type' => Ingredient::class,
+        ]);
+
+        $prepEgg = Preparation::factory()->for($user->company)->create();
+        PreparationEntity::create([
+            'preparation_id' => $prepEgg->id,
+            'entity_id' => $eggs->id,
             'entity_type' => Ingredient::class,
         ]);
 
@@ -47,31 +70,19 @@ class PreparationAllergenQueryTest extends TestCase
                 preparations(allergens: $allergens) {
                     data {
                         id
-                        allergens
                     }
                 }
             }
         ';
 
         $response = $this->actingAs($user)->graphQL($query, [
-            'allergens' => [Allergen::MILK->value],
+            'allergens' => [Allergen::MILK->value, Allergen::GLUTEN->value],
         ]);
 
-        $response->assertJson([
-            'data' => [
-                'preparations' => [
-                    'data' => [
-                        [
-                            'id' => (string) $prepWithMilk->id,
-                            'allergens' => [Allergen::MILK->value],
-                        ],
-                    ],
-                ],
-            ],
-        ]);
-
-        $response->assertJsonMissing([
-            'id' => (string) $prepWithGluten->id,
-        ]);
+        $response->assertJsonCount(3, 'data.preparations.data');
+        $response->assertJsonFragment(['id' => (string) $prepMilk->id]);
+        $response->assertJsonFragment(['id' => (string) $prepGluten->id]);
+        $response->assertJsonFragment(['id' => (string) $prepBoth->id]);
+        $response->assertJsonMissing(['id' => (string) $prepEgg->id]);
     }
 }

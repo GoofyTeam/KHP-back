@@ -14,7 +14,7 @@ class IngredientAllergenQueryTest extends TestCase
     use MakesGraphQLRequests;
     use RefreshDatabase;
 
-    public function test_it_filters_ingredients_by_allergen_and_returns_values(): void
+    public function test_it_filters_ingredients_by_any_of_multiple_allergens(): void
     {
         $user = User::factory()->create();
 
@@ -26,36 +26,32 @@ class IngredientAllergenQueryTest extends TestCase
             'allergens' => [Allergen::GLUTEN->value],
         ]);
 
+        $both = Ingredient::factory()->for($user->company)->create([
+            'allergens' => [Allergen::MILK->value, Allergen::GLUTEN->value],
+        ]);
+
+        $eggs = Ingredient::factory()->for($user->company)->create([
+            'allergens' => [Allergen::EGGS->value],
+        ]);
+
         $query = /* @lang GraphQL */ '
             query ($allergens: [AllergenEnum!]) {
                 ingredients(allergens: $allergens) {
                     data {
                         id
-                        allergens
                     }
                 }
             }
         ';
 
         $response = $this->actingAs($user)->graphQL($query, [
-            'allergens' => [Allergen::MILK->value],
+            'allergens' => [Allergen::MILK->value, Allergen::GLUTEN->value],
         ]);
 
-        $response->assertJson([
-            'data' => [
-                'ingredients' => [
-                    'data' => [
-                        [
-                            'id' => (string) $milk->id,
-                            'allergens' => [Allergen::MILK->value],
-                        ],
-                    ],
-                ],
-            ],
-        ]);
-
-        $response->assertJsonMissing([
-            'id' => (string) $gluten->id,
-        ]);
+        $response->assertJsonCount(3, 'data.ingredients.data');
+        $response->assertJsonFragment(['id' => (string) $milk->id]);
+        $response->assertJsonFragment(['id' => (string) $gluten->id]);
+        $response->assertJsonFragment(['id' => (string) $both->id]);
+        $response->assertJsonMissing(['id' => (string) $eggs->id]);
     }
 }
