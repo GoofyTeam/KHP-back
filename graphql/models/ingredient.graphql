@@ -14,6 +14,9 @@ type Ingredient {
     "Unit for the base quantity of the ingredient."
     base_unit: UnitEnum!
 
+    "Allergens contained in the ingredient."
+    allergens: [AllergenEnum!]!
+
     quantities: [IngredientQuantity!]!
         @field(
             resolver: "App\\GraphQL\\Resolvers\\IngredientResolver@quantityByLocation"

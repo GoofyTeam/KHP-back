@@ -103,6 +103,19 @@ class Preparation extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function getAllergensAttribute(): array
+    {
+        $this->loadMissing('entities.entity');
+
+        return $this->entities
+            ->pluck('entity')
+            ->filter(fn ($component) => $component && isset($component->allergens))
+            ->flatMap(fn ($component) => $component->allergens)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     /**
      * Injecte trois alias de compteurs de retraits pour tri et affichage.
      */

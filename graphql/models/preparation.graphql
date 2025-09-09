@@ -8,6 +8,9 @@ type Preparation {
     "Unit of measurement for the preparation."
     unit: UnitEnum!
 
+    "Allergens contained in this preparation."
+    allergens: [AllergenEnum!]!
+
     "The company that produces this preparation."
     company: Company! @belongsTo
 

@@ -44,6 +44,19 @@ class Menu extends Model
         return $this->hasMany(MenuOrder::class);
     }
 
+    public function getAllergensAttribute(): array
+    {
+        $this->loadMissing('items.entity');
+
+        return $this->items
+            ->pluck('entity')
+            ->filter(fn ($entity) => $entity && isset($entity->allergens))
+            ->flatMap(fn ($entity) => $entity->allergens)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function scopeForCompany($query)
     {
         return $query->where('company_id', auth()->user()->company_id);

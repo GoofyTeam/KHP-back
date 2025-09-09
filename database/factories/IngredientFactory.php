@@ -2,11 +2,13 @@
 
 namespace Database\Factories;
 
+use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Arr;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Ingredient>
@@ -152,6 +154,16 @@ class IngredientFactory extends Factory
             'unit' => $this->faker->randomElement(MeasurementUnit::values()),
             'base_quantity' => $this->faker->numberBetween(1, 1000),
             'base_unit' => $this->faker->randomElement(MeasurementUnit::values()),
+            'allergens' => (function () {
+                $all = Allergen::values();
+                $count = $this->faker->numberBetween(0, 3);
+                if ($count === 0) {
+                    return [];
+                }
+                $picked = Arr::random($all, $count);
+
+                return $count === 1 ? [$picked] : $picked;
+            })(),
             'barcode' => $this->faker->unique()->ean13(),
             'company_id' => Company::factory(),
         ];

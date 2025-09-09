@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Allergen;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
@@ -47,6 +48,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
         ];
 
@@ -105,6 +107,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $location->id, 'quantity' => 5]],
             'image_url' => 'https://example.com/tomate.jpg',
         ];
@@ -137,6 +140,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [
                 ['location_id' => $loc1->id, 'quantity' => 10],
                 ['location_id' => $loc2->id, 'quantity' => 4.5],
@@ -195,6 +199,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 3]],
             'image_url' => 'https://example.com/tomate.jpg',
         ];
@@ -206,6 +211,86 @@ class IngredientControllerTest extends TestCase
 
         $ingredient = Ingredient::find($resp['ingredient_id']);
         $this->assertTrue(Storage::disk('s3')->exists($ingredient->image_url));
+    }
+
+    public function test_it_defaults_allergens_to_empty_array_when_omitted(): void
+    {
+        Storage::fake('s3');
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'SansAllergenes',
+            'unit' => 'kg',
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+            'category_id' => $category->id,
+            'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
+        ];
+
+        $resp = $this->actingAs($user)
+            ->postJson('/api/ingredients', $payload)
+            ->assertStatus(201)
+            ->json();
+
+        $ingredient = Ingredient::find($resp['ingredient_id']);
+        $this->assertSame([], $ingredient->allergens);
+    }
+
+    public function test_it_stores_multiple_allergens(): void
+    {
+        Storage::fake('s3');
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'MultiAllergen',
+            'unit' => 'kg',
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+            'category_id' => $category->id,
+            'allergens' => [Allergen::GLUTEN->value, Allergen::MILK->value],
+            'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
+        ];
+
+        $resp = $this->actingAs($user)
+            ->postJson('/api/ingredients', $payload)
+            ->assertStatus(201)
+            ->json();
+
+        $ingredient = Ingredient::find($resp['ingredient_id']);
+        $this->assertEqualsCanonicalizing(
+            [Allergen::GLUTEN->value, Allergen::MILK->value],
+            $ingredient->allergens
+        );
+    }
+
+    public function test_it_rejects_invalid_allergens(): void
+    {
+        Storage::fake('s3');
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $loc = Location::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'InvalidAllergen',
+            'unit' => 'kg',
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+            'category_id' => $category->id,
+            'allergens' => ['invalid'],
+            'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/ingredients', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['allergens.0']);
     }
 
     /** Création multiple d'ingrédients via endpoint bulk. */
@@ -234,6 +319,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 1,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    'allergens' => [Allergen::MILK->value],
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 5]],
                     'image_url' => 'https://example.com/tomate1.jpg',
                 ],
@@ -243,6 +329,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 2,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    // no allergens provided
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 7]],
                     'image_url' => 'https://example.com/oignon.jpg',
                 ],
@@ -257,6 +344,9 @@ class IngredientControllerTest extends TestCase
         $this->assertCount(2, $resp['ingredient_ids']);
         $this->assertDatabaseHas('ingredients', ['name' => 'TomateBulk']);
         $this->assertDatabaseHas('ingredients', ['name' => 'OignonBulk']);
+
+        $oignon = Ingredient::where('name', 'OignonBulk')->first();
+        $this->assertSame([], $oignon->allergens);
     }
 
     /** Création multiple : placeholder utilisé quand aucune image n'est fournie. */
@@ -277,6 +367,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 1,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    'allergens' => [],
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 3]],
                 ],
             ],
@@ -318,6 +409,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 1,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    'allergens' => [],
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 5]],
                     'image_url' => 'https://example.com/good.jpg',
                 ],
@@ -327,6 +419,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 2,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    'allergens' => [],
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 7]],
                     // URL qui renvoie un contenu non image pour déclencher une ValidationException après création du premier ingrédient
                     'image_url' => 'https://example.com/not-image',
@@ -363,6 +456,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 1,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    'allergens' => [],
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
                     'image_url' => 'https://example.com/img1.jpg',
                 ],
@@ -372,6 +466,7 @@ class IngredientControllerTest extends TestCase
                     'base_quantity' => 2,
                     'base_unit' => 'kg',
                     'category_id' => $category->id,
+                    'allergens' => [],
                     'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
                     'image_url' => 'https://example.com/img2.jpg',
                 ],
@@ -402,6 +497,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/t.jpg',
         ];
@@ -438,6 +534,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/t.jpg',
         ];
@@ -464,6 +561,7 @@ class IngredientControllerTest extends TestCase
             'unit' => 'kg',
             'base_quantity' => 1,
             'base_unit' => 'kg',
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
             'image_url' => 'https://example.com/ok.jpg',
         ];
@@ -493,6 +591,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/not-image',
         ];
@@ -526,6 +625,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 1]],
             'image_url' => 'https://example.com/too-big.jpg',
         ];
@@ -755,6 +855,7 @@ class IngredientControllerTest extends TestCase
             'base_quantity' => 1.25,
             'base_unit' => 'kg',
             'category_id' => $category->id,
+            'allergens' => [],
             'quantities' => [['location_id' => $loc->id, 'quantity' => 2]],
             'barcode' => '123456789',
             'image_url' => 'https://example.com/pic.jpg',

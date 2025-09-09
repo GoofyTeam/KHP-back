@@ -25,11 +25,17 @@ class Ingredient extends Model
         'base_quantity',
         'barcode',
         'base_unit',
+        'allergens',
     ];
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
         'base_unit' => MeasurementUnit::class,
+        'allergens' => 'array',
+    ];
+
+    protected $attributes = [
+        'allergens' => '[]',
     ];
 
     public function company(): BelongsTo
