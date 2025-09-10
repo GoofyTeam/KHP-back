@@ -1,0 +1,13 @@
+# POST /menus/{menu}/command
+
+**Description**
+Crée une commande pour un menu.
+
+**Paramètres de chemin**
+- `menu` : identifiant du menu.
+
+**Corps de la requête**
+- `quantity` (integer, optionnel, défaut 1)
+
+**Réponse**
+Message et commande créée.
