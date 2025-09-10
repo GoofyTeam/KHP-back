@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('index');
             $table->string('name', 26);
             $table->string('icon'); // Plus, Notebook, Minus, Calendar, Check
-            $table->unsignedTinyInteger('icon_color'); // 1:primary,2:warning,3:error,4:info
+            $table->string('icon_color'); // 'primary' | 'warning' | 'error' | 'info'
             $table->string('url');
             $table->timestamps();
 

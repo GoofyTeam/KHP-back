@@ -10,90 +10,67 @@ use Illuminate\Validation\Rule;
 class QuickAccessController extends Controller
 {
     /**
-     * Lister les 5 boutons quick access pour l'utilisateur authentifié.
+     * Met à jour un ou plusieurs quick access en une seule requête pour la société de l'utilisateur authentifié.
      */
-    public function index(Request $request)
-    {
-        $companyId = $request->user()->company_id;
-
-        $items = QuickAccess::where('company_id', $companyId)
-            ->orderBy('index')
-            ->get();
-
-        $special = SpecialQuickAccess::where('company_id', $companyId)->first();
-
-        return response()->json([
-            'quick_accesses' => $items,
-            'special_quick_access' => $special,
-        ]);
-    }
-
-    /**
-     * Met à jour une quick access par sa position (1..5) pour la société de l'utilisateur authentifié.
-     */
-    public function update(Request $request, int $position)
+    public function update(Request $request)
     {
         $user = $request->user();
         $companyId = $user->company_id;
 
-        if ($position < 1 || $position > 5) {
-            return response()->json(['message' => 'Position must be between 1 and 5'], 422);
-        }
+        $validatedData = $request->validate([
+            'quick_accesses' => ['required_without:special_quick_access', 'array', 'min:1'],
+            'quick_accesses.*.id' => ['required_with:quick_accesses', 'integer', 'exists:quick_accesses,id'],
+            'quick_accesses.*.name' => ['sometimes', 'string', 'max:255'],
+            'quick_accesses.*.icon' => ['sometimes', 'string', 'max:255'],
+            'quick_accesses.*.icon_color' => ['sometimes', 'string', Rule::in(['primary', 'warning', 'error', 'info'])],
+            'quick_accesses.*.url' => ['sometimes', 'string', 'max:255'],
 
-        if ($position === 5) {
-            // Special quick access: seulement le nom et l'url existent
-            $data = $request->validate([
-                'name' => ['sometimes', 'string', 'max:26'],
-                'url' => ['sometimes', 'string'],
-            ]);
+            'special_quick_access' => ['required_without:quick_accesses', 'array'],
+            'special_quick_access.name' => ['sometimes', 'string', 'max:255'],
+            'special_quick_access.url' => ['sometimes', 'string', 'max:255'],
+        ]);
 
-            $item = SpecialQuickAccess::where('company_id', $companyId)->first();
-            if (! $item) {
-                $item = SpecialQuickAccess::factory()->create([
-                    'company_id' => $companyId,
-                    'name' => $data['name'] ?? 'Move Quantity',
-                    'url' => $data['url'] ?? '/movequantity',
-                ]);
-            } else {
-                $item->update($data);
+        if (isset($validatedData['quick_accesses'])) {
+            foreach ($validatedData['quick_accesses'] as $item) {
+                $quickAccess = QuickAccess::where('company_id', $companyId)
+                    ->where('id', $item['id'])
+                    ->first();
+
+                if ($quickAccess) {
+                    $quickAccess->fill(array_filter($item, function ($key) {
+                        return in_array($key, ['name', 'icon', 'icon_color', 'url']);
+                    }, ARRAY_FILTER_USE_KEY));
+                    $quickAccess->save();
+                }
             }
-
-            return response()->json(['message' => 'Special quick access updated', 'special_quick_access' => $item->fresh()]);
         }
 
-        // Positions 1..4
-        $rules = [
-            'name' => ['sometimes', 'string', 'max:26'],
-            'url' => ['sometimes', 'string'],
-            'icon' => ['sometimes', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check'])],
-            'icon_color' => ['sometimes', 'integer', Rule::in([1, 2, 3, 4])],
-        ];
-        $data = $request->validate($rules);
+        $special = null;
+        if (isset($validatedData['special_quick_access'])) {
+            $payload = array_filter($validatedData['special_quick_access'], function ($key) {
+                return in_array($key, ['name', 'url']);
+            }, ARRAY_FILTER_USE_KEY);
 
-        $item = QuickAccess::where('company_id', $companyId)
-            ->where('index', $position)
-            ->first();
-
-        if (! $item) {
-            // Exiger l'icône et la couleur lors de la création d'une nouvelle entrée pour éviter les valeurs nulles
-            $request->validate([
-                'icon' => ['required', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check'])],
-                'icon_color' => ['required', 'integer', Rule::in([1, 2, 3, 4])],
-            ]);
-
-            $item = QuickAccess::create([
-                'company_id' => $companyId,
-                'index' => $position,
-                'name' => $data['name'] ?? 'Button '.$position,
-                'url' => $data['url'] ?? '/',
-                'icon' => $data['icon'],
-                'icon_color' => $data['icon_color'],
-            ]);
+            if (! empty($payload)) {
+                $special = SpecialQuickAccess::updateOrCreate(
+                    ['company_id' => $companyId],
+                    $payload
+                );
+            } else {
+                $special = SpecialQuickAccess::where('company_id', $companyId)->first();
+            }
         } else {
-            $item->update($data);
+            $special = SpecialQuickAccess::where('company_id', $companyId)->first();
         }
 
-        return response()->json(['message' => 'Quick access updated', 'quick_access' => $item->fresh()]);
+        $items = QuickAccess::where('company_id', $companyId)->orderBy('index')->get();
+
+        return response()->json([
+            'message' => 'Quick accesses updated',
+            'quick_accesses' => $items,
+            'special_quick_access' => $special,
+        ]);
+
     }
 
     /**
@@ -105,10 +82,10 @@ class QuickAccessController extends Controller
         $companyId = $user->company_id;
 
         $defaults = [
-            1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 1, 'url' => '/stock/add'],
-            2 => ['name' => 'Menu Card', 'icon' => 'Notebook', 'icon_color' => 4, 'url' => '/menucard'],
-            3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 1, 'url' => '/stock'],
-            4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 1, 'url' => '/takeorder'],
+            1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url' => '/stock/add'],
+            2 => ['name' => 'Menu Card', 'icon' => 'Notebook', 'icon_color' => 'info', 'url' => '/menucard'],
+            3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url' => '/stock'],
+            4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 'primary', 'url' => '/takeorder'],
         ];
 
         foreach ($defaults as $pos => $payload) {

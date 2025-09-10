@@ -15,28 +15,28 @@ class QuickAccessSeeder extends Seeder
                 'index' => 1,
                 'name' => 'Add to stock',
                 'icon' => 'Plus',
-                'icon_color' => 1, // primary
+                'icon_color' => 'primary',
                 'url' => '/stock/add',
             ],
             [
                 'index' => 2,
                 'name' => 'Menu Card',
                 'icon' => 'Notebook',
-                'icon_color' => 4, // info
+                'icon_color' => 'info',
                 'url' => '/menucard',
             ],
             [
                 'index' => 3,
                 'name' => 'Stock',
                 'icon' => 'Check',
-                'icon_color' => 1, // primary
+                'icon_color' => 'primary',
                 'url' => '/stock',
             ],
             [
                 'index' => 4,
                 'name' => 'Take Order',
                 'icon' => 'Notebook',
-                'icon_color' => 1, // primary
+                'icon_color' => 'primary',
                 'url' => '/takeorder',
             ],
         ];

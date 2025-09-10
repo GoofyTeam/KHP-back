@@ -19,4 +19,14 @@ class QuickAccess extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function scopeForCompany($query)
+    {
+        return $query->where('company_id', auth()->user()->company_id);
+    }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('index');
+    }
 }

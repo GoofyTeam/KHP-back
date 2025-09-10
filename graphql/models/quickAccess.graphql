@@ -1,0 +1,38 @@
+"""
+Bouton d’accès rapide configurable pour une entreprise.
+"""
+type QuickAccess {
+    "Identifiant unique."
+    id: ID!
+
+    "Position (1..4) au sein de l’entreprise."
+    index: Int!
+
+    "Libellé du bouton."
+    name: String!
+
+    "Nom de l’icône (ex: Plus, Notebook, Minus, Calendar, Check)."
+    icon: String!
+
+    "Couleur de l’icône (ex: primary, warning, error, info)."
+    icon_color: String!
+
+    "URL cible du bouton."
+    url: String!
+
+    "Entreprise propriétaire."
+    company: Company! @belongsTo
+
+    "Date de création."
+    created_at: DateTime!
+
+    "Date de mise à jour."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les quick access de l’entreprise courante, triés par index."
+    quickAccesses: [QuickAccess!]!
+        @all(scopes: ["forCompany", "ordered"])
+}
+
