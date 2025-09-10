@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             UserSeeder::class,
             CategorySeeder::class,
+            MenuCategorySeeder::class,
             LocationSeeder::class,
             IngredientSeeder::class,
             PerishableSeeder::class,

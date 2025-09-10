@@ -5,6 +5,9 @@ type Menu {
     image_url: String @field(resolver: "App\\GraphQL\\Resolvers\\MenuResolver@imageUrl")
     is_a_la_carte: Boolean!
     is_available: Boolean!
+    type: String!
+    price: Float!
+    categories: [MenuCategory!]! @belongsToMany
     allergens: [AllergenEnum!]!
     items: [MenuItem!]! @hasMany
     created_at: DateTime!
@@ -25,6 +28,12 @@ extend type Query @guard {
     menus(
         "Filtrer par un ou plusieurs allergènes."
         allergens: [AllergenEnum!] @scope(name: "allergen")
+        "Filtrer par une ou plusieurs catégories (IDs)."
+        category_ids: [ID!] @scope(name: "category")
+        "Filtrer par un ou plusieurs types."
+        types: [String!] @scope(name: "type")
+        "Filtrer par un range de prix [min, max]."
+        price_between: [Float!] @scope(name: "priceBetween")
     ): [Menu!]! @all(scopes: ["forCompany"])
     menu(id: ID!): Menu @find(scopes: ["forCompany"])
 }

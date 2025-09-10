@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -22,11 +23,14 @@ class Menu extends Model
         'image_url',
         'is_a_la_carte',
         'is_available',
+        'type',
+        'price',
     ];
 
     protected $casts = [
         'is_a_la_carte' => 'boolean',
         'is_available' => 'boolean',
+        'price' => 'float',
     ];
 
     public function company(): BelongsTo
@@ -37,6 +41,11 @@ class Menu extends Model
     public function items(): HasMany
     {
         return $this->hasMany(MenuItem::class);
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(MenuCategory::class, 'menu_category_menu');
     }
 
     public function orders(): HasMany
@@ -82,6 +91,41 @@ class Menu extends Model
                 });
             }
         });
+    }
+
+    public function scopeCategory($query, $categoryIds)
+    {
+        if (empty($categoryIds)) {
+            return $query;
+        }
+
+        $categoryIds = is_array($categoryIds) ? $categoryIds : [$categoryIds];
+
+        return $query->whereHas('categories', function ($q) use ($categoryIds) {
+            $q->whereIn('menu_categories.id', $categoryIds);
+        });
+    }
+
+    public function scopeType($query, $types)
+    {
+        if (empty($types)) {
+            return $query;
+        }
+
+        $types = is_array($types) ? $types : [$types];
+
+        return $query->whereIn('type', $types);
+    }
+
+    public function scopePriceBetween($query, $prices)
+    {
+        if (! is_array($prices) || count($prices) !== 2) {
+            return $query;
+        }
+
+        [$min, $max] = $prices;
+
+        return $query->whereBetween('price', [$min, $max]);
     }
 
     public function scopeForCompany($query)
