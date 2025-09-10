@@ -10,4 +10,10 @@ Supprime une catégorie de menus.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Category deleted successfully"
+}
+```

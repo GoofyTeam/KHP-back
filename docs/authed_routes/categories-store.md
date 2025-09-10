@@ -13,4 +13,18 @@ Aucun
   - `freezer` (integer, requis)
 
 **Réponse**
-Message et catégorie créée.
+HTTP 201
+
+```json
+{
+  "message": "Catégorie créée avec succès",
+  "data": {
+    "id": 1,
+    "name": "Légumes",
+    "location_types": [
+      {"id": 1, "name": "Réfrigérateur", "pivot": {"shelf_life_hours": 72}},
+      {"id": 2, "name": "Congélateur", "pivot": {"shelf_life_hours": 720}}
+    ]
+  }
+}
+```

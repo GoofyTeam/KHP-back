@@ -15,4 +15,16 @@ Aucun
 - `category_id` (integer, requis)
 
 **Réponse**
-Message et objet `preparation` créé.
+HTTP 201
+
+```json
+{
+  "message": "Préparation créée avec succès",
+  "preparation": {
+    "id": 1,
+    "name": "Sauce tomate",
+    "unit": "liter",
+    "entities": []
+  }
+}
+```

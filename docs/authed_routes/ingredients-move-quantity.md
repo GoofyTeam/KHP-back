@@ -12,4 +12,17 @@ Déplace une quantité d'ingrédient entre deux emplacements.
 - `quantity` (numeric, requis)
 
 **Réponse**
-Message et ingrédient avec stocks mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Ingredient quantity moved successfully",
+  "ingredient": {
+    "id": 1,
+    "name": "Tomate",
+    "locations": [
+      {"id": 2, "name": "Cuisine", "pivot": {"quantity": 5}}
+    ]
+  }
+}
+```

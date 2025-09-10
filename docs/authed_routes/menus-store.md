@@ -18,4 +18,18 @@ Aucun
 - `items` (array, requis) : `{entity_id, entity_type, quantity, unit, location_id}`
 
 **Réponse**
-Message et menu créé.
+HTTP 201
+
+```json
+{
+  "message": "Menu created",
+  "menu": {
+    "id": 1,
+    "name": "Menu du jour",
+    "type": "plat",
+    "price": 12.5,
+    "items": [],
+    "categories": []
+  }
+}
+```

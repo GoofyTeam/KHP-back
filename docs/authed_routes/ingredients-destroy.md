@@ -10,4 +10,10 @@ Supprime un ingrédient.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Ingredient deleted successfully"
+}
+```

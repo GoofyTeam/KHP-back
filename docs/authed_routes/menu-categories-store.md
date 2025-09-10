@@ -10,4 +10,14 @@ Aucun
 - `name` (string, requis, unique)
 
 **Réponse**
-Message et catégorie créée.
+HTTP 201
+
+```json
+{
+  "message": "Category created successfully",
+  "data": {
+    "id": 1,
+    "name": "Entrées"
+  }
+}
+```

@@ -10,4 +10,10 @@ Supprime une raison de perte.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Raison supprimée avec succès"
+}
+```

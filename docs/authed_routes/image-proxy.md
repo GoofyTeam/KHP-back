@@ -11,4 +11,14 @@ Récupère une image stockée sur S3 via une URL temporaire.
 Aucun
 
 **Réponse**
-Image en binaire.
+HTTP 200
+
+Image binaire du fichier demandé.
+
+En cas d'erreur :
+
+```json
+{
+  "error": "Image not found"
+}
+```

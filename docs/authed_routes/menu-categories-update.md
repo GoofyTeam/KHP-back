@@ -10,4 +10,14 @@ Met à jour une catégorie de menus.
 - `name` (string, optionnel)
 
 **Réponse**
-Message et catégorie mise à jour.
+HTTP 200
+
+```json
+{
+  "message": "Category updated successfully",
+  "data": {
+    "id": 1,
+    "name": "Entrées"
+  }
+}
+```

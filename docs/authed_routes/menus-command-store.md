@@ -10,4 +10,15 @@ Crée une commande pour un menu.
 - `quantity` (integer, optionnel, défaut 1)
 
 **Réponse**
-Message et commande créée.
+HTTP 201
+
+```json
+{
+  "message": "Order created",
+  "order": {
+    "id": 1,
+    "status": "completed",
+    "quantity": 1
+  }
+}
+```

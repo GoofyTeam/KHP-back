@@ -10,4 +10,14 @@ Aucun
 Aucun
 
 **Réponse**
-Renvoie l'objet `user` correspondant à l'utilisateur connecté.
+HTTP 200
+
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  }
+}
+```

@@ -12,4 +12,18 @@ Aucun
 - `new_password_confirmation` (string, requis)
 
 **Réponse**
-Message confirmant la mise à jour du mot de passe.
+HTTP 200
+
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+Échec :
+
+```json
+{
+  "message": "Password is the same as the current one"
+}
+```

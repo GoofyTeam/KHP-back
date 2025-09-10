@@ -10,4 +10,14 @@ Met à jour le nom d'une raison de perte.
 - `name` (string, requis, unique)
 
 **Réponse**
-Message et raison mise à jour.
+HTTP 200
+
+```json
+{
+  "message": "Raison mise à jour avec succès",
+  "data": {
+    "id": 1,
+    "name": "Casse"
+  }
+}
+```

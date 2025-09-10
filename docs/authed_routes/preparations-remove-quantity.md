@@ -11,4 +11,14 @@ Retire une quantité de préparation d'un emplacement.
 - `quantity` (numeric, requis)
 
 **Réponse**
-Message et préparation avec stocks mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Quantité de la préparation mise à jour avec succès",
+  "preparation": {
+    "id": 1,
+    "name": "Sauce tomate"
+  }
+}
+```

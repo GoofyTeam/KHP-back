@@ -10,4 +10,14 @@ Met à jour le nom d'un type de localisation.
 - `name` (string, requis, unique)
 
 **Réponse**
-Message et type de localisation mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Type de localisation mis à jour avec succès",
+  "data": {
+    "id": 3,
+    "name": "Arrière-boutique"
+  }
+}
+```

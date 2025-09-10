@@ -12,4 +12,14 @@ Déplace une quantité de préparation d'un emplacement à un autre.
 - `quantity` (numeric, requis)
 
 **Réponse**
-Message et préparation avec stocks mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Quantité de la préparation déplacée avec succès",
+  "preparation": {
+    "id": 1,
+    "name": "Sauce tomate"
+  }
+}
+```

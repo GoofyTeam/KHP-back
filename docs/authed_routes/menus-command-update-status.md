@@ -10,4 +10,14 @@ Change le statut d'une commande de menu.
 - `status` (string, requis, valeurs : `pending`, `completed`)
 
 **Réponse**
-Message et commande mise à jour.
+HTTP 200
+
+```json
+{
+  "message": "Order updated",
+  "order": {
+    "id": 1,
+    "status": "completed"
+  }
+}
+```

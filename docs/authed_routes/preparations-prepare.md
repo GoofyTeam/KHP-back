@@ -16,4 +16,14 @@ Déclare la préparation d'un lot et met à jour les stocks des composants utili
   - `sources` (array `{location_id, quantity}`)
 
 **Réponse**
-Message et préparation avec quantités mises à jour.
+HTTP 200
+
+```json
+{
+  "message": "Préparation de 5 unit de Sauce tomate effectuée avec succès",
+  "preparation": {
+    "id": 1,
+    "name": "Sauce tomate"
+  }
+}
+```

@@ -10,4 +10,10 @@ Supprime un type de localisation non utilisé.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Type de localisation supprimé avec succès"
+}
+```

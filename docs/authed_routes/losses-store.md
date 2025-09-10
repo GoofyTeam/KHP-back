@@ -14,4 +14,16 @@ Aucun
 - `reason` (string, requis)
 
 **Réponse**
-Message et perte enregistrée.
+HTTP 201
+
+```json
+{
+  "message": "Perte enregistrée avec succès",
+  "loss": {
+    "id": 1,
+    "loss_item_type": "ingredient",
+    "quantity": 1,
+    "location_id": 2
+  }
+}
+```

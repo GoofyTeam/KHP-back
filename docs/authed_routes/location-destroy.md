@@ -10,4 +10,10 @@ Supprime un emplacement de stockage inutilisé.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Emplacement supprimé avec succès"
+}
+```

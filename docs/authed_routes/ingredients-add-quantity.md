@@ -11,4 +11,17 @@ Ajoute une quantité d'ingrédient sur un emplacement.
 - `quantity` (numeric, requis)
 
 **Réponse**
-Message et ingrédient avec stocks mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Ingredient quantity updated successfully",
+  "ingredient": {
+    "id": 1,
+    "name": "Tomate",
+    "locations": [
+      {"id": 1, "name": "Réserve", "pivot": {"quantity": 15}}
+    ]
+  }
+}
+```

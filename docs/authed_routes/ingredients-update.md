@@ -19,4 +19,10 @@ Met à jour un ingrédient existant.
 - `allergens` (array, optionnel)
 
 **Réponse**
-Message et ingrédient mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Ingredient updated successfully"
+}
+```

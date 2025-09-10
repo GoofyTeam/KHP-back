@@ -10,4 +10,10 @@ Annule une perte enregistrée et restaure le stock.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Perte annulée avec succès"
+}
+```

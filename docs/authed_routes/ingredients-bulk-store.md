@@ -20,4 +20,11 @@ Aucun
   - `allergens` (array, optionnel)
 
 **Réponse**
-Liste des identifiants créés.
+HTTP 201
+
+```json
+{
+  "message": "Ingredients created successfully",
+  "ingredient_ids": [1,2,3]
+}
+```

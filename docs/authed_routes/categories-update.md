@@ -14,4 +14,17 @@ Met à jour une catégorie et ses durées de conservation.
   - `{location_type_id}` (integer ou null, optionnel)
 
 **Réponse**
-Message et catégorie mise à jour.
+HTTP 200
+
+```json
+{
+  "message": "Catégorie mise à jour avec succès",
+  "data": {
+    "id": 1,
+    "name": "Légumes",
+    "location_types": [
+      {"id": 1, "name": "Réfrigérateur", "pivot": {"shelf_life_hours": 72}}
+    ]
+  }
+}
+```

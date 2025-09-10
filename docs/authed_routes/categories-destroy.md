@@ -10,4 +10,10 @@ Supprime une catégorie.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 200
+
+```json
+{
+  "message": "Catégorie supprimée avec succès"
+}
+```

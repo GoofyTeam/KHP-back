@@ -11,4 +11,15 @@ Aucun
 - `email` (string, optionnel, unique)
 
 **Réponse**
-Message de confirmation et objet `user` mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "User updated successfully",
+  "user": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  }
+}
+```

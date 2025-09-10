@@ -10,4 +10,6 @@ Supprime un menu du catalogue.
 Aucun
 
 **Réponse**
-Réponse vide avec statut 204.
+HTTP 204
+
+Aucun contenu.

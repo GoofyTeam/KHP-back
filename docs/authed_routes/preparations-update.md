@@ -17,4 +17,14 @@ Met à jour une préparation existante.
 - `quantities` (array `{location_id, quantity}`, optionnel)
 
 **Réponse**
-Message et objet `preparation` mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Préparation mise à jour avec succès",
+  "preparation": {
+    "id": 1,
+    "name": "Sauce tomate"
+  }
+}
+```

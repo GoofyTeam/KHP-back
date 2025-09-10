@@ -10,4 +10,6 @@ Supprime une préparation.
 Aucun
 
 **Réponse**
-Message de confirmation.
+HTTP 204
+
+Aucun contenu.

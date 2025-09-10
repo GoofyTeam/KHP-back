@@ -21,4 +21,17 @@ Met à jour un menu existant.
 - `items_to_update` (array `{entity_id, entity_type, quantity, unit?, location_id?}`, optionnel)
 
 **Réponse**
-Message et menu mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Menu updated",
+  "menu": {
+    "id": 1,
+    "name": "Menu du jour",
+    "type": "plat",
+    "price": 13,
+    "items": []
+  }
+}
+```

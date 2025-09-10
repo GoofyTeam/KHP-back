@@ -10,4 +10,14 @@ Aucun
 - `name` (string, requis, unique)
 
 **Réponse**
-Message et type de localisation créé.
+HTTP 201
+
+```json
+{
+  "message": "Type de localisation créé avec succès",
+  "data": {
+    "id": 3,
+    "name": "Arrière-boutique"
+  }
+}
+```

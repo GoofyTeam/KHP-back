@@ -11,4 +11,15 @@ Aucun
 - `location_type_id` (integer, requis)
 
 **Réponse**
-Message et emplacement mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "L'emplacement 'Frigo A' a été associé au type 'Réfrigérateur'",
+  "data": {
+    "id": 1,
+    "name": "Frigo A",
+    "location_type_id": 1
+  }
+}
+```

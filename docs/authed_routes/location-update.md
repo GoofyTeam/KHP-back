@@ -11,4 +11,15 @@ Met à jour un emplacement existant.
 - `location_type_id` (integer, optionnel)
 
 **Réponse**
-Message et emplacement mis à jour.
+HTTP 200
+
+```json
+{
+  "message": "Emplacement mis à jour avec succès",
+  "data": {
+    "id": 1,
+    "name": "Réserve centrale",
+    "location_type_id": 2
+  }
+}
+```

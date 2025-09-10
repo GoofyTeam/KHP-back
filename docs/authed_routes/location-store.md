@@ -11,4 +11,15 @@ Aucun
 - `location_type_id` (integer, requis)
 
 **Réponse**
-Message et emplacement créé.
+HTTP 201
+
+```json
+{
+  "message": "Emplacement créé avec succès",
+  "data": {
+    "id": 1,
+    "name": "Réserve",
+    "location_type_id": 2
+  }
+}
+```

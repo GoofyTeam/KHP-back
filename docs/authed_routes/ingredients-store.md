@@ -19,4 +19,11 @@ Aucun
 - `allergens` (array, optionnel)
 
 **Réponse**
-Message et identifiant de l'ingrédient créé.
+HTTP 201
+
+```json
+{
+  "message": "Ingredient created successfully",
+  "ingredient_id": 1
+}
+```

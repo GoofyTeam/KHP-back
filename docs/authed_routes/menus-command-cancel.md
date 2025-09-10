@@ -10,4 +10,14 @@ Annule une commande de menu.
 Aucun
 
 **Réponse**
-Message et commande annulée.
+HTTP 200
+
+```json
+{
+  "message": "Order canceled",
+  "order": {
+    "id": 1,
+    "status": "canceled"
+  }
+}
+```

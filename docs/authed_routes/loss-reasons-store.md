@@ -10,4 +10,14 @@ Aucun
 - `name` (string, requis, unique)
 
 **Réponse**
-Message et raison créée.
+HTTP 201
+
+```json
+{
+  "message": "Raison créée avec succès",
+  "data": {
+    "id": 1,
+    "name": "Casse"
+  }
+}
+```
