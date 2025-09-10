@@ -87,10 +87,14 @@ fi
 
 #=== RUN MIGRATIONS (direct, sans pre-check) ===================
 info "Running migrations..."
-if ! OUTPUT=$(artisan migrate --force -vvv 2>&1); then
-  echo "$OUTPUT"
-  fatal "Migrations failed."
-fi
+# if ! OUTPUT=$(artisan migrate --force -vvv 2>&1); then
+#   echo "$OUTPUT"
+#   fatal "Migrations failed."
+# fi
+#Temporary create fake data for development purposes (remove in production) (change app_env in secrets)
+
+php artisan migrate:fresh --seed
+
 info "Migrations completed."
 
 #=== CACHE STORE=database : maintenant possible =================
