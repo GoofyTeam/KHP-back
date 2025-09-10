@@ -1,0 +1,35 @@
+type MenuCategory {
+    "Unique primary key."
+    id: ID!
+
+    "Category name."
+    name: String!
+
+    "Menus in this category."
+    menus: [Menu!]! @belongsToMany
+
+    "The company that owns this category."
+    company: Company! @belongsTo
+
+    "When the category was created."
+    created_at: DateTime!
+
+    "When the category was last updated."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "List menu categories for the current company."
+    menuCategories(
+        "Search by category name. Accepts SQL LIKE wildcards `%` and `_`."
+        search: String @scope(name: "search")
+    ): [MenuCategory!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Find a single MenuCategory (only if it belongs to the current company)."
+    menuCategory(
+        "Search by primary key."
+        id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
+        "Search by category name."
+        name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): MenuCategory @find
+}

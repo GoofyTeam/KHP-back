@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Menu;
+use App\Models\MenuCategory;
 use App\Models\MenuOrder;
 use App\Models\User;
 use Carbon\Carbon;
@@ -37,8 +38,13 @@ class MenuControllerTest extends TestCase
 
         $ingredient->locations()->sync([$location->id => ['quantity' => 10]]);
 
+        $category = MenuCategory::factory()->create(['company_id' => $company->id]);
+
         $menuPayload = [
             'name' => 'Test Menu',
+            'type' => 'plat',
+            'price' => 12.5,
+            'category_ids' => [$category->id],
             'items' => [
                 [
                     'entity_id' => $ingredient->id,
@@ -84,6 +90,9 @@ class MenuControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Pending Menu',
+                'type' => 'plat',
+                'price' => 8.5,
+                'category_ids' => [],
                 'items' => [
                     [
                         'entity_id' => $ingredient->id,
@@ -125,6 +134,9 @@ class MenuControllerTest extends TestCase
 
         $menuPayload = [
             'name' => 'Stat Menu',
+            'type' => 'plat',
+            'price' => 10.0,
+            'category_ids' => [],
             'items' => [
                 [
                     'entity_id' => $ingredient->id,
@@ -187,6 +199,9 @@ class MenuControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Incremental Menu',
+                'type' => 'plat',
+                'price' => 9.0,
+                'category_ids' => [],
                 'items' => [
                     [
                         'entity_id' => $ingredientA->id,
@@ -243,6 +258,9 @@ class MenuControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Quantity Menu',
+                'type' => 'plat',
+                'price' => 9.0,
+                'category_ids' => [],
                 'items' => [
                     [
                         'entity_id' => $ingredient->id,
@@ -271,6 +289,47 @@ class MenuControllerTest extends TestCase
             ->assertJsonPath('menu.items.0.quantity', 5);
     }
 
+    /** Permet d'ajouter et de retirer des catégories sans écraser les existantes. */
+    public function test_can_add_and_remove_categories(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $location = Location::factory()->create(['company_id' => $company->id]);
+
+        $categoryA = MenuCategory::factory()->create(['company_id' => $company->id]);
+        $categoryB = MenuCategory::factory()->create(['company_id' => $company->id]);
+
+        $this->actingAs($user)
+            ->postJson('/api/menus', [
+                'name' => 'Cat Menu',
+                'type' => 'plat',
+                'price' => 9.0,
+                'category_ids' => [$categoryA->id],
+                'items' => [
+                    [
+                        'entity_id' => $ingredient->id,
+                        'entity_type' => 'ingredient',
+                        'quantity' => 1,
+                        'unit' => 'unit',
+                        'location_id' => $location->id,
+                    ],
+                ],
+            ])
+            ->assertStatus(201);
+
+        $menu = Menu::where('name', 'Cat Menu')->first();
+
+        $this->actingAs($user)
+            ->putJson('/api/menus/'.$menu->id, [
+                'category_ids_to_add' => [$categoryB->id],
+                'category_ids_to_remove' => [$categoryA->id],
+            ])
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'menu.categories')
+            ->assertJsonPath('menu.categories.0.id', $categoryB->id);
+    }
+
     /** Empêche d'avoir deux fois le même item dans un menu. */
     public function test_menu_cannot_have_duplicate_items(): void
     {
@@ -282,6 +341,9 @@ class MenuControllerTest extends TestCase
 
         $payload = [
             'name' => 'Dup Menu',
+            'type' => 'plat',
+            'price' => 9.0,
+            'category_ids' => [],
             'items' => [
                 [
                     'entity_id' => $ingredient->id,
@@ -318,6 +380,9 @@ class MenuControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Limited Menu',
+                'type' => 'plat',
+                'price' => 9.0,
+                'category_ids' => [],
                 'items' => [
                     [
                         'entity_id' => $ingredient->id,

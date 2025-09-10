@@ -7,6 +7,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LocationTypeController;
 use App\Http\Controllers\LossController;
 use App\Http\Controllers\LossReasonController;
+use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PreparationController;
@@ -114,4 +115,11 @@ Route::prefix('categories')->name('categories.')->group(function () {
     Route::post('/', [CategoryController::class, 'store'])->name('store');
     Route::put('/{id}', [CategoryController::class, 'update'])->name('update');
     Route::delete('/{id}', [CategoryController::class, 'destroy'])->name('destroy');
+});
+
+// Groupe de routes pour les catégories de menus
+Route::prefix('menu-categories')->name('menu-categories.')->group(function () {
+    Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
+    Route::put('/{id}', [MenuCategoryController::class, 'update'])->name('update');
+    Route::delete('/{id}', [MenuCategoryController::class, 'destroy'])->name('destroy');
 });

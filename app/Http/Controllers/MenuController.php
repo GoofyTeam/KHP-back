@@ -34,6 +34,13 @@ class MenuController extends Controller
                 'max:255',
                 Rule::unique('menus')->where(fn ($q) => $q->where('company_id', $user->company_id)),
             ],
+            'type' => ['required', 'string', 'max:255'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'category_ids' => ['sometimes', 'array'],
+            'category_ids.*' => [
+                'integer',
+                Rule::exists('menu_categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
             'description' => ['nullable', 'string'],
             'is_a_la_carte' => ['sometimes', 'boolean'],
             'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
@@ -81,7 +88,13 @@ class MenuController extends Controller
             'description' => $validated['description'] ?? null,
             'is_a_la_carte' => $validated['is_a_la_carte'] ?? false,
             'image_url' => $imagePath,
+            'type' => $validated['type'],
+            'price' => $validated['price'],
         ]);
+
+        if (! empty($validated['category_ids'])) {
+            $menu->categories()->sync($validated['category_ids']);
+        }
 
         foreach ($validated['items'] as $item) {
             $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
@@ -106,7 +119,7 @@ class MenuController extends Controller
 
         return response()->json([
             'message' => 'Menu created',
-            'menu' => $menu->load('items.entity'),
+            'menu' => $menu->load('items.entity', 'categories'),
         ], 201);
     }
 
@@ -128,6 +141,18 @@ class MenuController extends Controller
                 'string',
                 'max:255',
                 Rule::unique('menus')->where(fn ($q) => $q->where('company_id', $user->company_id))->ignore($menu->id),
+            ],
+            'type' => ['sometimes', 'string', 'max:255'],
+            'price' => ['sometimes', 'numeric', 'min:0'],
+            'category_ids_to_add' => ['sometimes', 'array'],
+            'category_ids_to_add.*' => [
+                'integer',
+                Rule::exists('menu_categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'category_ids_to_remove' => ['sometimes', 'array'],
+            'category_ids_to_remove.*' => [
+                'integer',
+                Rule::exists('menu_categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
             ],
             'description' => ['sometimes', 'nullable', 'string'],
             'is_a_la_carte' => ['sometimes', 'boolean'],
@@ -198,7 +223,21 @@ class MenuController extends Controller
         if (array_key_exists('is_a_la_carte', $validated)) {
             $menu->is_a_la_carte = $validated['is_a_la_carte'];
         }
+        if (array_key_exists('type', $validated)) {
+            $menu->type = $validated['type'];
+        }
+        if (array_key_exists('price', $validated)) {
+            $menu->price = $validated['price'];
+        }
         $menu->save();
+
+        if (! empty($validated['category_ids_to_add'])) {
+            $menu->categories()->syncWithoutDetaching($validated['category_ids_to_add']);
+        }
+
+        if (! empty($validated['category_ids_to_remove'])) {
+            $menu->categories()->detach($validated['category_ids_to_remove']);
+        }
 
         // Remove specified items
         if (! empty($validated['items_to_remove'])) {
@@ -281,7 +320,7 @@ class MenuController extends Controller
 
         return response()->json([
             'message' => 'Menu updated',
-            'menu' => $menu->load('items.entity'),
+            'menu' => $menu->load('items.entity', 'categories'),
         ], 200);
     }
 

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Menu;
+use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use Illuminate\Database\Seeder;
 
@@ -21,11 +22,20 @@ class MenuSeeder extends Seeder
                 ->whereHas('locations')
                 ->get();
             $locations = Location::where('company_id', $company->id)->get();
+            $categories = MenuCategory::where('company_id', $company->id)->get();
 
             for ($i = 0; $i < 5; $i++) {
                 $menu = Menu::factory()->create([
                     'company_id' => $company->id,
+                    'type' => fake()->randomElement(['entrée', 'plat', 'dessert', 'side']),
+                    'price' => fake()->randomFloat(2, 5, 50),
                 ]);
+
+                if ($categories->count() > 0) {
+                    $menu->categories()->sync(
+                        $categories->random(rand(0, min(3, $categories->count())))->pluck('id')->toArray()
+                    );
+                }
 
                 if ($ingredients->count() === 0 || $locations->count() === 0) {
                     $menu->refreshAvailability();
