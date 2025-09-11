@@ -1,0 +1,10 @@
+type SearchItem {
+    type: String!
+    ingredient: Ingredient
+    preparation: Preparation
+}
+
+extend type Query @guard {
+    searchInStock(keyword: String!): [SearchItem!]!
+        @field(resolver: "App\\GraphQL\\Queries\\SearchInStockQuery@resolve")
+}
