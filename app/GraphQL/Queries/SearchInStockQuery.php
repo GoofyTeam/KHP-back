@@ -13,19 +13,11 @@ class SearchInStockQuery
 
         $ingredients = Ingredient::forCompany()
             ->search($keyword)
-            ->get()
-            ->map(fn ($ingredient) => [
-                'type' => 'ingredient',
-                'ingredient' => $ingredient,
-            ]);
+            ->get();
 
         $preparations = Preparation::forCompany()
             ->search($keyword)
-            ->get()
-            ->map(fn ($preparation) => [
-                'type' => 'preparation',
-                'preparation' => $preparation,
-            ]);
+            ->get();
 
         return $ingredients->concat($preparations)->all();
     }
