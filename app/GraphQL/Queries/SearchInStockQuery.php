@@ -7,12 +7,6 @@ use App\Models\Preparation;
 
 class SearchInStockQuery
 {
-    /**
-     * Search ingredients and preparations by keyword.
-     *
-     * @param  array<string,mixed>  $args
-     * @return array<int, array<string, mixed>>
-     */
     public function resolve(mixed $_, array $args): array
     {
         $keyword = $args['keyword'] ?? '';
