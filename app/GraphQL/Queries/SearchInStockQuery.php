@@ -10,22 +10,13 @@ class SearchInStockQuery
     public function resolve(mixed $_, array $args): array
     {
         $keyword = $args['keyword'] ?? '';
-
         $ingredients = Ingredient::forCompany()
             ->search($keyword)
-            ->get()
-            ->map(fn ($ingredient) => [
-                'type' => 'ingredient',
-                'ingredient' => $ingredient,
-            ]);
+            ->get();
 
         $preparations = Preparation::forCompany()
             ->search($keyword)
-            ->get()
-            ->map(fn ($preparation) => [
-                'type' => 'preparation',
-                'preparation' => $preparation,
-            ]);
+            ->get();
 
         return $ingredients->concat($preparations)->all();
     }
