@@ -1,10 +1,8 @@
-type SearchItem {
-    type: String!
-    ingredient: Ingredient
-    preparation: Preparation
-}
+union SearchResult
+    @union(resolveType: "App\\GraphQL\\Unions\\SearchResultUnion@resolveType")
+    = Ingredient | Preparation
 
 extend type Query @guard {
-    searchInStock(keyword: String!): [SearchItem!]!
+    searchInStock(keyword: String!): [SearchResult!]!
         @field(resolver: "App\\GraphQL\\Queries\\SearchInStockQuery@resolve")
 }
