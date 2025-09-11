@@ -26,6 +26,11 @@ type Preparation {
             resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@quantityByLocation"
         )
 
+    image_url: String
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@imageUrl"
+        )
+
     "Historique des mouvements de stock pour cette préparation"
     stockMovements: [StockMovement!]! @morphMany
 

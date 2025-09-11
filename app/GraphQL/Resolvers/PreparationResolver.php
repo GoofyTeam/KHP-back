@@ -6,6 +6,15 @@ use App\Models\Preparation;
 
 class PreparationResolver
 {
+    public function imageUrl(Preparation $preparation): ?string
+    {
+        if (! $preparation->image_url) {
+            return null;
+        }
+
+        return url('/api/image-proxy/'.$preparation->image_url);
+    }
+
     /**
      * Récupère les quantités par emplacement pour une préparation
      *
