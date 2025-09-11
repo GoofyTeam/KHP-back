@@ -15,13 +15,13 @@ class QuickAccessFactory extends Factory
 
     public function definition(): array
     {
-        $icons = ['Plus', 'Notebook', 'Minus', 'Calendar', 'Check'];
+        $icons = ['Plus', 'Notebook', 'Minus', 'Calendar', 'Check', 'NoIcon'];
         $color = ['primary', 'warning', 'error', 'info'];
-        $url = ['add_to_stock', 'menu_card', 'stock', 'take_order'];
+        $url = ['add_to_stock', 'menu_card', 'stock', 'take_order', 'move_quantity'];
 
         return [
             'company_id' => Company::factory(),
-            'index' => $this->faker->numberBetween(1, 4),
+            'index' => $this->faker->numberBetween(1, 5),
             'name' => $this->faker->words(2, true),
             'icon' => $this->faker->randomElement($icons),
             'icon_color' => $this->faker->randomElement($color),

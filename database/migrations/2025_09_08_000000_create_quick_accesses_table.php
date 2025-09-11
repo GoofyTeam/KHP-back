@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('quick_accesses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
-            // Position 1..4 per company
+            // Position 1..5 per company
             $table->unsignedTinyInteger('index');
             $table->string('name', 26);
             $table->string('icon'); // Plus, Notebook, Minus, Calendar, Check

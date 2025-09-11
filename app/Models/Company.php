@@ -89,10 +89,7 @@ class Company extends Model
         return $this->hasMany(QuickAccess::class);
     }
 
-    public function specialQuickAccess()
-    {
-        return $this->hasOne(SpecialQuickAccess::class);
-    }
+    // Removed: specialQuickAccess relation (merged into QuickAccess index 5)
 
     protected static function booted()
     {
@@ -158,6 +155,13 @@ class Company extends Model
                     'icon_color' => 'primary',
                     'url_key' => 'take_order',
                 ],
+                [
+                    'index' => 5,
+                    'name' => 'Move Quantity',
+                    'icon' => 'NoIcon',
+                    'icon_color' => 'info',
+                    'url_key' => 'move_quantity',
+                ],
             ];
 
             foreach ($defaults as $row) {
@@ -172,11 +176,7 @@ class Company extends Model
                 );
             }
 
-            // Créer le bouton spécial de quick access par défaut
-            SpecialQuickAccess::updateOrCreate(
-                ['company_id' => $company->id],
-                ['name' => 'Move Quantity', 'url' => 'move_quantity']
-            );
+            // Removed: SpecialQuickAccess creation, handled as QuickAccess index 5
         });
     }
 }

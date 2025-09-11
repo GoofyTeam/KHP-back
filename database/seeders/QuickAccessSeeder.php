@@ -39,6 +39,13 @@ class QuickAccessSeeder extends Seeder
                 'icon_color' => 'primary',
                 'url_key' => 'take_order',
             ],
+            [
+                'index' => 5,
+                'name' => 'Move Quantity',
+                'icon' => 'NoIcon',
+                'icon_color' => 'info',
+                'url_key' => 'move_quantity',
+            ],
         ];
 
         Company::all()->each(function (Company $company) use ($defaults) {
