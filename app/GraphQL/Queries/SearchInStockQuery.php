@@ -10,7 +10,6 @@ class SearchInStockQuery
     /**
      * Search ingredients and preparations by keyword.
      *
-     * @param  mixed  $_
      * @param  array<string,mixed>  $args
      * @return array<int, array<string, mixed>>
      */
