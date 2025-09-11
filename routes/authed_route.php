@@ -11,6 +11,7 @@ use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PreparationController;
+use App\Http\Controllers\QuickAccessController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -122,4 +123,10 @@ Route::prefix('menu-categories')->name('menu-categories.')->group(function () {
     Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
     Route::put('/{id}', [MenuCategoryController::class, 'update'])->name('update');
     Route::delete('/{id}', [MenuCategoryController::class, 'destroy'])->name('destroy');
+});
+// Groupe de routes pour les Quick Access
+Route::prefix('quick-access')->name('quick-access.')->group(function () {
+    // Mise à jour en masse (positions 1..5) avec payload partiel
+    Route::put('/', [QuickAccessController::class, 'update'])->name('update');
+    Route::post('/reset', [QuickAccessController::class, 'reset'])->name('reset');
 });
