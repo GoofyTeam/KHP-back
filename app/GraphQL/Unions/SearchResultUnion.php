@@ -23,4 +23,3 @@ class SearchResultUnion
         return null;
     }
 }
-
