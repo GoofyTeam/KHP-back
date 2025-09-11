@@ -16,28 +16,28 @@ class QuickAccessSeeder extends Seeder
                 'name' => 'Add to stock',
                 'icon' => 'Plus',
                 'icon_color' => 'primary',
-                'url' => '/stock/add',
+                'url_key' => 'add_to_stock',
             ],
             [
                 'index' => 2,
                 'name' => 'Menu Card',
                 'icon' => 'Notebook',
                 'icon_color' => 'info',
-                'url' => '/menucard',
+                'url_key' => 'menu_card',
             ],
             [
                 'index' => 3,
                 'name' => 'Stock',
                 'icon' => 'Check',
                 'icon_color' => 'primary',
-                'url' => '/stock',
+                'url_key' => 'stock',
             ],
             [
                 'index' => 4,
                 'name' => 'Take Order',
                 'icon' => 'Notebook',
                 'icon_color' => 'primary',
-                'url' => '/takeorder',
+                'url_key' => 'take_order',
             ],
         ];
 
@@ -52,7 +52,7 @@ class QuickAccessSeeder extends Seeder
                         'name' => $row['name'],
                         'icon' => $row['icon'],
                         'icon_color' => $row['icon_color'],
-                        'url' => $row['url'],
+                        'url_key' => $row['url_key'],
                     ]
                 );
             }

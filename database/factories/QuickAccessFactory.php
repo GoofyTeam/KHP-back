@@ -17,7 +17,7 @@ class QuickAccessFactory extends Factory
     {
         $icons = ['Plus', 'Notebook', 'Minus', 'Calendar', 'Check'];
         $color = ['primary', 'warning', 'error', 'info'];
-        $url = ['/stock/add', '/menucard', '/stock', '/takeorder'];
+        $url = ['add_to_stock', 'menu_card', 'stock', 'take_order'];
 
         return [
             'company_id' => Company::factory(),
@@ -25,7 +25,7 @@ class QuickAccessFactory extends Factory
             'name' => $this->faker->words(2, true),
             'icon' => $this->faker->randomElement($icons),
             'icon_color' => $this->faker->randomElement($color),
-            'url' => $this->faker->randomElement($url),
+            'url_key' => $this->faker->randomElement($url),
         ];
     }
 }

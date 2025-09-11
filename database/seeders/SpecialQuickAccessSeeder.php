@@ -12,7 +12,7 @@ class SpecialQuickAccessSeeder extends Seeder
     {
         $default = [
             'name' => 'Move Quantity',
-            'url' => '/movequantity',
+            'url' => 'move_quantity',
         ];
 
         Company::all()->each(function (Company $company) use ($default) {

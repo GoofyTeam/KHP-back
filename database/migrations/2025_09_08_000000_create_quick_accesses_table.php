@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name', 26);
             $table->string('icon'); // Plus, Notebook, Minus, Calendar, Check
             $table->string('icon_color'); // 'primary' | 'warning' | 'error' | 'info'
-            $table->string('url');
+            $table->string('url_key');
             $table->timestamps();
 
             $table->unique(['company_id', 'index']);

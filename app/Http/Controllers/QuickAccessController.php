@@ -21,13 +21,13 @@ class QuickAccessController extends Controller
             'quick_accesses' => ['required_without:special_quick_access', 'array', 'min:1'],
             'quick_accesses.*.id' => ['required_with:quick_accesses', 'integer', 'exists:quick_accesses,id'],
             'quick_accesses.*.name' => ['sometimes', 'string', 'max:255'],
-            'quick_accesses.*.icon' => ['sometimes', 'string', 'max:255'],
+            'quick_accesses.*.icon' => ['sometimes', 'string', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check'])],
             'quick_accesses.*.icon_color' => ['sometimes', 'string', Rule::in(['primary', 'warning', 'error', 'info'])],
-            'quick_accesses.*.url' => ['sometimes', 'string', 'max:255'],
+            'quick_accesses.*.url_key' => ['sometimes', 'string', 'max:255'],
 
             'special_quick_access' => ['required_without:quick_accesses', 'array'],
             'special_quick_access.name' => ['sometimes', 'string', 'max:255'],
-            'special_quick_access.url' => ['sometimes', 'string', 'max:255'],
+            'special_quick_access.url_key' => ['sometimes', 'string', 'max:255'],
         ]);
 
         if (isset($validatedData['quick_accesses'])) {
@@ -82,10 +82,10 @@ class QuickAccessController extends Controller
         $companyId = $user->company_id;
 
         $defaults = [
-            1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url' => '/stock/add'],
-            2 => ['name' => 'Menu Card', 'icon' => 'Notebook', 'icon_color' => 'info', 'url' => '/menucard'],
-            3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url' => '/stock'],
-            4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 'primary', 'url' => '/takeorder'],
+            1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url' => 'add_to_stock'],
+            2 => ['name' => 'Menu Card', 'icon' => 'Notebook', 'icon_color' => 'info', 'url' => 'menu_card'],
+            3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url' => 'stock'],
+            4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 'primary', 'url' => 'take_order'],
         ];
 
         foreach ($defaults as $pos => $payload) {
@@ -97,7 +97,7 @@ class QuickAccessController extends Controller
 
         SpecialQuickAccess::updateOrCreate(
             ['company_id' => $companyId],
-            ['name' => 'Move Quantity', 'url' => '/movequantity']
+            ['name' => 'Move Quantity', 'url' => 'move_quantity']
         );
 
         $items = QuickAccess::where('company_id', $companyId)->orderBy('index')->get();

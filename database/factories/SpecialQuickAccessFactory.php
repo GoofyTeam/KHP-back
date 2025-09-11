@@ -18,7 +18,7 @@ class SpecialQuickAccessFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'name' => $this->faker->words(2, true),
-            'url' => '/'.$this->faker->slug(),
+            'url_key' => 'special_action',
         ];
     }
 }
