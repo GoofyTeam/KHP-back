@@ -18,7 +18,6 @@ class MenuFactory extends Factory
             'description' => $this->faker->sentence(),
             'image_url' => null,
             'is_a_la_carte' => $this->faker->boolean(),
-            'is_available' => true,
             'type' => $this->faker->randomElement(['entrée', 'plat', 'dessert', 'side']),
             'price' => $this->faker->randomFloat(2, 5, 50),
         ];

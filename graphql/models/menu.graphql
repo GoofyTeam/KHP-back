@@ -4,7 +4,7 @@ type Menu {
     description: String
     image_url: String @field(resolver: "App\\GraphQL\\Resolvers\\MenuResolver@imageUrl")
     is_a_la_carte: Boolean!
-    is_available: Boolean!
+    available(quantity: Int! = 1): Boolean! @field(resolver: "App\\GraphQL\\Resolvers\\MenuResolver@available")
     type: String!
     price: Float!
     categories: [MenuCategory!]! @belongsToMany
@@ -34,6 +34,8 @@ extend type Query @guard {
         types: [String!] @scope(name: "type")
         "Filtrer par un range de prix [min, max]."
         price_between: [Float!] @scope(name: "priceBetween")
+        "Filtrer par disponibilité."
+        available: Boolean @scope(name: "available")
     ): [Menu!]! @all(scopes: ["forCompany"])
     menu(id: ID! @eq): Menu @find(scopes: ["forCompany"])
 }

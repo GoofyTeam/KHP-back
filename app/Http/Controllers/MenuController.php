@@ -115,8 +115,6 @@ class MenuController extends Controller
             ]);
         }
 
-        $menu->refreshAvailability();
-
         return response()->json([
             'message' => 'Menu created',
             'menu' => $menu->load('items.entity', 'categories'),
@@ -315,8 +313,6 @@ class MenuController extends Controller
             }
             $menu->load('items');
         }
-
-        $menu->refreshAvailability();
 
         return response()->json([
             'message' => 'Menu updated',

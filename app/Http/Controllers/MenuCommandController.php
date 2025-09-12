@@ -38,7 +38,7 @@ class MenuCommandController extends Controller
 
         if (! $menu->hasSufficientStock($quantity)) {
             return response()->json([
-                'message' => 'Insufficient stock for this menu order',
+                'message' => 'Menu not available',
             ], 422);
         }
 
@@ -54,7 +54,6 @@ class MenuCommandController extends Controller
 
         if ($status === 'completed') {
             $this->applyOrder($order, $stockService);
-            $menu->refreshAvailability();
         }
 
         return response()->json([
@@ -89,7 +88,6 @@ class MenuCommandController extends Controller
 
         if ($previous !== 'completed' && $order->status === 'completed') {
             $this->applyOrder($order, $stockService);
-            $order->menu->refreshAvailability();
         }
 
         return response()->json([
@@ -114,7 +112,6 @@ class MenuCommandController extends Controller
 
         if ($order->status === 'completed') {
             $this->revertOrder($order, $stockService);
-            $order->menu->refreshAvailability();
         }
 
         $order->status = 'canceled';

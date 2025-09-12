@@ -22,14 +22,12 @@ class Menu extends Model
         'description',
         'image_url',
         'is_a_la_carte',
-        'is_available',
         'type',
         'price',
     ];
 
     protected $casts = [
         'is_a_la_carte' => 'boolean',
-        'is_available' => 'boolean',
         'price' => 'float',
     ];
 
@@ -128,6 +126,31 @@ class Menu extends Model
         return $query->whereBetween('price', [$min, $max]);
     }
 
+    public function scopeAvailable($query, ?bool $available)
+    {
+        if ($available === null) {
+            return $query;
+        }
+
+        $method = $available ? 'whereDoesntHave' : 'whereHas';
+
+        return $query->$method('items', function ($itemQuery) {
+            $itemQuery->where(function ($q) {
+                $q->where(function ($ingredientSub) {
+                    $ingredientSub->where('entity_type', Ingredient::class)
+                        ->whereRaw(
+                            'COALESCE((SELECT quantity FROM ingredient_location WHERE ingredient_id = menu_items.entity_id AND location_id = menu_items.location_id), 0) < menu_items.quantity'
+                        );
+                })->orWhere(function ($prepSub) {
+                    $prepSub->where('entity_type', Preparation::class)
+                        ->whereRaw(
+                            'COALESCE((SELECT quantity FROM location_preparation WHERE preparation_id = menu_items.entity_id AND location_id = menu_items.location_id), 0) < menu_items.quantity'
+                        );
+                });
+            });
+        });
+    }
+
     public function scopeForCompany($query)
     {
         return $query->where('company_id', auth()->user()->company_id);
@@ -149,11 +172,5 @@ class Menu extends Model
         }
 
         return true;
-    }
-
-    public function refreshAvailability(): void
-    {
-        $this->is_available = $this->hasSufficientStock();
-        $this->save();
     }
 }
