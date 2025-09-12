@@ -38,8 +38,6 @@ class MenuSeeder extends Seeder
                 }
 
                 if ($ingredients->count() === 0 || $locations->count() === 0) {
-                    $menu->refreshAvailability();
-
                     continue;
                 }
 
@@ -56,7 +54,6 @@ class MenuSeeder extends Seeder
                     ]);
                 }
 
-                $menu->refreshAvailability();
             }
         }
     }
