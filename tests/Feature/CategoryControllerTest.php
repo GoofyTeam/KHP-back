@@ -72,6 +72,32 @@ class CategoryControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_accepts_additional_location_types(): void
+    {
+        $this->actingAs($this->user);
+
+        $extraType = LocationType::factory()->create(['company_id' => $this->company->id]);
+
+        $response = $this->postJson('/api/categories', [
+            'name' => 'Pâtisserie',
+            'shelf_lives' => [
+                'fridge' => 24,
+                'freezer' => 72,
+                $extraType->id => 48,
+            ],
+        ]);
+
+        $response->assertStatus(201);
+
+        $category = Category::where('name', 'Pâtisserie')->first();
+
+        $this->assertDatabaseHas('category_location_type', [
+            'category_id' => $category->id,
+            'location_type_id' => $extraType->id,
+            'shelf_life_hours' => 48,
+        ]);
+    }
+
     public function test_update_allows_partial_updates_and_keeps_fridge_and_freezer(): void
     {
         $this->actingAs($this->user);
