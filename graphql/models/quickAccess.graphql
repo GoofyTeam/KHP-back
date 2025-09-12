@@ -17,8 +17,8 @@ type QuickAccess {
     "Couleur de l’icône (ex: primary, warning, error, info)."
     icon_color: String!
 
-    "URL cible du bouton."
-    url: String!
+    "Clé d'URL cible du bouton (route logique)."
+    url_key: String!
 
     "Entreprise propriétaire."
     company: Company! @belongsTo
