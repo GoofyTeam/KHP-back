@@ -35,5 +35,5 @@ extend type Query @guard {
         "Filtrer par un range de prix [min, max]."
         price_between: [Float!] @scope(name: "priceBetween")
     ): [Menu!]! @all(scopes: ["forCompany"])
-    menu(id: ID!): Menu @find(scopes: ["forCompany"])
+    menu(id: ID! @eq): Menu @find(scopes: ["forCompany"])
 }
