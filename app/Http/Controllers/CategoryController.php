@@ -35,6 +35,7 @@ class CategoryController extends Controller
             'shelf_lives' => ['required', 'array'],
             'shelf_lives.fridge' => ['required', 'integer', 'min:1'],
             'shelf_lives.freezer' => ['required', 'integer', 'min:1'],
+            'shelf_lives.*' => ['integer', 'min:1'],
         ]);
 
         $category = Category::create([
@@ -51,10 +52,25 @@ class CategoryController extends Controller
             ['is_default' => true]
         );
 
-        $category->locationTypes()->attach([
-            $fridge->id => ['shelf_life_hours' => $validated['shelf_lives']['fridge']],
-            $freezer->id => ['shelf_life_hours' => $validated['shelf_lives']['freezer']],
-        ]);
+        $shelfLives = $validated['shelf_lives'];
+
+        $locationTypeData = [
+            $fridge->id => ['shelf_life_hours' => $shelfLives['fridge']],
+            $freezer->id => ['shelf_life_hours' => $shelfLives['freezer']],
+        ];
+
+        foreach ($shelfLives as $key => $hours) {
+            if (in_array($key, ['fridge', 'freezer'], true)) {
+                continue;
+            }
+            if (! ctype_digit((string) $key)) {
+                continue;
+            }
+            $locationType = LocationType::forCompany()->findOrFail((int) $key);
+            $locationTypeData[$locationType->id] = ['shelf_life_hours' => $hours];
+        }
+
+        $category->locationTypes()->attach($locationTypeData);
 
         return response()->json([
             'message' => 'Catégorie créée avec succès',
@@ -121,10 +137,10 @@ class CategoryController extends Controller
             }
 
             foreach ($shelfLives as $key => $hours) {
-                if (in_array($key, ['fridge', 'freezer'])) {
+                if (in_array($key, ['fridge', 'freezer'], true)) {
                     continue;
                 }
-                if (! is_numeric($key)) {
+                if (! ctype_digit((string) $key)) {
                     continue;
                 }
                 $locationType = LocationType::forCompany()->findOrFail((int) $key);
