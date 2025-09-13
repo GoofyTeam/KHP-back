@@ -122,17 +122,17 @@ class MenuController extends Controller
     }
 
     /**
-     * Cas métier : Mise à jour d'un menu existant
+     * Cas métier : Mise à jour d'un menu existant en remplaçant intégralement ses données
      *
      * Use cases :
-     * - Modifier le nom du menu
-     * - Ajouter, retirer ou modifier des éléments (et leur localisation) sans renvoyer la liste complète
+     * - Pré-remplir un formulaire avec les informations du menu puis renvoyer la liste complète modifiée
+     * - Remplacer en une requête le nom, la description, le type, les catégories et les items
+     * - Éviter la complexité côté front de gérer des ajouts ou suppressions incrémentaux
      */
     public function update(Request $request, int $id, ImageService $imageService): JsonResponse
     {
         $user = $request->user();
         $menu = Menu::where('id', $id)->where('company_id', $user->company_id)->firstOrFail();
-
         $validated = $request->validate([
             'name' => [
                 'sometimes',
@@ -142,13 +142,8 @@ class MenuController extends Controller
             ],
             'type' => ['sometimes', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric', 'min:0'],
-            'category_ids_to_add' => ['sometimes', 'array'],
-            'category_ids_to_add.*' => [
-                'integer',
-                Rule::exists('menu_categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
-            ],
-            'category_ids_to_remove' => ['sometimes', 'array'],
-            'category_ids_to_remove.*' => [
+            'category_ids' => ['sometimes', 'array'],
+            'category_ids.*' => [
                 'integer',
                 Rule::exists('menu_categories', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
             ],
@@ -156,13 +151,13 @@ class MenuController extends Controller
             'is_a_la_carte' => ['sometimes', 'boolean'],
             'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
             'image_url' => ['sometimes', 'nullable', 'url'],
-            'items_to_add' => ['sometimes', 'array', 'min:1'],
-            'items_to_add.*.entity_id' => [
-                'required_with:items_to_add',
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.entity_id' => [
+                'required',
                 'integer',
                 function ($attribute, $value, $fail) use ($request, $user) {
                     $index = explode('.', $attribute)[1] ?? null;
-                    $entityType = $request->input("items_to_add.$index.entity_type");
+                    $entityType = $request->input("items.$index.entity_type");
                     $table = $entityType === 'ingredient' ? 'ingredients' : 'preparations';
 
                     $rule = Rule::exists($table, 'id')->where(fn ($q) => $q->where('company_id', $user->company_id));
@@ -171,33 +166,13 @@ class MenuController extends Controller
                     }
                 },
             ],
-            'items_to_add.*.entity_type' => ['required_with:items_to_add', 'string', 'in:ingredient,preparation'],
-            'items_to_add.*.quantity' => ['required_with:items_to_add', 'numeric', 'min:0.01'],
-            'items_to_add.*.unit' => ['required_with:items_to_add', 'string', Rule::in(MeasurementUnit::values())],
-            'items_to_add.*.location_id' => ['required_with:items_to_add', Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id))],
-            'items_to_remove' => ['sometimes', 'array', 'min:1'],
-            'items_to_remove.*.entity_id' => ['required_with:items_to_remove', 'integer'],
-            'items_to_remove.*.entity_type' => ['required_with:items_to_remove', 'string', 'in:ingredient,preparation'],
-            'items_to_update' => ['sometimes', 'array', 'min:1'],
-            'items_to_update.*.entity_id' => [
-                'required_with:items_to_update',
-                'integer',
-                function ($attribute, $value, $fail) use ($request, $user) {
-                    $index = explode('.', $attribute)[1] ?? null;
-                    $entityType = $request->input("items_to_update.$index.entity_type");
-                    $table = $entityType === 'ingredient' ? 'ingredients' : 'preparations';
-
-                    $rule = Rule::exists($table, 'id')->where(fn ($q) => $q->where('company_id', $user->company_id));
-                    if (! Validator::make(['entity_id' => $value], ['entity_id' => [$rule]])->passes()) {
-                        $fail('The selected entity_id is invalid.');
-                    }
-                },
-            ],
-            'items_to_update.*.entity_type' => ['required_with:items_to_update', 'string', 'in:ingredient,preparation'],
-            'items_to_update.*.quantity' => ['required_with:items_to_update', 'numeric', 'min:0.01'],
-            'items_to_update.*.unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
-            'items_to_update.*.location_id' => ['sometimes', Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id))],
+            'items.*.entity_type' => ['required', 'string', 'in:ingredient,preparation'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
+            'items.*.location_id' => ['required', Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id))],
         ]);
+
+        $this->ensureUniqueItems($validated['items']);
 
         if ($request->hasFile('image') && $request->filled('image_url')) {
             throw ValidationException::withMessages([
@@ -229,89 +204,30 @@ class MenuController extends Controller
         }
         $menu->save();
 
-        if (! empty($validated['category_ids_to_add'])) {
-            $menu->categories()->syncWithoutDetaching($validated['category_ids_to_add']);
+        if (array_key_exists('category_ids', $validated)) {
+            $menu->categories()->sync($validated['category_ids']);
         }
 
-        if (! empty($validated['category_ids_to_remove'])) {
-            $menu->categories()->detach($validated['category_ids_to_remove']);
-        }
+        // Replace all items with the provided list
+        $menu->items()->delete();
 
-        // Remove specified items
-        if (! empty($validated['items_to_remove'])) {
-            foreach ($validated['items_to_remove'] as $item) {
-                $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
-                $menu->items()
-                    ->where('entity_type', $entityClass)
-                    ->where('entity_id', $item['entity_id'])
-                    ->delete();
-            }
-            $menu->load('items');
-        }
+        foreach ($validated['items'] as $item) {
+            $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
 
-        // Add new items while ensuring no duplicates
-        if (! empty($validated['items_to_add'])) {
-            $this->ensureUniqueItems($validated['items_to_add']);
-
-            foreach ($validated['items_to_add'] as $item) {
-                $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
-
-                if ($menu->items()->where('entity_type', $entityClass)->where('entity_id', $item['entity_id'])->exists()) {
-                    throw ValidationException::withMessages([
-                        'items_to_add' => ['Duplicate items are not allowed in a menu.'],
-                    ]);
-                }
-
-                if (! $entityClass::where('id', $item['entity_id'])->where('company_id', $user->company_id)->exists()) {
-                    throw ValidationException::withMessages([
-                        'items_to_add' => ['The selected entity does not belong to this company.'],
-                    ]);
-                }
-
-                MenuItem::create([
-                    'menu_id' => $menu->id,
-                    'entity_id' => $item['entity_id'],
-                    'entity_type' => $entityClass,
-                    'quantity' => $item['quantity'],
-                    'unit' => $item['unit'],
-                    'location_id' => $item['location_id'],
+            if (! $entityClass::where('id', $item['entity_id'])->where('company_id', $user->company_id)->exists()) {
+                throw ValidationException::withMessages([
+                    'items' => ['The selected entity does not belong to this company.'],
                 ]);
             }
-        }
 
-        // Update quantity or unit of existing items
-        if (! empty($validated['items_to_update'])) {
-            foreach ($validated['items_to_update'] as $item) {
-                $entityClass = $item['entity_type'] === 'ingredient' ? Ingredient::class : Preparation::class;
-
-                if (! $entityClass::where('id', $item['entity_id'])->where('company_id', $user->company_id)->exists()) {
-                    throw ValidationException::withMessages([
-                        'items_to_update' => ['The selected entity does not belong to this company.'],
-                    ]);
-                }
-
-                /** @var MenuItem|null $menuItem */
-                $menuItem = $menu->items()
-                    ->where('entity_type', $entityClass)
-                    ->where('entity_id', $item['entity_id'])
-                    ->first();
-
-                if (! $menuItem) {
-                    throw ValidationException::withMessages([
-                        'items_to_update' => ['Item not found in this menu.'],
-                    ]);
-                }
-
-                $menuItem->quantity = $item['quantity'];
-                if (array_key_exists('unit', $item)) {
-                    $menuItem->unit = $item['unit'];
-                }
-                if (array_key_exists('location_id', $item)) {
-                    $menuItem->location_id = $item['location_id'];
-                }
-                $menuItem->save();
-            }
-            $menu->load('items');
+            MenuItem::create([
+                'menu_id' => $menu->id,
+                'entity_id' => $item['entity_id'],
+                'entity_type' => $entityClass,
+                'quantity' => $item['quantity'],
+                'unit' => $item['unit'],
+                'location_id' => $item['location_id'],
+            ]);
         }
 
         return response()->json([
