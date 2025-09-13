@@ -21,7 +21,7 @@ use Tests\TestCase;
  * - Commander un menu et annuler la commande avec impact stock
  * - Retirer le stock seulement après changement de statut si l'option est désactivée
  * - Obtenir les stats de commandes terminées entre deux dates via GraphQL
- * - Mettre à jour un menu en ajoutant, retirant ou modifiant des items
+ * - Mettre à jour un menu en renvoyant la liste complète des items et des catégories
  */
 class MenuControllerTest extends TestCase
 {
@@ -186,8 +186,8 @@ class MenuControllerTest extends TestCase
         ]);
     }
 
-    /** Vérifie que l'on peut ajouter ou retirer des items sans renvoyer la liste complète. */
-    public function test_update_menu_adds_and_removes_items_incrementally(): void
+    /** Vérifie que l'on peut remplacer la liste des items d'un menu. */
+    public function test_update_menu_replaces_items(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -216,10 +216,17 @@ class MenuControllerTest extends TestCase
 
         $menu = Menu::where('name', 'Incremental Menu')->first();
 
-        // Ajout d'un nouvel ingrédient sans renvoyer le premier
+        // Remplacement par deux ingrédients
         $this->actingAs($user)
             ->putJson('/api/menus/'.$menu->id, [
-                'items_to_add' => [
+                'items' => [
+                    [
+                        'entity_id' => $ingredientA->id,
+                        'entity_type' => 'ingredient',
+                        'quantity' => 1,
+                        'unit' => 'unit',
+                        'location_id' => $location->id,
+                    ],
                     [
                         'entity_id' => $ingredientB->id,
                         'entity_type' => 'ingredient',
@@ -232,13 +239,16 @@ class MenuControllerTest extends TestCase
             ->assertStatus(200)
             ->assertJsonCount(2, 'menu.items');
 
-        // Suppression du premier ingrédient sans renvoyer le second
+        // Remplacement par un seul ingrédient
         $this->actingAs($user)
             ->putJson('/api/menus/'.$menu->id, [
-                'items_to_remove' => [
+                'items' => [
                     [
-                        'entity_id' => $ingredientA->id,
+                        'entity_id' => $ingredientB->id,
                         'entity_type' => 'ingredient',
+                        'quantity' => 2,
+                        'unit' => 'unit',
+                        'location_id' => $location->id,
                     ],
                 ],
             ])
@@ -246,7 +256,7 @@ class MenuControllerTest extends TestCase
             ->assertJsonCount(1, 'menu.items');
     }
 
-    /** Vérifie que l'on peut modifier la quantité d'un item existant sans renvoyer la liste complète. */
+    /** Vérifie que l'on peut modifier la quantité d'un item existant en renvoyant la liste complète. */
     public function test_update_menu_modifies_item_quantity(): void
     {
         $company = Company::factory()->create();
@@ -277,11 +287,13 @@ class MenuControllerTest extends TestCase
 
         $this->actingAs($user)
             ->putJson('/api/menus/'.$menu->id, [
-                'items_to_update' => [
+                'items' => [
                     [
                         'entity_id' => $ingredient->id,
                         'entity_type' => 'ingredient',
                         'quantity' => 5,
+                        'unit' => 'unit',
+                        'location_id' => $location->id,
                     ],
                 ],
             ])
@@ -289,8 +301,8 @@ class MenuControllerTest extends TestCase
             ->assertJsonPath('menu.items.0.quantity', 5);
     }
 
-    /** Permet d'ajouter et de retirer des catégories sans écraser les existantes. */
-    public function test_can_add_and_remove_categories(): void
+    /** Permet de remplacer les catégories d'un menu. */
+    public function test_can_replace_categories(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -322,8 +334,16 @@ class MenuControllerTest extends TestCase
 
         $this->actingAs($user)
             ->putJson('/api/menus/'.$menu->id, [
-                'category_ids_to_add' => [$categoryB->id],
-                'category_ids_to_remove' => [$categoryA->id],
+                'category_ids' => [$categoryB->id],
+                'items' => [
+                    [
+                        'entity_id' => $ingredient->id,
+                        'entity_type' => 'ingredient',
+                        'quantity' => 1,
+                        'unit' => 'unit',
+                        'location_id' => $location->id,
+                    ],
+                ],
             ])
             ->assertStatus(200)
             ->assertJsonCount(1, 'menu.categories')
