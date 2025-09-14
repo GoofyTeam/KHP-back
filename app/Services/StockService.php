@@ -50,10 +50,6 @@ class StockService
             $newQuantity = $current + $quantity;
             $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_ADD_REASON);
 
-            if ($model instanceof Ingredient) {
-                $this->perishableService->add($model->id, $locationId, $companyId, $quantity);
-            }
-
             return $newQuantity;
         });
     }
@@ -90,10 +86,6 @@ class StockService
             }
 
             $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_REMOVE_REASON);
-
-            if ($model instanceof Ingredient) {
-                $this->perishableService->remove($model->id, $locationId, $companyId, $quantity);
-            }
 
             return $newQuantity;
         });

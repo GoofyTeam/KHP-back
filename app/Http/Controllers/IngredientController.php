@@ -7,7 +7,9 @@ use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Services\ImageService;
+use App\Services\PerishableService;
 use App\Services\StockService;
+use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -418,8 +420,13 @@ class IngredientController extends Controller
     /**
      * Cas métier : Ajout de stock d'un ingrédient sur un emplacement.
      */
-    public function addQuantity(Request $request, Ingredient $ingredient, StockService $stockService): JsonResponse
-    {
+    public function addQuantity(
+        Request $request,
+        Ingredient $ingredient,
+        StockService $stockService,
+        PerishableService $perishableService,
+        UnitConversionService $unitConversionService
+    ): JsonResponse {
         $user = $request->user();
 
         if ($ingredient->company_id !== $user->company_id) {
@@ -440,6 +447,12 @@ class IngredientController extends Controller
 
         $stockService->add($ingredient, $locationId, $user->company_id, $quantity, null, $unit);
 
+        $converted = $unit && $unit !== $ingredient->unit
+            ? $unitConversionService->convert($quantity, $unit, $ingredient->unit)
+            : $quantity;
+
+        $perishableService->add($ingredient->id, $locationId, $user->company_id, $converted);
+
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',
             'ingredient' => $ingredient->load('locations', 'category'),
@@ -449,8 +462,13 @@ class IngredientController extends Controller
     /**
      * Cas métier : Retrait de stock d'un ingrédient sur un emplacement.
      */
-    public function removeQuantity(Request $request, Ingredient $ingredient, StockService $stockService): JsonResponse
-    {
+    public function removeQuantity(
+        Request $request,
+        Ingredient $ingredient,
+        StockService $stockService,
+        PerishableService $perishableService,
+        UnitConversionService $unitConversionService
+    ): JsonResponse {
         $user = $request->user();
 
         if ($ingredient->company_id !== $user->company_id) {
@@ -476,6 +494,12 @@ class IngredientController extends Controller
                 'message' => 'Quantity cannot be negative',
             ], 422);
         }
+
+        $converted = $unit && $unit !== $ingredient->unit
+            ? $unitConversionService->convert($quantity, $unit, $ingredient->unit)
+            : $quantity;
+
+        $perishableService->remove($ingredient->id, $locationId, $user->company_id, $converted);
 
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',
