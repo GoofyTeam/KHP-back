@@ -19,7 +19,10 @@ type Preparation {
     locations: [Location!]! @belongsToMany
 
     "The categories associated with this preparation."
-    categories: [Category!]! @belongsToMany
+    categories: [Category!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@categories"
+        )
 
     quantities: [PreparationQuantity!]!
         @field(

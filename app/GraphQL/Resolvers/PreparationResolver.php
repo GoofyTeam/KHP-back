@@ -6,6 +6,19 @@ use App\Models\Preparation;
 
 class PreparationResolver
 {
+    /**
+     * Return categories as a list wrapping the single category relation.
+     * Keeps backward compatibility with a list-based GraphQL field.
+     *
+     * @return array<int, mixed>
+     */
+    public function categories(Preparation $preparation): array
+    {
+        $category = $preparation->category;
+
+        return $category ? [$category] : [];
+    }
+
     public function imageUrl(Preparation $preparation): ?string
     {
         if (! $preparation->image_url) {
