@@ -486,9 +486,17 @@ class PreparationController extends Controller
         $validated = $request->validate([
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
         ]);
 
-        $stockService->add($preparation, (int) $validated['location_id'], $user->company_id, (float) $validated['quantity']);
+        $stockService->add(
+            $preparation,
+            (int) $validated['location_id'],
+            $user->company_id,
+            (float) $validated['quantity'],
+            null,
+            isset($validated['unit']) ? MeasurementUnit::from($validated['unit']) : null
+        );
 
         return response()->json([
             'message' => 'Quantité de la préparation mise à jour avec succès',
@@ -510,10 +518,18 @@ class PreparationController extends Controller
         $validated = $request->validate([
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
         ]);
 
         try {
-            $stockService->remove($preparation, (int) $validated['location_id'], $user->company_id, (float) $validated['quantity']);
+            $stockService->remove(
+                $preparation,
+                (int) $validated['location_id'],
+                $user->company_id,
+                (float) $validated['quantity'],
+                null,
+                isset($validated['unit']) ? MeasurementUnit::from($validated['unit']) : null
+            );
         } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'message' => 'Quantity cannot be negative',
@@ -541,6 +557,7 @@ class PreparationController extends Controller
             'from_location_id' => ['required', 'integer', 'exists:locations,id'],
             'to_location_id' => ['required', 'integer', 'different:from_location_id', 'exists:locations,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
         ]);
 
         try {
@@ -549,7 +566,8 @@ class PreparationController extends Controller
                 (int) $validated['from_location_id'],
                 (int) $validated['to_location_id'],
                 $user->company_id,
-                (float) $validated['quantity']
+                (float) $validated['quantity'],
+                isset($validated['unit']) ? MeasurementUnit::from($validated['unit']) : null
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json([

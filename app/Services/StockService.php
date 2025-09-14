@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Preparation;
@@ -13,10 +14,24 @@ class StockService
 
     public const DEFAULT_REMOVE_REASON = 'Manual Withdrawal';
 
-    public function __construct(private PerishableService $perishableService) {}
+    public function __construct(
+        private PerishableService $perishableService,
+        private UnitConversionService $unitConversionService
+    ) {}
 
-    public function add(Ingredient|Preparation $model, int $locationId, int $companyId, float $quantity, ?string $reason = null): float
-    {
+    public function add(
+        Ingredient|Preparation $model,
+        int $locationId,
+        int $companyId,
+        float $quantity,
+        ?string $reason = null,
+        ?MeasurementUnit $unit = null
+    ): float {
+        $unit ??= $model->unit;
+        if ($unit !== $model->unit) {
+            $quantity = $this->unitConversionService->convert($quantity, $unit, $model->unit);
+        }
+
         return DB::transaction(function () use ($model, $locationId, $companyId, $quantity, $reason) {
             $location = Location::where('id', $locationId)
                 ->where('company_id', $companyId)
@@ -35,12 +50,27 @@ class StockService
             $newQuantity = $current + $quantity;
             $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_ADD_REASON);
 
+            if ($model instanceof Ingredient) {
+                $this->perishableService->add($model->id, $locationId, $companyId, $quantity);
+            }
+
             return $newQuantity;
         });
     }
 
-    public function remove(Ingredient|Preparation $model, int $locationId, int $companyId, float $quantity, ?string $reason = null): float
-    {
+    public function remove(
+        Ingredient|Preparation $model,
+        int $locationId,
+        int $companyId,
+        float $quantity,
+        ?string $reason = null,
+        ?MeasurementUnit $unit = null
+    ): float {
+        $unit ??= $model->unit;
+        if ($unit !== $model->unit) {
+            $quantity = $this->unitConversionService->convert($quantity, $unit, $model->unit);
+        }
+
         return DB::transaction(function () use ($model, $locationId, $companyId, $quantity, $reason) {
             $location = Location::where('id', $locationId)
                 ->where('company_id', $companyId)
@@ -61,6 +91,10 @@ class StockService
 
             $model->recordStockMovement($location, $current, $newQuantity, $reason ?? self::DEFAULT_REMOVE_REASON);
 
+            if ($model instanceof Ingredient) {
+                $this->perishableService->remove($model->id, $locationId, $companyId, $quantity);
+            }
+
             return $newQuantity;
         });
     }
@@ -70,8 +104,14 @@ class StockService
         int $fromLocationId,
         int $toLocationId,
         int $companyId,
-        float $quantity
+        float $quantity,
+        ?MeasurementUnit $unit = null
     ): void {
+        $unit ??= $model->unit;
+        if ($unit !== $model->unit) {
+            $quantity = $this->unitConversionService->convert($quantity, $unit, $model->unit);
+        }
+
         DB::transaction(function () use ($model, $fromLocationId, $toLocationId, $companyId, $quantity) {
             $from = Location::where('id', $fromLocationId)
                 ->where('company_id', $companyId)
