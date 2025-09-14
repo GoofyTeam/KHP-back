@@ -14,4 +14,14 @@ type MenuOrderStats {
 extend type Query @guard {
     menuOrderStats(start: Date, end: Date): MenuOrderStats!
         @field(resolver: "App\\GraphQL\\Queries\\MenuOrderStatsQuery@resolve")
+
+    menuOrders(
+        status: String @eq
+        orderBy: [OrderByClause!] @orderBy(columnsEnum: MenuOrderOrderByField)
+    ): [MenuOrder!]!
+        @paginate(defaultCount: 10, scopes: ["forCompany"])
+}
+enum MenuOrderOrderByField {
+    STATUS @enum(value: "status")
+    CREATED_AT @enum(value: "created_at")
 }
