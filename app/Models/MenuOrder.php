@@ -25,4 +25,11 @@ class MenuOrder extends Model
     {
         return $this->belongsTo(Menu::class);
     }
+
+    public function scopeForCompany($query)
+    {
+        return $query->whereHas('menu', function ($q) {
+            $q->where('company_id', auth()->user()->company_id);
+        });
+    }
 }
