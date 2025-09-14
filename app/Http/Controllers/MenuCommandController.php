@@ -131,12 +131,17 @@ class MenuCommandController extends Controller
         try {
             DB::transaction(function () use ($order, $stockService) {
                 $order->load('menu.items.entity');
+                $converter = app(\App\Services\UnitConversionService::class);
                 foreach ($order->menu->items as $item) {
                     $entity = $item->entity;
                     if (! $entity instanceof Ingredient && ! $entity instanceof Preparation) {
                         continue;
                     }
-                    $total = $item->quantity * $order->quantity;
+                    $total = $converter->convert(
+                        $item->quantity * $order->quantity,
+                        $item->unit,
+                        $entity->unit
+                    );
                     $stockService->remove($entity, $item->location_id, $order->menu->company_id, $total, 'menu order');
                 }
             });
@@ -157,12 +162,17 @@ class MenuCommandController extends Controller
         try {
             DB::transaction(function () use ($order, $stockService) {
                 $order->load('menu.items.entity');
+                $converter = app(\App\Services\UnitConversionService::class);
                 foreach ($order->menu->items as $item) {
                     $entity = $item->entity;
                     if (! $entity instanceof Ingredient && ! $entity instanceof Preparation) {
                         continue;
                     }
-                    $total = $item->quantity * $order->quantity;
+                    $total = $converter->convert(
+                        $item->quantity * $order->quantity,
+                        $item->unit,
+                        $entity->unit
+                    );
                     $stockService->add($entity, $item->location_id, $order->menu->company_id, $total, 'menu order cancellation');
                 }
             });

@@ -159,6 +159,7 @@ class Menu extends Model
     public function hasSufficientStock(int $quantity = 1): bool
     {
         $this->loadMissing('items');
+        $converter = app(\App\Services\UnitConversionService::class);
         foreach ($this->items as $item) {
             $entityClass = $item->entity_type;
             $entity = $entityClass::find($item->entity_id);
@@ -166,7 +167,8 @@ class Menu extends Model
                 return false;
             }
             $available = (float) ($entity->locations()->find($item->location_id)?->pivot->quantity ?? 0);
-            if ($available < $item->quantity * $quantity) {
+            $required = $converter->convert($item->quantity * $quantity, $item->unit, $entity->unit);
+            if ($available < $required) {
                 return false;
             }
         }
