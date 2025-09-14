@@ -22,13 +22,13 @@ class MenuOrderQueryTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $menu = Menu::factory()->create(['company_id' => $company->id]);
 
-        $pending = MenuOrder::forceCreate([
+        $pending = MenuOrder::factory()->create([
             'menu_id' => $menu->id,
             'status' => 'pending',
             'quantity' => 1,
         ]);
 
-        MenuOrder::forceCreate([
+        MenuOrder::factory()->create([
             'menu_id' => $menu->id,
             'status' => 'completed',
             'quantity' => 1,
@@ -64,7 +64,7 @@ class MenuOrderQueryTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $menu = Menu::factory()->create(['company_id' => $company->id]);
 
-        $order1 = MenuOrder::forceCreate([
+        $order1 = MenuOrder::factory()->create([
             'menu_id' => $menu->id,
             'status' => 'pending',
             'quantity' => 1,
@@ -72,7 +72,7 @@ class MenuOrderQueryTest extends TestCase
             'updated_at' => Carbon::parse('2024-01-01'),
         ]);
 
-        $order2 = MenuOrder::forceCreate([
+        $order2 = MenuOrder::factory()->create([
             'menu_id' => $menu->id,
             'status' => 'completed',
             'quantity' => 1,
@@ -80,7 +80,7 @@ class MenuOrderQueryTest extends TestCase
             'updated_at' => Carbon::parse('2024-01-02'),
         ]);
 
-        $order3 = MenuOrder::forceCreate([
+        $order3 = MenuOrder::factory()->create([
             'menu_id' => $menu->id,
             'status' => 'pending',
             'quantity' => 1,
