@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\MeasurementUnit;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
@@ -273,6 +274,186 @@ class QuantityAdjustmentTest extends TestCase
             'location_id' => $to->id,
             'type' => 'movement',
             'reason' => $reason,
+        ]);
+    }
+
+    public function test_it_converts_units_when_adjusting_ingredient_quantity(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $locationType = LocationType::factory()->create();
+        $location = Location::factory()->create([
+            'company_id' => $company->id,
+            'location_type_id' => $locationType->id,
+        ]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+        $category->locationTypes()->attach($locationType->id, ['shelf_life_hours' => 24]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+            'unit' => MeasurementUnit::KILOGRAM,
+        ]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 1]]);
+
+        $this->actingAs($user)
+            ->postJson("/api/ingredients/{$ingredient->id}/add-quantity", [
+                'location_id' => $location->id,
+                'quantity' => 500,
+                'unit' => MeasurementUnit::GRAM->value,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'quantity' => 1.5,
+        ]);
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'company_id' => $company->id,
+            'quantity' => 0.5,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/api/ingredients/{$ingredient->id}/remove-quantity", [
+                'location_id' => $location->id,
+                'quantity' => 200,
+                'unit' => MeasurementUnit::GRAM->value,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'quantity' => 1.3,
+        ]);
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'company_id' => $company->id,
+            'quantity' => 0.3,
+        ]);
+    }
+
+    public function test_it_converts_units_when_moving_ingredient_quantity_between_locations(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $locationType = LocationType::factory()->create();
+        $from = Location::factory()->create(['company_id' => $company->id, 'location_type_id' => $locationType->id]);
+        $to = Location::factory()->create(['company_id' => $company->id, 'location_type_id' => $locationType->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+        $category->locationTypes()->attach($locationType->id, ['shelf_life_hours' => 24]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+            'unit' => MeasurementUnit::KILOGRAM,
+        ]);
+        $ingredient->locations()->syncWithoutDetaching([$from->id => ['quantity' => 1]]);
+        app(\App\Services\PerishableService::class)->add($ingredient->id, $from->id, $company->id, 1);
+
+        $this->actingAs($user)
+            ->postJson("/api/ingredients/{$ingredient->id}/move-quantity", [
+                'from_location_id' => $from->id,
+                'to_location_id' => $to->id,
+                'quantity' => 250,
+                'unit' => MeasurementUnit::GRAM->value,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $from->id,
+            'quantity' => 0.75,
+        ]);
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $to->id,
+            'quantity' => 0.25,
+        ]);
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $from->id,
+            'quantity' => 0.75,
+        ]);
+        $this->assertDatabaseHas('perishables', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $to->id,
+            'quantity' => 0.25,
+        ]);
+    }
+
+    public function test_it_converts_units_when_adjusting_preparation_quantity(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $location = Location::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'unit' => MeasurementUnit::LITRE,
+        ]);
+        $preparation->locations()->syncWithoutDetaching([$location->id => ['quantity' => 1]]);
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/add-quantity", [
+                'location_id' => $location->id,
+                'quantity' => 500,
+                'unit' => MeasurementUnit::MILLILITRE->value,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $location->id,
+            'quantity' => 1.5,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/remove-quantity", [
+                'location_id' => $location->id,
+                'quantity' => 250,
+                'unit' => MeasurementUnit::MILLILITRE->value,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $location->id,
+            'quantity' => 1.25,
+        ]);
+    }
+
+    public function test_it_converts_units_when_moving_preparation_quantity_between_locations(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $from = Location::factory()->create(['company_id' => $company->id]);
+        $to = Location::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'unit' => MeasurementUnit::LITRE,
+        ]);
+        $preparation->locations()->syncWithoutDetaching([$from->id => ['quantity' => 1]]);
+
+        $this->actingAs($user)
+            ->postJson("/api/preparations/{$preparation->id}/move-quantity", [
+                'from_location_id' => $from->id,
+                'to_location_id' => $to->id,
+                'quantity' => 250,
+                'unit' => MeasurementUnit::MILLILITRE->value,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $from->id,
+            'quantity' => 0.75,
+        ]);
+        $this->assertDatabaseHas('location_preparation', [
+            'preparation_id' => $preparation->id,
+            'location_id' => $to->id,
+            'quantity' => 0.25,
         ]);
     }
 }

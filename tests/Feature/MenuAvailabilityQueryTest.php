@@ -19,7 +19,7 @@ class MenuAvailabilityQueryTest extends TestCase
     public function test_menu_available_field_reflects_stock_for_requested_quantity(): void
     {
         $user = User::factory()->create();
-        $ingredient = Ingredient::factory()->for($user->company)->create();
+        $ingredient = Ingredient::factory()->for($user->company)->create(['unit' => 'unit']);
         $location = Location::factory()->for($user->company)->create();
         $ingredient->locations()->sync([$location->id => ['quantity' => 5]]);
 
@@ -50,12 +50,44 @@ class MenuAvailabilityQueryTest extends TestCase
             ->assertJsonPath('data.menu.available', false);
     }
 
+    public function test_menu_available_handles_unit_conversion(): void
+    {
+        $user = User::factory()->create();
+        $ingredient = Ingredient::factory()->for($user->company)->create([
+            'unit' => \App\Enums\MeasurementUnit::KILOGRAM,
+        ]);
+        $location = Location::factory()->for($user->company)->create();
+        $ingredient->locations()->sync([$location->id => ['quantity' => 16.6]]);
+
+        $menu = Menu::factory()->for($user->company)->create();
+        MenuItem::create([
+            'menu_id' => $menu->id,
+            'entity_id' => $ingredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 17,
+            'unit' => \App\Enums\MeasurementUnit::GRAM->value,
+        ]);
+
+        $query = /** @lang GraphQL */ '
+            query ($id: ID!, $quantity: Int!) {
+                menu(id: $id) {
+                    available(quantity: $quantity)
+                }
+            }
+        ';
+
+        $this->actingAs($user)
+            ->graphQL($query, ['id' => $menu->id, 'quantity' => 1])
+            ->assertJsonPath('data.menu.available', true);
+    }
+
     public function test_menus_query_filters_by_availability(): void
     {
         $user = User::factory()->create();
         $location = Location::factory()->for($user->company)->create();
 
-        $ingredientAvailable = Ingredient::factory()->for($user->company)->create();
+        $ingredientAvailable = Ingredient::factory()->for($user->company)->create(['unit' => 'unit']);
         $ingredientAvailable->locations()->sync([$location->id => ['quantity' => 5]]);
         $menuAvailable = Menu::factory()->for($user->company)->create();
         MenuItem::create([
@@ -67,7 +99,7 @@ class MenuAvailabilityQueryTest extends TestCase
             'unit' => 'unit',
         ]);
 
-        $ingredientUnavailable = Ingredient::factory()->for($user->company)->create();
+        $ingredientUnavailable = Ingredient::factory()->for($user->company)->create(['unit' => 'unit']);
         $ingredientUnavailable->locations()->sync([$location->id => ['quantity' => 0]]);
         $menuUnavailable = Menu::factory()->for($user->company)->create();
         MenuItem::create([

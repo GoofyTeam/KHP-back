@@ -34,7 +34,7 @@ class MenuControllerTest extends TestCase
         $company = Company::factory()->create(['auto_complete_menu_orders' => true]);
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'unit']);
 
         $ingredient->locations()->sync([$location->id => ['quantity' => 10]]);
 
@@ -83,7 +83,7 @@ class MenuControllerTest extends TestCase
         $company = Company::factory()->create(['auto_complete_menu_orders' => false]);
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'unit']);
 
         $ingredient->locations()->sync([$location->id => ['quantity' => 5]]);
 
@@ -128,7 +128,7 @@ class MenuControllerTest extends TestCase
         $company = Company::factory()->create(['auto_complete_menu_orders' => true]);
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'unit']);
 
         $ingredient->locations()->sync([$location->id => ['quantity' => 10]]);
 
@@ -261,7 +261,7 @@ class MenuControllerTest extends TestCase
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'unit']);
 
         $location = Location::factory()->create(['company_id' => $company->id]);
 
@@ -393,7 +393,10 @@ class MenuControllerTest extends TestCase
         $company = Company::factory()->create(['auto_complete_menu_orders' => true]);
         $user = User::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create(['company_id' => $company->id]);
-        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'unit' => 'unit',
+        ]);
 
         $ingredient->locations()->sync([$location->id => ['quantity' => 1]]);
 

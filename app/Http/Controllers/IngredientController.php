@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Services\ImageService;
 use App\Services\PerishableService;
 use App\Services\StockService;
+use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -419,8 +420,13 @@ class IngredientController extends Controller
     /**
      * Cas métier : Ajout de stock d'un ingrédient sur un emplacement.
      */
-    public function addQuantity(Request $request, Ingredient $ingredient, StockService $stockService, PerishableService $perishableService): JsonResponse
-    {
+    public function addQuantity(
+        Request $request,
+        Ingredient $ingredient,
+        StockService $stockService,
+        PerishableService $perishableService,
+        UnitConversionService $unitConversionService
+    ): JsonResponse {
         $user = $request->user();
 
         if ($ingredient->company_id !== $user->company_id) {
@@ -432,13 +438,20 @@ class IngredientController extends Controller
         $validated = $request->validate([
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
         ]);
 
         $locationId = (int) $validated['location_id'];
         $quantity = (float) $validated['quantity'];
+        $unit = isset($validated['unit']) ? MeasurementUnit::from($validated['unit']) : null;
 
-        $stockService->add($ingredient, $locationId, $user->company_id, $quantity);
-        $perishableService->add($ingredient->id, $locationId, $user->company_id, $quantity);
+        $stockService->add($ingredient, $locationId, $user->company_id, $quantity, null, $unit);
+
+        $converted = $unit && $unit !== $ingredient->unit
+            ? $unitConversionService->convert($quantity, $unit, $ingredient->unit)
+            : $quantity;
+
+        $perishableService->add($ingredient->id, $locationId, $user->company_id, $converted);
 
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',
@@ -449,8 +462,13 @@ class IngredientController extends Controller
     /**
      * Cas métier : Retrait de stock d'un ingrédient sur un emplacement.
      */
-    public function removeQuantity(Request $request, Ingredient $ingredient, StockService $stockService, PerishableService $perishableService): JsonResponse
-    {
+    public function removeQuantity(
+        Request $request,
+        Ingredient $ingredient,
+        StockService $stockService,
+        PerishableService $perishableService,
+        UnitConversionService $unitConversionService
+    ): JsonResponse {
         $user = $request->user();
 
         if ($ingredient->company_id !== $user->company_id) {
@@ -462,20 +480,26 @@ class IngredientController extends Controller
         $validated = $request->validate([
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
         ]);
 
         $locationId = (int) $validated['location_id'];
         $quantity = (float) $validated['quantity'];
+        $unit = isset($validated['unit']) ? MeasurementUnit::from($validated['unit']) : null;
 
         try {
-            $stockService->remove($ingredient, $locationId, $user->company_id, $quantity);
+            $stockService->remove($ingredient, $locationId, $user->company_id, $quantity, null, $unit);
         } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'message' => 'Quantity cannot be negative',
             ], 422);
         }
 
-        $perishableService->remove($ingredient->id, $locationId, $user->company_id, $quantity);
+        $converted = $unit && $unit !== $ingredient->unit
+            ? $unitConversionService->convert($quantity, $unit, $ingredient->unit)
+            : $quantity;
+
+        $perishableService->remove($ingredient->id, $locationId, $user->company_id, $converted);
 
         return response()->json([
             'message' => 'Ingredient quantity updated successfully',
@@ -500,7 +524,10 @@ class IngredientController extends Controller
             'from_location_id' => ['required', 'integer', 'exists:locations,id'],
             'to_location_id' => ['required', 'integer', 'different:from_location_id', 'exists:locations,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
         ]);
+
+        $unit = isset($validated['unit']) ? MeasurementUnit::from($validated['unit']) : null;
 
         try {
             $stockService->move(
@@ -508,7 +535,8 @@ class IngredientController extends Controller
                 (int) $validated['from_location_id'],
                 (int) $validated['to_location_id'],
                 $user->company_id,
-                (float) $validated['quantity']
+                (float) $validated['quantity'],
+                $unit
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json([
