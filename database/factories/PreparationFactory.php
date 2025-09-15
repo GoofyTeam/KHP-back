@@ -24,6 +24,8 @@ class PreparationFactory extends Factory
             'name' => fake()->unique()->word(),
             'unit' => fake()->randomElement(MeasurementUnit::values()),
             'company_id' => Company::factory(),
+            'base_quantity' => 1,
+            'base_unit' => fake()->randomElement(MeasurementUnit::values()),
         ];
     }
 

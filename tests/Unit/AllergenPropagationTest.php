@@ -37,6 +37,9 @@ class AllergenPropagationTest extends TestCase
             'preparation_id' => $preparation->id,
             'entity_id' => $ingredientA->id,
             'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
         ]);
 
         $menu = Menu::factory()->create(['company_id' => $company->id]);
