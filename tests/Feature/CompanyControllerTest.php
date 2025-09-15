@@ -2,17 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
+use App\Models\User;
+use App\Models\Company;
+use Illuminate\Support\Str;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /**
  * Class CompanyControllerTest
  *
  * Use cases couverts :
- * - Mettre à jour les options de l'entreprise
+ * - Mettre à jour la langue Open Food Facts de l'entreprise
  */
 class CompanyControllerTest extends TestCase
 {

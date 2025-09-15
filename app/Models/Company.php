@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * @property bool $auto_complete_menu_orders
  * @property string $open_food_facts_language
  * @property string $public_menu_card_url
  * @property bool $show_out_of_stock_menus_on_card
@@ -19,7 +18,6 @@ class Company extends Model
 
     protected $fillable = [
         'name',
-        'auto_complete_menu_orders',
         'open_food_facts_language',
         'public_menu_card_url',
         'show_out_of_stock_menus_on_card',
@@ -27,7 +25,6 @@ class Company extends Model
     ];
 
     protected $casts = [
-        'auto_complete_menu_orders' => 'bool',
         'open_food_facts_language' => 'string',
         'public_menu_card_url' => 'string',
         'show_out_of_stock_menus_on_card' => 'bool',
@@ -127,7 +124,7 @@ class Company extends Model
     {
         static::creating(function ($company) {
             if (! $company->public_menu_card_url) {
-                $company->public_menu_card_url = 'temp-'.Str::uuid();
+                $company->public_menu_card_url = 'temp-' . Str::uuid();
             }
         });
 
@@ -158,7 +155,7 @@ class Company extends Model
             ]);
 
             // Créer les raisons de perte par défaut
-            $company->lossReasons()->createMany(array_map(fn ($name) => ['name' => $name], [
+            $company->lossReasons()->createMany(array_map(fn($name) => ['name' => $name], [
                 'Expired',
                 'Broken',
                 'Spilled',
@@ -218,8 +215,6 @@ class Company extends Model
                     ]
                 );
             }
-
-            // Removed: SpecialQuickAccess creation, handled as QuickAccess index 5
         });
     }
 }
