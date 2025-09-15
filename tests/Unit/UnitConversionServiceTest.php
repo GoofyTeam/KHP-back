@@ -4,10 +4,13 @@ namespace Tests\Unit;
 
 use App\Enums\MeasurementUnit;
 use App\Services\UnitConversionService;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class UnitConversionServiceTest extends TestCase
 {
+    private const DELTA = 0.0001;
+
     private UnitConversionService $service;
 
     protected function setUp(): void
@@ -17,13 +20,11 @@ class UnitConversionServiceTest extends TestCase
         $this->service = new UnitConversionService;
     }
 
-    /**
-     * @dataProvider massUnits
-     */
+    #[DataProvider('massUnits')]
     public function test_converts_mass_units_with_gram_reference(MeasurementUnit $unit, float $grams): void
     {
-        $this->assertEqualsWithDelta($grams, $this->service->convert(1, $unit, MeasurementUnit::GRAM), 0.0001);
-        $this->assertEqualsWithDelta(1, $this->service->convert($grams, MeasurementUnit::GRAM, $unit), 0.0001);
+        $this->assertEqualsWithDelta($grams, $this->service->convert(1, $unit, MeasurementUnit::GRAM), self::DELTA);
+        $this->assertEqualsWithDelta(1, $this->service->convert($grams, MeasurementUnit::GRAM, $unit), self::DELTA);
     }
 
     public static function massUnits(): array
@@ -39,13 +40,11 @@ class UnitConversionServiceTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider volumeUnits
-     */
+    #[DataProvider('volumeUnits')]
     public function test_converts_volume_units_with_litre_reference(MeasurementUnit $unit, float $litres): void
     {
-        $this->assertEqualsWithDelta($litres, $this->service->convert(1, $unit, MeasurementUnit::LITRE), 0.0001);
-        $this->assertEqualsWithDelta(1, $this->service->convert($litres, MeasurementUnit::LITRE, $unit), 0.0001);
+        $this->assertEqualsWithDelta($litres, $this->service->convert(1, $unit, MeasurementUnit::LITRE), self::DELTA);
+        $this->assertEqualsWithDelta(1, $this->service->convert($litres, MeasurementUnit::LITRE, $unit), self::DELTA);
     }
 
     public static function volumeUnits(): array
