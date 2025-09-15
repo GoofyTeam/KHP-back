@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\MenuServiceType;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -37,6 +38,8 @@ class MenuControllerTest extends TestCase
             ->postJson('/api/menus', [
                 'name' => 'Incremental Menu',
                 'type' => 'plat',
+                'service_type' => MenuServiceType::DIRECT->value,
+                'is_returnable' => false,
                 'price' => 9.0,
                 'category_ids' => [],
                 'items' => [
@@ -52,6 +55,8 @@ class MenuControllerTest extends TestCase
             ->assertStatus(201);
 
         $menu = Menu::where('name', 'Incremental Menu')->first();
+        $this->assertSame(MenuServiceType::DIRECT, $menu->service_type);
+        $this->assertFalse($menu->is_returnable);
 
         // Remplacement par deux ingrédients
         $this->actingAs($user)
@@ -106,6 +111,8 @@ class MenuControllerTest extends TestCase
             ->postJson('/api/menus', [
                 'name' => 'Quantity Menu',
                 'type' => 'plat',
+                'service_type' => MenuServiceType::PREP->value,
+                'is_returnable' => true,
                 'price' => 9.0,
                 'category_ids' => [],
                 'items' => [
@@ -121,6 +128,8 @@ class MenuControllerTest extends TestCase
             ->assertStatus(201);
 
         $menu = Menu::where('name', 'Quantity Menu')->first();
+        $this->assertSame(MenuServiceType::PREP, $menu->service_type);
+        $this->assertTrue($menu->is_returnable);
 
         $this->actingAs($user)
             ->putJson('/api/menus/'.$menu->id, [
@@ -153,6 +162,8 @@ class MenuControllerTest extends TestCase
             ->postJson('/api/menus', [
                 'name' => 'Cat Menu',
                 'type' => 'plat',
+                'service_type' => MenuServiceType::DIRECT->value,
+                'is_returnable' => false,
                 'price' => 9.0,
                 'category_ids' => [$categoryA->id],
                 'items' => [
@@ -199,6 +210,8 @@ class MenuControllerTest extends TestCase
         $payload = [
             'name' => 'Dup Menu',
             'type' => 'plat',
+            'service_type' => MenuServiceType::DIRECT->value,
+            'is_returnable' => false,
             'price' => 9.0,
             'category_ids' => [],
             'items' => [
