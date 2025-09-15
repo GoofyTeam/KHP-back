@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property bool $auto_complete_menu_orders
  * @property string $open_food_facts_language
  */
 class Company extends Model
@@ -15,12 +14,10 @@ class Company extends Model
 
     protected $fillable = [
         'name',
-        'auto_complete_menu_orders',
         'open_food_facts_language',
     ];
 
     protected $casts = [
-        'auto_complete_menu_orders' => 'bool',
         'open_food_facts_language' => 'string',
     ];
 
@@ -88,8 +85,6 @@ class Company extends Model
     {
         return $this->hasMany(QuickAccess::class);
     }
-
-    // Removed: specialQuickAccess relation (merged into QuickAccess index 5)
 
     protected static function booted()
     {
@@ -175,8 +170,6 @@ class Company extends Model
                     ]
                 );
             }
-
-            // Removed: SpecialQuickAccess creation, handled as QuickAccess index 5
         });
     }
 }
