@@ -169,18 +169,22 @@ class PreparationController extends Controller
                     ->ignore($id),
             ],
             'unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
+            'base_quantity' => ['sometimes', 'numeric', 'min:0'],
+            'base_unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
 
             // Image (upload OU URL) - optionnels
             'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
             'image_url' => ['sometimes', 'nullable', 'url'],
 
-            'entities_to_add' => ['sometimes', 'array'],
-            'entities_to_add.*.id' => ['required_with:entities_to_add', 'integer'],
-            'entities_to_add.*.type' => ['required_with:entities_to_add', 'string', 'in:ingredient,preparation'],
-
-            'entities_to_remove' => ['sometimes', 'array'],
-            'entities_to_remove.*.id' => ['required_with:entities_to_remove', 'integer'],
-            'entities_to_remove.*.type' => ['required_with:entities_to_remove', 'string', 'in:ingredient,preparation'],
+            'entities' => ['sometimes', 'array', 'min:1'],
+            'entities.*.id' => ['required_with:entities', 'integer'],
+            'entities.*.type' => ['required_with:entities', 'string', 'in:ingredient,preparation'],
+            'entities.*.quantity' => ['required_with:entities', 'numeric', 'min:0'],
+            'entities.*.unit' => ['required_with:entities', 'string', Rule::in(MeasurementUnit::values())],
+            'entities.*.location_id' => [
+                'required_with:entities',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'quantities' => ['sometimes', 'array'],
             'quantities.*.quantity' => ['required_with:quantities', 'numeric', 'min:0'],
@@ -210,6 +214,12 @@ class PreparationController extends Controller
         if (array_key_exists('unit', $validated)) {
             $preparation->unit = $validated['unit'];
         }
+        if (array_key_exists('base_quantity', $validated)) {
+            $preparation->base_quantity = $validated['base_quantity'];
+        }
+        if (array_key_exists('base_unit', $validated)) {
+            $preparation->base_unit = $validated['base_unit'];
+        }
 
         // MAJ de l'image (upload ou URL distante)
         if ($request->hasFile('image')) {
@@ -219,45 +229,61 @@ class PreparationController extends Controller
         }
         $preparation->save();
 
-        // Suppressions demandées
-        if (! empty($validated['entities_to_remove'] ?? [])) {
-            foreach ($validated['entities_to_remove'] as $entity) {
-                $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
-                // Vérifier que l'entité appartient à la même entreprise
-                $entityClass::where('id', $entity['id'])
-                    ->where('company_id', $user->company_id)
-                    ->firstOrFail();
+        if (! empty($validated['entities'] ?? [])) {
+            $incoming = [];
 
-                PreparationEntity::where('preparation_id', $preparation->id)
-                    ->where('entity_id', $entity['id'])
-                    ->where('entity_type', $entityClass) // précision du type
-                    ->delete();
-            }
-        }
-
-        // Ajouts demandés
-        if (! empty($validated['entities_to_add'] ?? [])) {
-            // Récupère les couples (id,type) déjà présents
-            $existing = $preparation->entities()
-                ->select('entity_id', 'entity_type')
-                ->get()
-                ->map(fn ($e) => $e['entity_type'].'#'.$e['entity_id'])
-                ->toArray();
-
-            foreach ($validated['entities_to_add'] as $entity) {
+            foreach ($validated['entities'] as $index => $entity) {
                 $entityClass = $entity['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
                 $key = $entityClass.'#'.$entity['id'];
 
-                // Vérifier que l'entité appartient à la même entreprise
+                if (isset($incoming[$key])) {
+                    throw ValidationException::withMessages([
+                        "entities.$index" => ['Chaque entité ne peut être définie qu\'une seule fois.'],
+                    ]);
+                }
+
                 $entityClass::where('id', $entity['id'])
                     ->where('company_id', $user->company_id)
                     ->firstOrFail();
 
-                if (! in_array($key, $existing, true)) {
-                    PreparationEntity::create([
+                Location::where('id', $entity['location_id'])
+                    ->where('company_id', $user->company_id)
+                    ->firstOrFail();
+
+                $incoming[$key] = [
+                    'entity_id' => (int) $entity['id'],
+                    'entity_type' => $entityClass,
+                    'location_id' => (int) $entity['location_id'],
+                    'quantity' => (float) $entity['quantity'],
+                    'unit' => $entity['unit'],
+                ];
+            }
+
+            /** @var \Illuminate\Support\Collection<int, PreparationEntity> $entityCollection */
+            $entityCollection = $preparation->entities()->get();
+
+            /** @var \Illuminate\Support\Collection<string, PreparationEntity> $existingEntities */
+            $existingEntities = $entityCollection->keyBy(
+                fn (PreparationEntity $entity): string => $entity->entity_type.'#'.$entity->entity_id
+            );
+
+            foreach ($existingEntities as $key => $existing) {
+                if (! array_key_exists($key, $incoming)) {
+                    $existing->delete();
+                }
+            }
+
+            foreach ($incoming as $key => $data) {
+                if ($existingEntities->has($key)) {
+                    $existing = $existingEntities->get($key);
+                    $existing->update([
+                        'location_id' => $data['location_id'],
+                        'quantity' => $data['quantity'],
+                        'unit' => $data['unit'],
+                    ]);
+                } else {
+                    PreparationEntity::create($data + [
                         'preparation_id' => $preparation->id,
-                        'entity_id' => $entity['id'],
-                        'entity_type' => $entityClass,
                     ]);
                 }
             }

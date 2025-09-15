@@ -55,6 +55,90 @@ class PreparationControllerTest extends TestCase
         ]);
     }
 
+    public function test_update_syncs_entities_from_single_payload(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $category = Category::factory()->create(['company_id' => $company->id]);
+        $ingredientA = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'kg', 'base_unit' => 'kg']);
+        $ingredientB = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'kg', 'base_unit' => 'kg']);
+        $ingredientC = Ingredient::factory()->create(['company_id' => $company->id, 'unit' => 'kg', 'base_unit' => 'kg']);
+        $locationA = Location::factory()->create(['company_id' => $company->id]);
+        $locationB = Location::factory()->create(['company_id' => $company->id]);
+        $locationC = Location::factory()->create(['company_id' => $company->id]);
+
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+            'unit' => 'kg',
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+        ]);
+
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ingredientA->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $locationA->id,
+            'quantity' => 1,
+            'unit' => 'kg',
+        ]);
+
+        PreparationEntity::create([
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ingredientB->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $locationB->id,
+            'quantity' => 2,
+            'unit' => 'kg',
+        ]);
+
+        $payload = [
+            'entities' => [
+                [
+                    'id' => $ingredientA->id,
+                    'type' => 'ingredient',
+                    'quantity' => 1.5,
+                    'unit' => 'kg',
+                    'location_id' => $locationC->id,
+                ],
+                [
+                    'id' => $ingredientC->id,
+                    'type' => 'ingredient',
+                    'quantity' => 0.75,
+                    'unit' => 'kg',
+                    'location_id' => $locationA->id,
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$preparation->id}", $payload)
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ingredientA->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $locationC->id,
+            'quantity' => 1.5,
+        ]);
+
+        $this->assertDatabaseHas('preparation_entities', [
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ingredientC->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $locationA->id,
+            'quantity' => 0.75,
+        ]);
+
+        $this->assertDatabaseMissing('preparation_entities', [
+            'preparation_id' => $preparation->id,
+            'entity_id' => $ingredientB->id,
+            'entity_type' => Ingredient::class,
+        ]);
+    }
+
     public function test_prepare_consumes_components_and_adds_stock(): void
     {
         $company = Company::factory()->create();
