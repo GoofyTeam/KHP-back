@@ -22,11 +22,14 @@ class Preparation extends Model
         'category_id',
         'name',
         'unit',
+        'base_quantity',
+        'base_unit',
         'image_url',
     ];
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
+        'base_unit' => MeasurementUnit::class,
     ];
 
     /**

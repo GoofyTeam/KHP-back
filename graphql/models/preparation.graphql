@@ -8,6 +8,12 @@ type Preparation {
     "Unit of measurement for the preparation."
     unit: UnitEnum!
 
+    "Quantity for one unit of the preparation."
+    base_quantity: Float!
+
+    "Unit for the base quantity of the preparation."
+    base_unit: UnitEnum!
+
     "Allergens contained in this preparation."
     allergens: [AllergenEnum!]!
 
@@ -27,6 +33,11 @@ type Preparation {
     quantities: [PreparationQuantity!]!
         @field(
             resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@quantityByLocation"
+        )
+
+    preparable_quantity: PreparationPreparableQuantity!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\PreparationResolver@preparableQuantity"
         )
 
     image_url: String
@@ -58,6 +69,14 @@ type PreparationQuantity {
 
     "La localisation de ce stock."
     location: Location!
+}
+
+type PreparationPreparableQuantity {
+    "Quantité maximale préparable avec le stock actuel."
+    quantity: Float!
+
+    "Unité associée à la préparation."
+    unit: UnitEnum!
 }
 
 enum PreparationOrderByField {
