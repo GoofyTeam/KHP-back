@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
+use App\Enums\MenuServiceType;
 use App\Services\OpenFoodFactsService;
 use GraphQL\Type\Definition\EnumType;
 use Illuminate\Support\ServiceProvider;
@@ -42,6 +43,14 @@ class AppServiceProvider extends ServiceProvider
             'values' => collect(Allergen::cases())
                 ->mapWithKeys(fn ($c) => [
                     $c->value => ['value' => $c->value],
+                ])->all(),
+        ]));
+
+        $typeRegistry->register(new EnumType([
+            'name' => 'MenuServiceTypeEnum',
+            'values' => collect(MenuServiceType::cases())
+                ->mapWithKeys(fn ($c) => [
+                    $c->value => ['value' => $c],
                 ])->all(),
         ]));
     }

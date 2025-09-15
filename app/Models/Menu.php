@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\MenuServiceType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,12 +23,16 @@ class Menu extends Model
         'description',
         'image_url',
         'is_a_la_carte',
+        'service_type',
+        'is_returnable',
         'type',
         'price',
     ];
 
     protected $casts = [
         'is_a_la_carte' => 'boolean',
+        'service_type' => MenuServiceType::class,
+        'is_returnable' => 'boolean',
         'price' => 'float',
     ];
 
@@ -108,6 +113,22 @@ class Menu extends Model
         $types = is_array($types) ? $types : [$types];
 
         return $query->whereIn('type', $types);
+    }
+
+    public function scopeServiceType($query, $serviceTypes)
+    {
+        if (empty($serviceTypes)) {
+            return $query;
+        }
+
+        $serviceTypes = is_array($serviceTypes) ? $serviceTypes : [$serviceTypes];
+
+        $serviceTypes = array_map(
+            fn ($serviceType) => $serviceType instanceof MenuServiceType ? $serviceType->value : $serviceType,
+            $serviceTypes
+        );
+
+        return $query->whereIn('service_type', $serviceTypes);
     }
 
     public function scopePriceBetween($query, $prices)
