@@ -1,0 +1,31 @@
+type Room {
+    "Unique primary key."
+    id: ID!
+
+    name: String!
+    code: String!
+    company: Company! @belongsTo
+    tables: [Table!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    rooms(
+        search: String @scope(name: "search")
+        code: String @where(key: "code")
+        orderBy: [OrderByClause!] @orderBy(columnsEnum: RoomOrderByField)
+    ): [Room!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+    room(
+        id: ID @eq @rules(apply: ["prohibits:code", "required_without:code"])
+        code: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
+    ): Room @find(scopes: ["forCompany"])
+}
+
+enum RoomOrderByField {
+    ID @enum(value: "id")
+    NAME @enum(value: "name")
+    CODE @enum(value: "code")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}
