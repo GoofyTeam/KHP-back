@@ -12,6 +12,8 @@ use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PreparationController;
 use App\Http\Controllers\QuickAccessController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\TableController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -123,6 +125,17 @@ Route::prefix('menu-categories')->name('menu-categories.')->group(function () {
     Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
     Route::put('/{id}', [MenuCategoryController::class, 'update'])->name('update');
     Route::delete('/{id}', [MenuCategoryController::class, 'destroy'])->name('destroy');
+});
+
+// Groupe de routes pour les salles et tables
+Route::prefix('rooms')->name('rooms.')->group(function () {
+    Route::post('/', [RoomController::class, 'store'])->name('store');
+    Route::put('/{id}', [RoomController::class, 'update'])->name('update');
+    Route::delete('/{id}', [RoomController::class, 'destroy'])->name('destroy');
+
+    Route::post('/{room}/tables', [TableController::class, 'store'])->name('tables.store');
+    Route::put('/{room}/tables/{table}', [TableController::class, 'update'])->name('tables.update');
+    Route::delete('/{room}/tables/{table}', [TableController::class, 'destroy'])->name('tables.destroy');
 });
 // Groupe de routes pour les Quick Access
 Route::prefix('quick-access')->name('quick-access.')->group(function () {
