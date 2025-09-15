@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasSearchScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Table extends Model
 {
     /** @use HasFactory<\Database\Factories\TableFactory> */
-    use HasFactory;
+    use HasFactory, HasSearchScope;
 
     protected $fillable = [
         'label',
@@ -17,6 +18,8 @@ class Table extends Model
         'room_id',
         'company_id',
     ];
+
+    protected string $searchColumn = 'label';
 
     public function room(): BelongsTo
     {
@@ -26,15 +29,6 @@ class Table extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
-    }
-
-    public function scopeSearch($query, ?string $search)
-    {
-        if (empty($search)) {
-            return $query;
-        }
-
-        return $query->where('label', 'like', '%'.$search.'%');
     }
 
     public function scopeForCompany($query)

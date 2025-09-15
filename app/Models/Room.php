@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasSearchScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Room extends Model
 {
     /** @use HasFactory<\Database\Factories\RoomFactory> */
-    use HasFactory;
+    use HasFactory, HasSearchScope;
 
     protected $fillable = [
         'name',
@@ -26,15 +27,6 @@ class Room extends Model
     public function tables(): HasMany
     {
         return $this->hasMany(Table::class);
-    }
-
-    public function scopeSearch($query, ?string $search)
-    {
-        if (empty($search)) {
-            return $query;
-        }
-
-        return $query->where('name', 'like', '%'.$search.'%');
     }
 
     public function scopeForCompany($query)

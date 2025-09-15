@@ -43,7 +43,7 @@ class RoomQueryTest extends TestCase
             }
         }';
 
-        $response = $this->actingAs($user)->graphQL($query, ['search' => 'Blue']);
+        $response = $this->actingAs($user)->graphQL($query, ['search' => 'blu']);
 
         $response->assertJsonCount(1, 'data.rooms.data');
         $response->assertJsonFragment(['name' => 'Blue Room']);

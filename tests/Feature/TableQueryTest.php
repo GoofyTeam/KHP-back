@@ -42,7 +42,7 @@ class TableQueryTest extends TestCase
             tables(search: $search) { data { label } }
         }';
 
-        $response = $this->actingAs($user)->graphQL($query, ['search' => 'T1']);
+        $response = $this->actingAs($user)->graphQL($query, ['search' => 't1']);
 
         $response->assertJsonCount(1, 'data.tables.data');
         $response->assertJsonFragment(['label' => 'T1']);
