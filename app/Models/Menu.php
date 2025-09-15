@@ -46,11 +46,6 @@ class Menu extends Model
         return $this->belongsToMany(MenuCategory::class, 'menu_category_menu');
     }
 
-    public function orders(): HasMany
-    {
-        return $this->hasMany(MenuOrder::class);
-    }
-
     public function getAllergensAttribute(): array
     {
         $this->loadMissing('items.entity');
