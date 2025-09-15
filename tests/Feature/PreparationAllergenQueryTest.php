@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\Allergen;
+use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Models\User;
@@ -19,6 +21,7 @@ class PreparationAllergenQueryTest extends TestCase
     public function test_it_filters_preparations_by_any_of_multiple_allergens(): void
     {
         $user = User::factory()->create();
+        $location = Location::factory()->for($user->company)->create();
 
         $milk = Ingredient::factory()->for($user->company)->create([
             'allergens' => [Allergen::MILK->value],
@@ -37,6 +40,9 @@ class PreparationAllergenQueryTest extends TestCase
             'preparation_id' => $prepMilk->id,
             'entity_id' => $milk->id,
             'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
         ]);
 
         $prepGluten = Preparation::factory()->for($user->company)->create();
@@ -44,6 +50,9 @@ class PreparationAllergenQueryTest extends TestCase
             'preparation_id' => $prepGluten->id,
             'entity_id' => $gluten->id,
             'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
         ]);
 
         $prepBoth = Preparation::factory()->for($user->company)->create();
@@ -51,11 +60,17 @@ class PreparationAllergenQueryTest extends TestCase
             'preparation_id' => $prepBoth->id,
             'entity_id' => $milk->id,
             'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
         ]);
         PreparationEntity::create([
             'preparation_id' => $prepBoth->id,
             'entity_id' => $gluten->id,
             'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
         ]);
 
         $prepEgg = Preparation::factory()->for($user->company)->create();
@@ -63,6 +78,9 @@ class PreparationAllergenQueryTest extends TestCase
             'preparation_id' => $prepEgg->id,
             'entity_id' => $eggs->id,
             'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
         ]);
 
         $query = /* @lang GraphQL */ '

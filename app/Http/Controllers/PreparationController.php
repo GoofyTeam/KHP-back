@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\MeasurementUnit;
 use App\Models\Ingredient;
 use App\Models\Location;
-use App\Models\LocationType;
 use App\Models\Preparation;
 use App\Models\PreparationEntity;
 use App\Services\ImageService;
 use App\Services\PerishableService;
 use App\Services\StockService;
+use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,14 +56,22 @@ class PreparationController extends Controller
                 }),
             ],
             'unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
+            'base_quantity' => ['required', 'numeric', 'min:0'],
+            'base_unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
 
             // Image (upload OU URL) - optionnels
             'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
             'image_url' => ['sometimes', 'nullable', 'url'],
 
-            'entities' => ['required', 'array', 'min:2'],
+            'entities' => ['required', 'array', 'min:1'],
             'entities.*.id' => ['required', 'integer'],
             'entities.*.type' => ['required', 'string', 'in:ingredient,preparation'],
+            'entities.*.quantity' => ['required', 'numeric', 'min:0'],
+            'entities.*.unit' => ['required', 'string', Rule::in(MeasurementUnit::values())],
+            'entities.*.location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
 
             'category_id' => [
                 'required',
@@ -93,6 +101,8 @@ class PreparationController extends Controller
             'company_id' => $user->company_id,
             'name' => $validated['name'],
             'unit' => $validated['unit'],
+            'base_quantity' => $validated['base_quantity'],
+            'base_unit' => $validated['base_unit'],
             'image_url' => $storedPath, // peut rester null
             'category_id' => $validated['category_id'],
         ];
@@ -108,10 +118,18 @@ class PreparationController extends Controller
                 ->where('company_id', $user->company_id)
                 ->firstOrFail();
 
+            // Vérifier la localisation
+            Location::where('id', $entity['location_id'])
+                ->where('company_id', $user->company_id)
+                ->firstOrFail();
+
             PreparationEntity::create([
                 'preparation_id' => $preparation->id,
                 'entity_id' => $entity['id'],
                 'entity_type' => $entityClass,
+                'location_id' => $entity['location_id'],
+                'quantity' => $entity['quantity'],
+                'unit' => $entity['unit'],
             ]);
         }
 
@@ -320,7 +338,7 @@ class PreparationController extends Controller
      *
      * @param  int  $id
      */
-    public function prepare(Request $request, $id, PerishableService $perishableService): JsonResponse
+    public function prepare(Request $request, $id, PerishableService $perishableService, UnitConversionService $unitConversionService): JsonResponse
     {
         $user = $request->user();
 
@@ -333,102 +351,134 @@ class PreparationController extends Controller
         $validated = $request->validate([
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'location_id' => ['required', 'exists:locations,id'],
-            'components' => ['required', 'array', 'min:1'],
-            'components.*.entity_id' => ['required', 'integer'],
-            'components.*.entity_type' => ['required', 'string', 'in:ingredient,preparation'],
-            'components.*.quantity' => ['required', 'numeric', 'min:0.01'],
-            'components.*.sources' => ['required', 'array', 'min:1'],
-            'components.*.sources.*.location_id' => ['required', 'exists:locations,id'],
-            'components.*.sources.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'overrides' => ['sometimes', 'array'],
+            'overrides.*.id' => ['required_with:overrides', 'integer'],
+            'overrides.*.type' => ['required_with:overrides', 'string', 'in:ingredient,preparation'],
+            'overrides.*.quantity' => ['sometimes', 'numeric', 'min:0'],
+            'overrides.*.unit' => ['sometimes', 'string', Rule::in(MeasurementUnit::values())],
+            'overrides.*.location_id' => [
+                'sometimes',
+                'integer',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
         ]);
+
+        $preparation->loadMissing('entities');
+
+        $overrides = collect($validated['overrides'] ?? [])
+            ->map(function (array $override) {
+                $hasQuantity = array_key_exists('quantity', $override);
+                $hasLocation = array_key_exists('location_id', $override);
+
+                if (! $hasQuantity && ! $hasLocation) {
+                    throw ValidationException::withMessages([
+                        'overrides' => ['Chaque override doit définir une quantité ou une localisation.'],
+                    ]);
+                }
+
+                if ($hasQuantity) {
+                    $override['quantity'] = (float) $override['quantity'];
+                }
+
+                if ($hasLocation) {
+                    $override['location_id'] = (int) $override['location_id'];
+                }
+
+                if (isset($override['unit'])) {
+                    $override['unit'] = MeasurementUnit::from($override['unit']);
+                }
+
+                return $override;
+            })
+            ->mapWithKeys(function (array $override) {
+                $entityClass = $override['type'] === 'ingredient' ? Ingredient::class : Preparation::class;
+
+                return [$entityClass.'#'.$override['id'] => $override];
+            });
+
+        if ($overrides->isNotEmpty()) {
+            $componentKeys = $preparation->entities
+                ->map(function ($component) {
+                    /** @var PreparationEntity $component */
+                    return $component->entity_type.'#'.$component->entity_id;
+                })
+                ->all();
+
+            $invalidOverrides = array_diff(array_keys($overrides->all()), $componentKeys);
+
+            if (! empty($invalidOverrides)) {
+                throw ValidationException::withMessages([
+                    'overrides' => ['Certaines entités spécifiées ne font pas partie de cette préparation.'],
+                ]);
+            }
+        }
 
         // Vérifier que l'emplacement de destination appartient à la même entreprise
         $destinationLocation = Location::where('id', $validated['location_id'])
             ->where('company_id', $user->company_id)
             ->firstOrFail();
 
-        // Trouver le type de localisation "Congélateur" pour cette entreprise
-        $freezerType = LocationType::where('name', 'Congélateur')
-            ->where(function ($query) use ($user) {
-                $query->where('company_id', $user->company_id)
-                    ->orWhereNull('company_id');
-            })
-            ->first();
-
         // Utiliser une transaction pour garantir l'intégrité des données
         try {
             DB::beginTransaction();
 
-            // Parcourir les composants
-            foreach ($validated['components'] as $component) {
-                $entityType = $component['entity_type'] === 'ingredient'
-                    ? Ingredient::class
-                    : Preparation::class;
+            $preparation->load('entities.entity');
 
-                // Vérifier que le composant existe et appartient à l'entreprise
-                $entity = $entityType::where('id', $component['entity_id'])
-                    ->where('company_id', $user->company_id)
-                    ->firstOrFail();
+            /** @var PreparationEntity $component */
+            foreach ($preparation->entities as $component) {
+                /** @var Ingredient|Preparation $entity */
+                $entity = $component->entity;
 
-                // Vérifier que l'entité est bien un composant de la préparation
-                $isComponent = $preparation->entities()
-                    ->where('entity_id', $component['entity_id'])
-                    ->where('entity_type', $entityType)
-                    ->exists();
+                $componentKey = $component->entity_type.'#'.$component->entity_id;
+                $override = $overrides->get($componentKey);
 
-                if (! $isComponent) {
-                    throw new \Exception("L'entité {$component['entity_id']} n'est pas un composant de cette préparation");
+                $componentUnit = $component->unit instanceof MeasurementUnit
+                    ? $component->unit
+                    : MeasurementUnit::from($component->unit);
+
+                $perUnitQuantity = (float) $component->quantity;
+                if ($override && array_key_exists('quantity', $override)) {
+                    $perUnitQuantity = (float) $override['quantity'];
+
+                    if (! empty($override['unit']) && $override['unit'] instanceof MeasurementUnit) {
+                        $perUnitQuantity = $unitConversionService->convert($perUnitQuantity, $override['unit'], $componentUnit);
+                    }
                 }
 
-                // Vérifier que la somme des quantités des sources correspond à la quantité requise
-                $totalSourceQuantity = array_sum(array_column($component['sources'], 'quantity'));
-                if (abs($totalSourceQuantity - $component['quantity']) > 0.001) { // Tolérance pour les erreurs d'arrondi
-                    $entityName = $entity->name ?? "ID: {$component['entity_id']}";
-                    throw new \Exception("La somme des quantités des sources ({$totalSourceQuantity}) ne correspond pas à la quantité requise ({$component['quantity']}) pour '{$entityName}'");
+                $sourceLocationId = $override['location_id'] ?? $component->location_id;
+
+                $locationEntity = $entity->locations()
+                    ->wherePivot('location_id', $sourceLocationId)
+                    ->first();
+
+                /** @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot */
+                $pivot = $locationEntity->pivot ?? null;
+
+                $required = $perUnitQuantity * $validated['quantity'];
+
+                $entityUnit = $entity->unit instanceof MeasurementUnit
+                    ? $entity->unit
+                    : MeasurementUnit::from($entity->unit);
+
+                if ($componentUnit !== $entityUnit) {
+                    $required = $unitConversionService->convert($required, $componentUnit, $entityUnit);
                 }
 
-                // Traiter chaque emplacement source pour ce composant
-                foreach ($component['sources'] as $source) {
-                    // Vérifier que l'emplacement source appartient à l'entreprise
-                    $sourceLocation = Location::where('id', $source['location_id'])
-                        ->where('company_id', $user->company_id)
-                        ->firstOrFail();
+                if (! $locationEntity || $pivot->quantity < $required) {
+                    $stock = $locationEntity ? $pivot->quantity : 0;
+                    throw new \Exception("Stock insuffisant pour '{$entity->name}'");
+                }
 
-                    // Vérifier que l'emplacement n'est pas un congélateur (si le type existe)
-                    if ($freezerType && $sourceLocation->location_type_id === $freezerType->id) {
-                        $entityName = $entity->name ?? "ID: {$component['entity_id']}";
-                        throw new \Exception("Impossible d'utiliser un emplacement de type congélateur ('{$sourceLocation->name}') pour le composant '{$entityName}'");
-                    }
+                // Retirer la quantité
+                $before = $pivot->quantity;
+                $after = $pivot->quantity - $required;
+                $entity->locations()->updateExistingPivot($sourceLocationId, ['quantity' => $after]);
+                /** @var Location $sourceLocation */
+                $sourceLocation = $locationEntity;
+                $entity->recordStockMovement($sourceLocation, $before, $after, "Used for Preparation {$preparation->name}");
 
-                    // Vérifier le stock disponible
-                    $locationEntity = $entity->locations()
-                        ->wherePivot('location_id', $source['location_id'])
-                        ->first();
-
-                    /**
-                     * @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot
-                     */
-                    $pivot = $locationEntity->pivot ?? null;
-
-                    if (! $locationEntity || $pivot->quantity < $source['quantity']) {
-                        $stockDispo = $locationEntity ? $pivot->quantity : 0;
-                        $entityName = $entity->name ?? "ID: {$component['entity_id']}";
-                        throw new \Exception("Stock insuffisant pour '{$entityName}' à l'emplacement '{$sourceLocation->name}' (disponible: {$stockDispo}, requis: {$source['quantity']})");
-                    }
-
-                    // Réduire la quantité du composant à cet emplacement
-                    $before = $pivot->quantity;
-                    $after = $pivot->quantity - $source['quantity'];
-                    $entity->locations()->updateExistingPivot(
-                        $source['location_id'],
-                        ['quantity' => $after]
-                    );
-
-                    $entity->recordStockMovement($sourceLocation, $before, $after, "Used for Preparation {$preparation->name}");
-
-                    if ($entity instanceof Ingredient) {
-                        $perishableService->remove($entity->id, $source['location_id'], $user->company_id, $source['quantity']);
-                    }
+                if ($entity instanceof Ingredient) {
+                    $perishableService->remove($entity->id, $sourceLocationId, $user->company_id, $required);
                 }
             }
 
@@ -439,22 +489,15 @@ class PreparationController extends Controller
                 ->first();
 
             if ($locationPrep) {
-                /**
-                 * @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot
-                 */
+                /** @var \Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float} $pivot */
                 $pivot = $locationPrep->pivot;
                 $existingQuantity = $pivot->quantity;
             }
 
             $after = $existingQuantity + $validated['quantity'];
-
-            // Mettre à jour ou ajouter la quantité
             $preparation->locations()->syncWithoutDetaching([
-                $validated['location_id'] => [
-                    'quantity' => $after,
-                ],
+                $validated['location_id'] => ['quantity' => $after],
             ]);
-
             $preparation->recordStockMovement($destinationLocation, $existingQuantity, $after, "Preparation {$preparation->name} Produced");
 
             DB::commit();
