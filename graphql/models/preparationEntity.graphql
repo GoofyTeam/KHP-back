@@ -2,6 +2,9 @@ type PreparationEntity {
     id: ID!
     entity: PreparationEntityItem! @morphTo
     preparation: Preparation! @belongsTo
+    location: Location! @belongsTo
+    quantity: Float!
+    unit: UnitEnum!
 }
 
 union PreparationEntityItem = Ingredient | Preparation
