@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 /**
- * @property-read float $price
+ * @property-read float $price Prix total TTC calculé à partir des menus des étapes.
+ * @property-read EloquentCollection<int, OrderStep> $steps
+ * @property-read EloquentCollection<int, StepMenu> $menus
  */
 class Order extends Model
 {
@@ -84,14 +87,17 @@ class Order extends Model
     {
         $this->loadMissing('steps.stepMenus.menu');
 
-        $total = 0.0;
+        /** @var EloquentCollection<int, OrderStep> $steps */
+        $steps = $this->steps;
 
-        foreach ($this->steps as $step) {
-            /** @var OrderStep $step */
-            $total += (float) $step->price;
-        }
+        $total = $steps->sum(static function (OrderStep $step): float {
+            /** @var EloquentCollection<int, StepMenu> $stepMenus */
+            $stepMenus = $step->stepMenus;
 
-        return round($total, 2);
+            return $stepMenus->sum(static fn (StepMenu $stepMenu): float => $stepMenu->totalPrice());
+        });
+
+        return round((float) $total, 2);
     }
 
     public function scopeForCompany(Builder $query): Builder

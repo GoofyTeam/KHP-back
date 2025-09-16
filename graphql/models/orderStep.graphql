@@ -17,7 +17,7 @@ type OrderStep {
     "Horodatage du service de l'étape."
     served_at: DateTime
 
-    "Prix agrégé des menus associés."
+    "Prix TTC de l'étape calculé en sommant prix × quantité des menus associés."
     price: Float!
 
     "Menus associés à cette étape."
