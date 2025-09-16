@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property-read float $price
+ * @property-read float $price Prix total TTC des menus rattachés à l'étape.
  */
 class OrderStep extends Model
 {
@@ -56,20 +56,9 @@ class OrderStep extends Model
     {
         $this->loadMissing('stepMenus.menu');
 
-        $total = 0.0;
+        $total = $this->stepMenus->sum(static fn (StepMenu $stepMenu): float => $stepMenu->totalPrice());
 
-        foreach ($this->stepMenus as $stepMenu) {
-            /** @var StepMenu $stepMenu */
-            $menu = $stepMenu->menu;
-
-            if (! $menu) {
-                continue;
-            }
-
-            $total += (float) $menu->price * (int) $stepMenu->quantity;
-        }
-
-        return round($total, 2);
+        return round((float) $total, 2);
     }
 
     public function scopeForCompany(Builder $query): Builder

@@ -35,7 +35,7 @@ type Order {
     "Horodatage de l'annulation éventuelle."
     canceled_at: DateTime
 
-    "Prix total calculé de la commande."
+    "Prix total TTC calculé à partir des menus de toutes les étapes (prix × quantité)."
     price: Float!
 
     "Étapes associées à la commande."

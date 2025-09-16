@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 /**
- * @property-read float $price
+ * @property-read float $price Prix total TTC calculé à partir des menus des étapes.
  */
 class Order extends Model
 {
@@ -84,14 +84,11 @@ class Order extends Model
     {
         $this->loadMissing('steps.stepMenus.menu');
 
-        $total = 0.0;
+        $total = $this->steps
+            ->flatMap(static fn (OrderStep $step) => $step->stepMenus)
+            ->sum(static fn (StepMenu $stepMenu): float => $stepMenu->totalPrice());
 
-        foreach ($this->steps as $step) {
-            /** @var OrderStep $step */
-            $total += (float) $step->price;
-        }
-
-        return round($total, 2);
+        return round((float) $total, 2);
     }
 
     public function scopeForCompany(Builder $query): Builder
