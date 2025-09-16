@@ -40,6 +40,16 @@ else
   info ".env file already exists."
 fi
 
+# S'assure que les dossiers de cache sont présents et accessibles
+info "Ensuring writable permissions for storage and cache directories..."
+mkdir -p \
+  "$WEB_ROOT/storage/logs" \
+  "$WEB_ROOT/storage/framework/cache" \
+  "$WEB_ROOT/storage/framework/sessions" \
+  "$WEB_ROOT/storage/framework/views"
+chown -R www-data:www-data "$WEB_ROOT/storage" "$WEB_ROOT/bootstrap/cache"
+chmod -R ug+rwx "$WEB_ROOT/storage" "$WEB_ROOT/bootstrap/cache"
+
 # Installation des dépendances Composer
 if [[ -f "$WEB_ROOT/composer.json" ]]; then
   if command_exists composer; then
