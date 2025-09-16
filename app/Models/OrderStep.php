@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStepStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,6 @@ class OrderStep extends Model
 
     protected $fillable = [
         'order_id',
-        'name',
         'position',
         'status',
         'served_at',
@@ -69,6 +69,30 @@ class OrderStep extends Model
             $total += (float) $menu->price * (int) $stepMenu->quantity;
         }
 
-        return $total;
+        return round($total, 2);
+    }
+
+    public function scopeForCompany(Builder $query): Builder
+    {
+        return $query->whereHas('order', static function (Builder $order): void {
+            $order->where('company_id', auth()->user()->company_id);
+        });
+    }
+
+    /**
+     * @param  array<int, OrderStepStatus|string>  $statuses
+     */
+    public function scopeStatus(Builder $query, array $statuses): Builder
+    {
+        if ($statuses === []) {
+            return $query;
+        }
+
+        $values = array_map(
+            fn (OrderStepStatus|string $status): string => $status instanceof OrderStepStatus ? $status->value : (string) $status,
+            $statuses,
+        );
+
+        return $query->whereIn('status', $values);
     }
 }

@@ -1,0 +1,75 @@
+"""
+Étape individuelle d'une commande.
+"""
+type OrderStep {
+    "Identifiant unique."
+    id: ID!
+
+    "Commande à laquelle appartient l'étape."
+    order: Order! @belongsTo
+
+    "Position de l'étape dans le flux de service."
+    position: Int!
+
+    "Statut actuel de l'étape."
+    status: OrderStepStatusEnum!
+
+    "Horodatage du service de l'étape."
+    served_at: DateTime
+
+    "Prix agrégé des menus associés."
+    price: Float!
+
+    "Menus associés à cette étape."
+    stepMenus: [StepMenu!]! @hasMany
+
+    "Menus liés via la relation pivot."
+    menus: [Menu!]! @belongsToMany
+
+    "Date de création de l'étape."
+    created_at: DateTime!
+
+    "Date de dernière mise à jour."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les étapes de commandes."
+    orderSteps(
+        "Filtre par identifiant de commande."
+        order_id: ID @where(key: "order_id")
+
+        "Filtre par statut."
+        statuses: [OrderStepStatusEnum!] @scope(name: "status")
+
+        "Options de tri des étapes."
+        orderBy: [OrderStepOrderByClause!] @orderBy(columnsEnum: OrderStepOrderByField)
+    ): [OrderStep!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Récupère une étape précise."
+    orderStep(id: ID! @eq): OrderStep @find(scopes: ["forCompany"])
+}
+
+"""
+Options de tri disponibles pour les étapes de commande.
+"""
+input OrderStepOrderByClause {
+    "Colonne utilisée pour le tri."
+    column: OrderStepOrderByField!
+
+    "Direction du tri."
+    order: SortOrder! = ASC
+}
+
+"""
+Colonnes triables pour les étapes de commande.
+"""
+enum OrderStepOrderByField {
+    ID @enum(value: "id")
+    ORDER_ID @enum(value: "order_id")
+    POSITION @enum(value: "position")
+    STATUS @enum(value: "status")
+    SERVED_AT @enum(value: "served_at")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StepMenuStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,5 +40,29 @@ class StepMenu extends Model
     public function menu(): BelongsTo
     {
         return $this->belongsTo(Menu::class);
+    }
+
+    public function scopeForCompany(Builder $query): Builder
+    {
+        return $query->whereHas('step.order', static function (Builder $order): void {
+            $order->where('company_id', auth()->user()->company_id);
+        });
+    }
+
+    /**
+     * @param  array<int, StepMenuStatus|string>  $statuses
+     */
+    public function scopeStatus(Builder $query, array $statuses): Builder
+    {
+        if ($statuses === []) {
+            return $query;
+        }
+
+        $values = array_map(
+            fn (StepMenuStatus|string $status): string => $status instanceof StepMenuStatus ? $status->value : (string) $status,
+            $statuses,
+        );
+
+        return $query->whereIn('status', $values);
     }
 }

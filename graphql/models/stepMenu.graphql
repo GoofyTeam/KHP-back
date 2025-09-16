@@ -1,0 +1,76 @@
+"""
+Association entre une étape de commande et un menu.
+"""
+type StepMenu {
+    "Identifiant unique."
+    id: ID!
+
+    "Étape de commande liée."
+    step: OrderStep! @belongsTo(relation: "step")
+
+    "Menu associé à cette ligne."
+    menu: Menu! @belongsTo
+
+    "Quantité commandée."
+    quantity: Int!
+
+    "Statut de la ligne de menu."
+    status: StepMenuStatusEnum!
+
+    "Note éventuelle ajoutée par l'équipe."
+    note: String
+
+    "Horodatage du service de ce menu."
+    served_at: DateTime
+
+    "Date de création de la ligne."
+    created_at: DateTime!
+
+    "Date de dernière mise à jour."
+    updated_at: DateTime!
+}
+
+extend type Query @guard {
+    "Liste les menus associés aux étapes de commandes."
+    stepMenus(
+        "Filtre par identifiant d'étape de commande."
+        order_step_id: ID @where(key: "order_step_id")
+
+        "Filtre par identifiant de menu."
+        menu_id: ID @where(key: "menu_id")
+
+        "Filtre par statut."
+        statuses: [StepMenuStatusEnum!] @scope(name: "status")
+
+        "Options de tri des lignes."
+        orderBy: [StepMenuOrderByClause!] @orderBy(columnsEnum: StepMenuOrderByField)
+    ): [StepMenu!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Récupère une ligne précise."
+    stepMenu(id: ID! @eq): StepMenu @find(scopes: ["forCompany"])
+}
+
+"""
+Options de tri disponibles pour les menus d'une étape.
+"""
+input StepMenuOrderByClause {
+    "Colonne utilisée pour le tri."
+    column: StepMenuOrderByField!
+
+    "Direction du tri."
+    order: SortOrder! = ASC
+}
+
+"""
+Colonnes triables pour les menus d'une étape.
+"""
+enum StepMenuOrderByField {
+    ID @enum(value: "id")
+    ORDER_STEP_ID @enum(value: "order_step_id")
+    MENU_ID @enum(value: "menu_id")
+    QUANTITY @enum(value: "quantity")
+    STATUS @enum(value: "status")
+    SERVED_AT @enum(value: "served_at")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}
