@@ -8,9 +8,6 @@ type OrderStep {
     "Commande à laquelle appartient l'étape."
     order: Order! @belongsTo
 
-    "Nom de l'étape (ex: Entrées, Plats, etc.)."
-    name: String!
-
     "Position de l'étape dans le flux de service."
     position: Int!
 
@@ -70,7 +67,6 @@ Colonnes triables pour les étapes de commande.
 enum OrderStepOrderByField {
     ID @enum(value: "id")
     ORDER_ID @enum(value: "order_id")
-    NAME @enum(value: "name")
     POSITION @enum(value: "position")
     STATUS @enum(value: "status")
     SERVED_AT @enum(value: "served_at")

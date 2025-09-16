@@ -39,7 +39,6 @@ class StepMenuQueryTest extends TestCase
 
         return OrderStep::create(array_merge([
             'order_id' => $order->id,
-            'name' => 'Service',
             'position' => 1,
             'status' => OrderStepStatus::PENDING,
         ], $stepAttributes));

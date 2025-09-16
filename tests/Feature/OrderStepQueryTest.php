@@ -42,7 +42,6 @@ class OrderStepQueryTest extends TestCase
         $order = $this->createOrderForUser($user);
         $step = OrderStep::create([
             'order_id' => $order->id,
-            'name' => 'Service',
             'position' => 1,
             'status' => OrderStepStatus::PENDING,
         ]);
@@ -51,7 +50,6 @@ class OrderStepQueryTest extends TestCase
         $otherOrder = $this->createOrderForUser($otherUser);
         OrderStep::create([
             'order_id' => $otherOrder->id,
-            'name' => 'Autre',
             'position' => 1,
             'status' => OrderStepStatus::READY,
         ]);
@@ -74,14 +72,12 @@ class OrderStepQueryTest extends TestCase
         $order = $this->createOrderForUser($user);
         $ready = OrderStep::create([
             'order_id' => $order->id,
-            'name' => 'Prêt',
             'position' => 1,
             'status' => OrderStepStatus::READY,
         ]);
 
         OrderStep::create([
             'order_id' => $order->id,
-            'name' => 'En attente',
             'position' => 2,
             'status' => OrderStepStatus::PENDING,
         ]);
@@ -109,14 +105,12 @@ class OrderStepQueryTest extends TestCase
         $order = $this->createOrderForUser($user);
         $first = OrderStep::create([
             'order_id' => $order->id,
-            'name' => 'Entrées',
             'position' => 1,
             'status' => OrderStepStatus::PENDING,
         ]);
 
         $second = OrderStep::create([
             'order_id' => $order->id,
-            'name' => 'Plats',
             'position' => 2,
             'status' => OrderStepStatus::PENDING,
         ]);
@@ -137,7 +131,6 @@ class OrderStepQueryTest extends TestCase
         $order = $this->createOrderForUser($user);
         $step = OrderStep::create([
             'order_id' => $order->id,
-            'name' => 'Service',
             'position' => 1,
             'status' => OrderStepStatus::READY,
         ]);

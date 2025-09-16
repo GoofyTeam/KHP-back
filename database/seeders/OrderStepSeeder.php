@@ -23,14 +23,13 @@ class OrderStepSeeder extends Seeder
             }
 
             $progress = $this->progressForStatus($order->status);
-            $steps = collect($this->stepsBlueprint());
+            $targets = collect($this->stepTargets());
 
-            $steps->each(function (array $blueprint, int $index) use ($order, $progress): void {
-                $status = $this->statusForProgress(min($progress, $blueprint['target']));
+            $targets->each(function (int $target, int $index) use ($order, $progress): void {
+                $status = $this->statusForProgress(min($progress, $target));
 
                 OrderStep::query()->create([
                     'order_id' => $order->id,
-                    'name' => $blueprint['name'],
                     'position' => $index + 1,
                     'status' => $status,
                     'served_at' => $status === OrderStepStatus::SERVED
@@ -42,15 +41,11 @@ class OrderStepSeeder extends Seeder
     }
 
     /**
-     * @return array<int, array{name: string, target: int}>
+     * @return array<int, int>
      */
-    private function stepsBlueprint(): array
+    private function stepTargets(): array
     {
-        return [
-            ['name' => 'Préparation bar', 'target' => 1],
-            ['name' => 'Sortie cuisine', 'target' => 2],
-            ['name' => 'Service en salle', 'target' => 3],
-        ];
+        return [1, 2, 3];
     }
 
     private function progressForStatus(OrderStatus $status): int

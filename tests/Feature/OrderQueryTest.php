@@ -152,7 +152,6 @@ class OrderQueryTest extends TestCase
         $payedOrder = $this->createOrderForUser($user, ['status' => OrderStatus::PAYED]);
         $step = OrderStep::create([
             'order_id' => $payedOrder->id,
-            'name' => 'Service',
             'position' => 1,
             'status' => OrderStepStatus::SERVED,
         ]);

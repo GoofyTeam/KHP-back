@@ -20,7 +20,6 @@ class OrderStep extends Model
 
     protected $fillable = [
         'order_id',
-        'name',
         'position',
         'status',
         'served_at',
