@@ -91,7 +91,7 @@ class Order extends Model
             $total += (float) $step->price;
         }
 
-        return $total;
+        return round($total, 2);
     }
 
     public function scopeForCompany(Builder $query): Builder

@@ -54,6 +54,8 @@ class OrdersResolver
             ->get()
             ->sum(static fn (Order $order): float => $order->price);
 
+        $revenue = round((float) $revenue, 2);
+
         return [
             'pending' => (int) ($counts[OrderStatus::PENDING->value] ?? 0),
             'in_prep' => (int) ($counts[OrderStatus::IN_PREP->value] ?? 0),
@@ -62,7 +64,7 @@ class OrdersResolver
             'payed' => (int) ($counts[OrderStatus::PAYED->value] ?? 0),
             'cancelled' => (int) ($counts[OrderStatus::CANCELLED->value] ?? 0),
             'total' => (int) array_sum($counts),
-            'revenue' => (float) $revenue,
+            'revenue' => $revenue,
         ];
     }
 }

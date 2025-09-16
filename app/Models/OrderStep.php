@@ -69,7 +69,7 @@ class OrderStep extends Model
             $total += (float) $menu->price * (int) $stepMenu->quantity;
         }
 
-        return $total;
+        return round($total, 2);
     }
 
     public function scopeForCompany(Builder $query): Builder

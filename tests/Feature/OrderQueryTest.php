@@ -198,4 +198,62 @@ class OrderQueryTest extends TestCase
         $expectedRevenue = (12.5 * 2) + 5.25;
         $this->assertEqualsWithDelta($expectedRevenue, $response->json('data.ordersStats.revenue'), 0.001);
     }
+
+    public function test_order_prices_are_rounded_like_restaurants(): void
+    {
+        $user = User::factory()->create();
+
+        $order = $this->createOrderForUser($user, ['status' => OrderStatus::PAYED]);
+        $step = OrderStep::create([
+            'order_id' => $order->id,
+            'position' => 1,
+            'status' => OrderStepStatus::SERVED,
+        ]);
+
+        $menu = Menu::factory()->for($user->company)->create(['price' => 10.1]);
+
+        StepMenu::create([
+            'order_step_id' => $step->id,
+            'menu_id' => $menu->id,
+            'quantity' => 3,
+            'status' => StepMenuStatus::SERVED,
+        ]);
+
+        $response = $this->actingAs($user)->graphQL(/** @lang GraphQL */ '{
+            orders {
+                data { price }
+            }
+        }');
+
+        $this->assertSame(30.3, $response->json('data.orders.data.0.price'));
+    }
+
+    public function test_orders_stats_revenue_is_rounded_like_restaurants(): void
+    {
+        $user = User::factory()->create();
+
+        $order = $this->createOrderForUser($user, ['status' => OrderStatus::PAYED]);
+        $step = OrderStep::create([
+            'order_id' => $order->id,
+            'position' => 1,
+            'status' => OrderStepStatus::SERVED,
+        ]);
+
+        $menu = Menu::factory()->for($user->company)->create(['price' => 10.1]);
+
+        StepMenu::create([
+            'order_step_id' => $step->id,
+            'menu_id' => $menu->id,
+            'quantity' => 3,
+            'status' => StepMenuStatus::SERVED,
+        ]);
+
+        $response = $this->actingAs($user)->graphQL(/** @lang GraphQL */ '{
+            ordersStats {
+                revenue
+            }
+        }');
+
+        $this->assertSame(30.3, $response->json('data.ordersStats.revenue'));
+    }
 }
