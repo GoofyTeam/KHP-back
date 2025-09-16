@@ -6,6 +6,8 @@ use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Order extends Model
 {
@@ -49,5 +51,22 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function steps(): HasMany
+    {
+        return $this->hasMany(OrderStep::class);
+    }
+
+    public function menus(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            StepMenu::class,
+            OrderStep::class,
+            'order_id',
+            'order_step_id',
+            'id',
+            'id'
+        )->with('menu');
     }
 }

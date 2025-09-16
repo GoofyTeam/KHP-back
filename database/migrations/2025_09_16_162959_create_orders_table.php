@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\OrderStatus;
+use App\Enums\OrderStepStatus;
+use App\Enums\StepMenuStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -30,6 +32,33 @@ return new class extends Migration
 
             $table->timestamps();
         });
+
+        Schema::create('order_steps', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+
+            $table->string('name');
+            $table->unsignedInteger('position')->default(0);
+            $table->enum('status', OrderStepStatus::values());
+            $table->timestamp('served_at')->nullable();
+
+            $table->timestamps();
+        });
+
+        Schema::create('step_menus', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('order_step_id')->constrained('order_steps')->cascadeOnDelete();
+            $table->foreignId('menu_id')->constrained()->cascadeOnDelete();
+
+            $table->unsignedInteger('quantity')->default(1);
+            $table->enum('status', StepMenuStatus::values());
+            $table->text('note')->nullable();
+            $table->timestamp('served_at')->nullable();
+
+            $table->timestamps();
+        });
     }
 
     /**
@@ -37,6 +66,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('step_menus');
+        Schema::dropIfExists('order_steps');
         Schema::dropIfExists('orders');
     }
 };
