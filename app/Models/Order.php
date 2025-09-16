@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 /**
  * @property-read float $price Prix total TTC calculé à partir des menus des étapes.
+ * @property-read EloquentCollection<int, OrderStep> $steps
+ * @property-read EloquentCollection<int, StepMenu> $menus
  */
 class Order extends Model
 {
@@ -84,9 +87,15 @@ class Order extends Model
     {
         $this->loadMissing('steps.stepMenus.menu');
 
-        $total = $this->steps
-            ->flatMap(static fn (OrderStep $step) => $step->stepMenus)
-            ->sum(static fn (StepMenu $stepMenu): float => $stepMenu->totalPrice());
+        /** @var EloquentCollection<int, OrderStep> $steps */
+        $steps = $this->steps;
+
+        $total = $steps->sum(static function (OrderStep $step): float {
+            /** @var EloquentCollection<int, StepMenu> $stepMenus */
+            $stepMenus = $step->stepMenus;
+
+            return $stepMenus->sum(static fn (StepMenu $stepMenu): float => $stepMenu->totalPrice());
+        });
 
         return round((float) $total, 2);
     }
