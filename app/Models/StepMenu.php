@@ -65,4 +65,15 @@ class StepMenu extends Model
 
         return $query->whereIn('status', $values);
     }
+
+    public function totalPrice(): float
+    {
+        $menu = $this->menu;
+
+        if (! $menu) {
+            return 0.0;
+        }
+
+        return (float) $menu->price * (int) $this->quantity;
+    }
 }

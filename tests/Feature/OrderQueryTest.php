@@ -228,6 +228,72 @@ class OrderQueryTest extends TestCase
         $this->assertSame(30.3, $response->json('data.orders.data.0.price'));
     }
 
+    public function test_order_price_aggregates_menus_from_all_steps(): void
+    {
+        $user = User::factory()->create();
+
+        $order = $this->createOrderForUser($user, ['status' => OrderStatus::PAYED]);
+
+        $firstStep = OrderStep::create([
+            'order_id' => $order->id,
+            'position' => 1,
+            'status' => OrderStepStatus::SERVED,
+        ]);
+
+        $secondStep = OrderStep::create([
+            'order_id' => $order->id,
+            'position' => 2,
+            'status' => OrderStepStatus::SERVED,
+        ]);
+
+        $menuA = Menu::factory()->for($user->company)->create(['price' => 12.5]);
+        $menuB = Menu::factory()->for($user->company)->create(['price' => 5.25]);
+        $menuC = Menu::factory()->for($user->company)->create(['price' => 3.4]);
+
+        StepMenu::create([
+            'order_step_id' => $firstStep->id,
+            'menu_id' => $menuA->id,
+            'quantity' => 2,
+            'status' => StepMenuStatus::SERVED,
+        ]);
+
+        StepMenu::create([
+            'order_step_id' => $firstStep->id,
+            'menu_id' => $menuB->id,
+            'quantity' => 1,
+            'status' => StepMenuStatus::SERVED,
+        ]);
+
+        StepMenu::create([
+            'order_step_id' => $secondStep->id,
+            'menu_id' => $menuC->id,
+            'quantity' => 4,
+            'status' => StepMenuStatus::SERVED,
+        ]);
+
+        $query = /** @lang GraphQL */ 'query ($id: ID!) {
+            order(id: $id) {
+                price
+                steps {
+                    price
+                }
+            }
+        }';
+
+        $response = $this->actingAs($user)->graphQL($query, ['id' => $order->id]);
+
+        $expectedFirstStep = round(($menuA->price * 2) + $menuB->price, 2);
+        $expectedSecondStep = round($menuC->price * 4, 2);
+        $expectedTotal = round($expectedFirstStep + $expectedSecondStep, 2);
+
+        $this->assertEqualsWithDelta($expectedTotal, $response->json('data.order.price'), 0.001);
+
+        $stepPrices = array_column($response->json('data.order.steps'), 'price');
+        $this->assertCount(2, $stepPrices);
+        $this->assertEqualsWithDelta($expectedFirstStep, (float) $stepPrices[0], 0.001);
+        $this->assertEqualsWithDelta($expectedSecondStep, (float) $stepPrices[1], 0.001);
+    }
+
     public function test_orders_stats_revenue_is_rounded_like_restaurants(): void
     {
         $user = User::factory()->create();
