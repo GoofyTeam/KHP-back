@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\OrderStepStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property-read float $price
+ * @property-read float $price Prix total TTC des menus rattachés à l'étape.
+ * @property-read EloquentCollection<int, StepMenu> $stepMenus
  */
 class OrderStep extends Model
 {
@@ -56,20 +58,12 @@ class OrderStep extends Model
     {
         $this->loadMissing('stepMenus.menu');
 
-        $total = 0.0;
+        /** @var EloquentCollection<int, StepMenu> $stepMenus */
+        $stepMenus = $this->stepMenus;
 
-        foreach ($this->stepMenus as $stepMenu) {
-            /** @var StepMenu $stepMenu */
-            $menu = $stepMenu->menu;
+        $total = $stepMenus->sum(static fn (StepMenu $stepMenu): float => $stepMenu->totalPrice());
 
-            if (! $menu) {
-                continue;
-            }
-
-            $total += (float) $menu->price * (int) $stepMenu->quantity;
-        }
-
-        return round($total, 2);
+        return round((float) $total, 2);
     }
 
     public function scopeForCompany(Builder $query): Builder
