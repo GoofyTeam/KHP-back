@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\ImageService;
 use App\Services\OpenFoodFactsService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class DemoSeeder extends Seeder
@@ -301,6 +302,8 @@ class DemoSeeder extends Seeder
     /** @var array<string, ?string> */
     private array $productImages = [];
 
+    private ?string $placeholderImagePath = null;
+
     public function __construct(ImageService $images, OpenFoodFactsService $openFoodFacts)
     {
         $this->images = $images;
@@ -314,7 +317,10 @@ class DemoSeeder extends Seeder
             ['open_food_facts_language' => self::COMPANY_PROFILE['open_food_facts_language']]
         );
 
-        $this->seedUsers($company);
+        $authUser = $this->seedUsers($company);
+        if ($authUser instanceof User) {
+            Auth::setUser($authUser);
+        }
 
         $defaultLocation = $this->resolveDefaultLocation($company);
         $categoryIds = $this->ensureCategories($company);
@@ -339,10 +345,12 @@ class DemoSeeder extends Seeder
         $this->report();
     }
 
-    private function seedUsers(Company $company): void
+    private function seedUsers(Company $company): ?User
     {
+        $firstUser = null;
+
         foreach (self::COMPANY_PROFILE['users'] as $userData) {
-            User::updateOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
                     'name' => $userData['name'],
@@ -350,7 +358,11 @@ class DemoSeeder extends Seeder
                     'password' => 'password',
                 ]
             );
+
+            $firstUser ??= $user;
         }
+
+        return $firstUser;
     }
 
     private function resolveDefaultLocation(Company $company): Location
@@ -439,6 +451,10 @@ class DemoSeeder extends Seeder
                 }
             }
 
+            if (! $ingredient->image_url) {
+                $ingredient->update(['image_url' => $this->placeholderPath()]);
+            }
+
             $ingredient->locations()->syncWithoutDetaching([
                 $defaultLocation->id => ['quantity' => 0],
             ]);
@@ -493,6 +509,11 @@ class DemoSeeder extends Seeder
         }
 
         return $this->productImages[$barcode] = $stored;
+    }
+
+    private function placeholderPath(): string
+    {
+        return $this->placeholderImagePath ??= $this->images->storePlaceholder();
     }
 
     /**
@@ -666,12 +687,15 @@ class DemoSeeder extends Seeder
                     ],
                     [
                         'description' => null,
-                        'image_url' => null,
                         'is_a_la_carte' => true,
                         'type' => $menuType,
                         'price' => $entry['price'],
                     ]
                 );
+
+                if (! $menu->image_url) {
+                    $menu->update(['image_url' => $this->placeholderPath()]);
+                }
 
                 if ($menuCategory instanceof MenuCategory) {
                     $menu->categories()->syncWithoutDetaching([$menuCategory->id]);
