@@ -16,6 +16,7 @@ use App\Services\ImageService;
 use App\Services\OpenFoodFactsService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class DemoSeeder extends Seeder
@@ -286,6 +287,10 @@ class DemoSeeder extends Seeder
         'Sélection de fromages de vache, chèvre, brebis' => ['category' => 'Fromages', 'unit' => MeasurementUnit::GRAM, 'barcode' => '0200340018370'],
     ];
 
+    private const TEMP_IMAGE_FOLDER = 'tmp/demo-seeder/ingredients';
+
+    private const TEMP_PLACEHOLDER_PATH = 'tmp/demo-seeder/placeholder.svg';
+
     private ImageService $images;
 
     private OpenFoodFactsService $openFoodFacts;
@@ -501,7 +506,7 @@ class DemoSeeder extends Seeder
         }
 
         try {
-            $stored = $this->images->storeFromUrl($imageUrl, 'ingredients');
+            $stored = $this->images->storeFromUrl($imageUrl, self::TEMP_IMAGE_FOLDER);
         } catch (Throwable $exception) {
             $this->missingImages[] = $ingredientName.' (téléchargement)';
 
@@ -513,7 +518,28 @@ class DemoSeeder extends Seeder
 
     private function placeholderPath(): string
     {
-        return $this->placeholderImagePath ??= $this->images->storePlaceholder();
+        if ($this->placeholderImagePath) {
+            return $this->placeholderImagePath;
+        }
+
+        if ($this->images->exists(self::TEMP_PLACEHOLDER_PATH)) {
+            return $this->placeholderImagePath = self::TEMP_PLACEHOLDER_PATH;
+        }
+
+        $localPlaceholder = storage_path('app/private/images/placeholder.svg');
+        $contents = @file_get_contents($localPlaceholder);
+
+        if ($contents !== false) {
+            try {
+                if (Storage::disk('s3')->put(self::TEMP_PLACEHOLDER_PATH, $contents)) {
+                    return $this->placeholderImagePath = self::TEMP_PLACEHOLDER_PATH;
+                }
+            } catch (Throwable $exception) {
+                // ignored; fallback handled below
+            }
+        }
+
+        return $this->placeholderImagePath = $this->images->storePlaceholder();
     }
 
     /**
