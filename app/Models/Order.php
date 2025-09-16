@@ -3,11 +3,9 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
-use Illuminate\Support\Carbon;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Order extends Model
 {
@@ -28,12 +26,12 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'status'     => OrderStatus::class,
+        'status' => OrderStatus::class,
         'pending_at' => 'datetime',
         'in_prep_at' => 'datetime',
-        'ready_at'   => 'datetime',
-        'served_at'  => 'datetime',
-        'payed_at'   => 'datetime',
+        'ready_at' => 'datetime',
+        'served_at' => 'datetime',
+        'payed_at' => 'datetime',
         'canceled_at' => 'datetime',
     ];
 
