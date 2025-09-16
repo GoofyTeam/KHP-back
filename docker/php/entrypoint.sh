@@ -22,9 +22,63 @@ SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
 MAX_RETRIES=10
 RETRY_DELAY=10
 
+#=== ALIGN WWW-DATA USER WITH HOST =============================
+sync_www_data_identity() {
+  local current_uid current_gid target_uid target_gid group_name existing_user
+
+  current_uid=$(id -u www-data)
+  current_gid=$(id -g www-data)
+
+  target_uid=${WWWUSER:-$(stat -c '%u' "$WEB_ROOT" 2>/dev/null || echo "$current_uid")}
+  target_gid=${WWWGROUP:-$(stat -c '%g' "$WEB_ROOT" 2>/dev/null || echo "$current_gid")}
+
+  if [[ "$target_gid" != "$current_gid" ]]; then
+    local group_entry
+    group_entry=$(get_group_entry_by_gid "$target_gid")
+    if [[ -n "$group_entry" ]]; then
+      group_name=$(echo "$group_entry" | cut -d: -f1)
+      info "Assigning www-data to existing group ${group_name} (gid: ${target_gid})"
+      usermod -g "$group_name" www-data
+    else
+      info "Updating www-data primary group id from ${current_gid} to ${target_gid}"
+      groupmod -g "$target_gid" www-data
+    fi
+  fi
+
+  if [[ "$target_uid" != "$current_uid" ]]; then
+    local passwd_entry
+    passwd_entry=$(get_passwd_entry_by_uid "$target_uid")
+    if [[ -n "$passwd_entry" && "$(echo "$passwd_entry" | cut -d: -f1)" != "www-data" ]]; then
+      existing_user=$(echo "$passwd_entry" | cut -d: -f1)
+      warning "UID ${target_uid} already used by ${existing_user}. Skipping www-data UID reassignment."
+    else
+      info "Updating www-data user id from ${current_uid} to ${target_uid}"
+      usermod -u "$target_uid" www-data
+    fi
+  fi
+}
+
 #=== FUNCTION TO CHECK IF COMMAND EXISTS =======================
 command_exists() {
   command -v "$1" >/dev/null 2>&1
+}
+
+get_group_entry_by_gid() {
+  local gid=$1
+  if command_exists getent; then
+    getent group "$gid" || true
+  else
+    grep -E "^[^:]+:[^:]*:${gid}:" /etc/group || true
+  fi
+}
+
+get_passwd_entry_by_uid() {
+  local uid=$1
+  if command_exists getent; then
+    getent passwd "$uid" || true
+  else
+    grep -E "^[^:]+:[^:]*:${uid}:" /etc/passwd || true
+  fi
 }
 
 #=== START SCRIPT ==============================================
@@ -40,6 +94,10 @@ else
   info ".env file already exists."
 fi
 
+# Aligne l'utilisateur www-data sur les UID/GID du volume hôte
+info "Synchronizing www-data user and group IDs with mounted volume..."
+sync_www_data_identity
+
 # S'assure que les dossiers de cache sont présents et accessibles
 info "Ensuring writable permissions for storage and cache directories..."
 mkdir -p \
@@ -47,8 +105,11 @@ mkdir -p \
   "$WEB_ROOT/storage/framework/cache" \
   "$WEB_ROOT/storage/framework/sessions" \
   "$WEB_ROOT/storage/framework/views"
-chown -R www-data:www-data "$WEB_ROOT/storage" "$WEB_ROOT/bootstrap/cache"
+touch "$WEB_ROOT/storage/logs/laravel.log"
+WWW_DATA_GROUP=$(id -gn www-data)
+chown -R www-data:"$WWW_DATA_GROUP" "$WEB_ROOT/storage" "$WEB_ROOT/bootstrap/cache"
 chmod -R ug+rwx "$WEB_ROOT/storage" "$WEB_ROOT/bootstrap/cache"
+chmod ug+rw "$WEB_ROOT/storage/logs/laravel.log"
 
 # Installation des dépendances Composer
 if [[ -f "$WEB_ROOT/composer.json" ]]; then
