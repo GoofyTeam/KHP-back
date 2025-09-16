@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -89,5 +92,49 @@ class Order extends Model
         }
 
         return $total;
+    }
+
+    public function scopeForCompany(Builder $query): Builder
+    {
+        return $query->where('company_id', auth()->user()->company_id);
+    }
+
+    /**
+     * @param  array<int, OrderStatus|string>  $statuses
+     */
+    public function scopeStatus(Builder $query, array $statuses): Builder
+    {
+        if ($statuses === []) {
+            return $query;
+        }
+
+        $values = array_map(
+            fn (OrderStatus|string $status): string => $status instanceof OrderStatus ? $status->value : (string) $status,
+            $statuses,
+        );
+
+        return $query->whereIn('status', $values);
+    }
+
+    public function scopeCreatedAfter(Builder $query, mixed $date): Builder
+    {
+        if ($date === null) {
+            return $query;
+        }
+
+        $moment = $date instanceof CarbonInterface ? $date : Carbon::parse((string) $date);
+
+        return $query->where('created_at', '>=', $moment);
+    }
+
+    public function scopeCreatedBefore(Builder $query, mixed $date): Builder
+    {
+        if ($date === null) {
+            return $query;
+        }
+
+        $moment = $date instanceof CarbonInterface ? $date : Carbon::parse((string) $date);
+
+        return $query->where('created_at', '<=', $moment);
     }
 }
