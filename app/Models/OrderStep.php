@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read float $price
+ */
 class OrderStep extends Model
 {
     /** @use HasFactory<\Database\Factories\OrderStepFactory> */
@@ -28,6 +31,10 @@ class OrderStep extends Model
         'served_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'price',
+    ];
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -43,5 +50,25 @@ class OrderStep extends Model
         return $this->belongsToMany(Menu::class, 'step_menus', 'order_step_id', 'menu_id')
             ->withPivot('quantity', 'status', 'note', 'served_at')
             ->withTimestamps();
+    }
+
+    public function getPriceAttribute(): float
+    {
+        $this->loadMissing('stepMenus.menu');
+
+        $total = 0.0;
+
+        foreach ($this->stepMenus as $stepMenu) {
+            /** @var StepMenu $stepMenu */
+            $menu = $stepMenu->menu;
+
+            if (! $menu) {
+                continue;
+            }
+
+            $total += (float) $menu->price * (int) $stepMenu->quantity;
+        }
+
+        return $total;
     }
 }

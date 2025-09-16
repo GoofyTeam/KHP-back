@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
+/**
+ * @property-read float $price
+ */
 class Order extends Model
 {
     /** @use HasFactory<\Database\Factories\OrderFactory> */
@@ -35,6 +38,10 @@ class Order extends Model
         'served_at' => 'datetime',
         'payed_at' => 'datetime',
         'canceled_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'price',
     ];
 
     // Relations (adapter les classes si vos modèles diffèrent)
@@ -68,5 +75,19 @@ class Order extends Model
             'id',
             'id'
         )->with('menu');
+    }
+
+    public function getPriceAttribute(): float
+    {
+        $this->loadMissing('steps.stepMenus.menu');
+
+        $total = 0.0;
+
+        foreach ($this->steps as $step) {
+            /** @var OrderStep $step */
+            $total += (float) $step->price;
+        }
+
+        return $total;
     }
 }
