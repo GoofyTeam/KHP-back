@@ -38,7 +38,6 @@ return new class extends Migration
 
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
 
-            $table->string('name');
             $table->unsignedInteger('position')->default(0);
             $table->enum('status', OrderStepStatus::values());
             $table->timestamp('served_at')->nullable();
