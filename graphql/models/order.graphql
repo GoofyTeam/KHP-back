@@ -1,0 +1,128 @@
+"""
+Représente une commande passée dans l'établissement.
+"""
+type Order {
+    "Identifiant unique."
+    id: ID!
+
+    "Table associée à la commande."
+    table: Table! @belongsTo
+
+    "Entreprise propriétaire de la commande."
+    company: Company! @belongsTo
+
+    "Utilisateur qui a créé la commande."
+    user: User! @belongsTo
+
+    "Statut actuel de la commande."
+    status: OrderStatusEnum!
+
+    "Horodatage du passage de la commande en statut PENDING."
+    pending_at: DateTime
+
+    "Horodatage du passage de la commande en préparation."
+    in_prep_at: DateTime
+
+    "Horodatage indiquant que la commande est prête."
+    ready_at: DateTime
+
+    "Horodatage du service de la commande."
+    served_at: DateTime
+
+    "Horodatage du paiement de la commande."
+    payed_at: DateTime
+
+    "Horodatage de l'annulation éventuelle."
+    canceled_at: DateTime
+
+    "Prix total calculé de la commande."
+    price: Float!
+
+    "Étapes associées à la commande."
+    steps: [OrderStep!]! @hasMany
+
+    "Date de création de la commande."
+    created_at: DateTime!
+
+    "Date de dernière mise à jour."
+    updated_at: DateTime!
+}
+
+"""
+Statistiques agrégées sur les commandes.
+"""
+type OrdersStats {
+    pending: Int!
+    in_prep: Int!
+    ready: Int!
+    served: Int!
+    payed: Int!
+    cancelled: Int!
+    total: Int!
+    revenue: Float!
+}
+
+extend type Query @guard {
+    "Liste les commandes pour l'entreprise courante."
+    orders(
+        "Filtre par statut (plusieurs valeurs possibles)."
+        statuses: [OrderStatusEnum!] @scope(name: "status")
+
+        "Filtre par identifiant de table."
+        table_id: ID @where(key: "table_id")
+
+        "Filtre par identifiant d'utilisateur."
+        user_id: ID @where(key: "user_id")
+
+        "Filtre par date de création minimale."
+        start_date: DateTime @scope(name: "createdAfter")
+
+        "Filtre par date de création maximale."
+        end_date: DateTime @scope(name: "createdBefore")
+
+        "Options de tri des commandes."
+        orderBy: [OrderOrderByClause!] @orderBy(columnsEnum: OrderOrderByField)
+    ): [Order!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
+
+    "Récupère une commande précise (si elle appartient à l'entreprise courante)."
+    order(id: ID! @eq): Order @find(scopes: ["forCompany"])
+
+    "Retourne les statistiques des commandes sur une période."
+    ordersStats(
+        statuses: [OrderStatusEnum!]
+        table_id: ID
+        user_id: ID
+        start_date: DateTime
+        end_date: DateTime
+    ): OrdersStats!
+        @field(resolver: "App\\GraphQL\\Resolvers\\OrdersResolver@stats")
+}
+
+"""
+Options de tri disponibles pour les commandes.
+"""
+input OrderOrderByClause {
+    "Colonne utilisée pour le tri."
+    column: OrderOrderByField!
+
+    "Direction du tri."
+    order: SortOrder! = ASC
+}
+
+"""
+Colonnes triables pour les commandes.
+"""
+enum OrderOrderByField {
+    ID @enum(value: "id")
+    STATUS @enum(value: "status")
+    TABLE_ID @enum(value: "table_id")
+    USER_ID @enum(value: "user_id")
+    PENDING_AT @enum(value: "pending_at")
+    IN_PREP_AT @enum(value: "in_prep_at")
+    READY_AT @enum(value: "ready_at")
+    SERVED_AT @enum(value: "served_at")
+    PAYED_AT @enum(value: "payed_at")
+    CANCELED_AT @enum(value: "canceled_at")
+    CREATED_AT @enum(value: "created_at")
+    UPDATED_AT @enum(value: "updated_at")
+}

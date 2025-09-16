@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Enums\MenuServiceType;
+use App\Enums\OrderStatus;
+use App\Enums\OrderStepStatus;
+use App\Enums\StepMenuStatus;
 use App\Services\OpenFoodFactsService;
 use GraphQL\Type\Definition\EnumType;
 use Illuminate\Support\ServiceProvider;
@@ -49,6 +52,30 @@ class AppServiceProvider extends ServiceProvider
         $typeRegistry->register(new EnumType([
             'name' => 'MenuServiceTypeEnum',
             'values' => collect(MenuServiceType::cases())
+                ->mapWithKeys(fn ($c) => [
+                    $c->value => ['value' => $c],
+                ])->all(),
+        ]));
+
+        $typeRegistry->register(new EnumType([
+            'name' => 'OrderStatusEnum',
+            'values' => collect(OrderStatus::cases())
+                ->mapWithKeys(fn ($c) => [
+                    $c->value => ['value' => $c],
+                ])->all(),
+        ]));
+
+        $typeRegistry->register(new EnumType([
+            'name' => 'OrderStepStatusEnum',
+            'values' => collect(OrderStepStatus::cases())
+                ->mapWithKeys(fn ($c) => [
+                    $c->value => ['value' => $c],
+                ])->all(),
+        ]));
+
+        $typeRegistry->register(new EnumType([
+            'name' => 'StepMenuStatusEnum',
+            'values' => collect(StepMenuStatus::cases())
                 ->mapWithKeys(fn ($c) => [
                     $c->value => ['value' => $c],
                 ])->all(),

@@ -18,7 +18,6 @@ class OrderStepFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->sentence(2),
             'position' => $this->faker->numberBetween(1, 5),
             'status' => $this->faker->randomElement(OrderStepStatus::values()),
             'served_at' => $this->faker->optional()->dateTime(),

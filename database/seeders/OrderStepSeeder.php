@@ -2,6 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Enums\OrderStatus;
+use App\Enums\OrderStepStatus;
+use App\Models\Order;
+use App\Models\OrderStep;
 use Illuminate\Database\Seeder;
 
 class OrderStepSeeder extends Seeder
@@ -11,6 +15,56 @@ class OrderStepSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        $orders = Order::query()->withCount('steps')->get();
+
+        foreach ($orders as $order) {
+            if ($order->steps_count > 0) {
+                continue;
+            }
+
+            $progress = $this->progressForStatus($order->status);
+            $targets = collect($this->stepTargets());
+
+            $targets->each(function (int $target, int $index) use ($order, $progress): void {
+                $status = $this->statusForProgress(min($progress, $target));
+
+                OrderStep::query()->create([
+                    'order_id' => $order->id,
+                    'position' => $index + 1,
+                    'status' => $status,
+                    'served_at' => $status === OrderStepStatus::SERVED
+                        ? now()->subMinutes(random_int(5, 60))
+                        : null,
+                ]);
+            });
+        }
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function stepTargets(): array
+    {
+        return [1, 2, 3];
+    }
+
+    private function progressForStatus(OrderStatus $status): int
+    {
+        return match ($status) {
+            OrderStatus::PENDING, OrderStatus::CANCELLED => 0,
+            OrderStatus::IN_PREP => 1,
+            OrderStatus::READY => 2,
+            OrderStatus::SERVED, OrderStatus::PAYED => 3,
+        };
+    }
+
+    private function statusForProgress(int $progress): OrderStepStatus
+    {
+        return match ($progress) {
+            0 => OrderStepStatus::PENDING,
+            1 => OrderStepStatus::IN_PREP,
+            2 => OrderStepStatus::READY,
+            default => OrderStepStatus::SERVED,
+        };
     }
 }
