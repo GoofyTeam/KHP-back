@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             LossSeeder::class,
             QuickAccessSeeder::class,
             MenuOrderSeeder::class,
+            DemoSeeder::class,
         ]);
     }
 }
