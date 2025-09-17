@@ -107,31 +107,19 @@ class ImageService
 
     /**
      * S'assure qu'une image locale (par défaut le placeholder Laravel) est
-     * présente sur S3 à l'emplacement souhaité et renvoie ce chemin.
+     * présente sur S3 et renvoie son chemin.
      */
-    public function storePlaceholder(string $sourcePath = 'private/images/placeholder.svg', ?string $targetPath = null): string
+    public function storePlaceholder(string $path = 'private/images/placeholder.svg'): string
     {
-        $targetPath ??= $sourcePath;
-
-        if ($this->exists($targetPath)) {
-            return $targetPath;
+        if ($this->exists($path)) {
+            return $path;
         }
 
-        $localPath = storage_path('app/'.$sourcePath);
+        $localPath = storage_path('app/'.$path);
+        $contents = file_get_contents($localPath);
+        Storage::disk('s3')->put($path, $contents);
 
-        if (! is_file($localPath) || ! is_readable($localPath)) {
-            throw new \RuntimeException('Placeholder introuvable : '.$sourcePath);
-        }
-
-        $contents = @file_get_contents($localPath);
-
-        if ($contents === false) {
-            throw new \RuntimeException('Impossible de lire le placeholder local : '.$localPath);
-        }
-
-        Storage::disk('s3')->put($targetPath, $contents);
-
-        return $targetPath;
+        return $path;
     }
 
     public function exists(string $path): bool

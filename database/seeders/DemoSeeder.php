@@ -524,42 +524,35 @@ class DemoSeeder extends Seeder
             return $this->placeholderImagePath;
         }
 
+        if ($this->images->exists(self::DEMO_PLACEHOLDER_PATH)) {
+            return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
+        }
+
         $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
         $localAvailable = is_file($localPlaceholder) && is_readable($localPlaceholder);
 
         if ($localAvailable) {
-            try {
-                return $this->placeholderImagePath = $this->images->storePlaceholder(
-                    self::DEFAULT_PLACEHOLDER_SOURCE,
-                    self::DEMO_PLACEHOLDER_PATH
-                );
-            } catch (Throwable $exception) {
-                $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
+            $contents = file_get_contents($localPlaceholder);
+
+            if ($contents === false) {
+                $this->command?->warn('Impossible de lire le placeholder local pour la démonstration.');
+            } else {
+                try {
+                    if (Storage::disk('s3')->put(self::DEMO_PLACEHOLDER_PATH, $contents)) {
+                        return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
+                    }
+
+                    $this->command?->warn('Impossible de stocker le placeholder de démonstration sur S3.');
+                } catch (Throwable $exception) {
+                    $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
+                }
             }
         } else {
             $this->command?->warn('Placeholder local indisponible pour la démonstration.');
         }
 
-        if ($this->images->exists(self::DEMO_PLACEHOLDER_PATH)) {
-            return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
-        }
-
-        if ($localAvailable) {
-            $contents = @file_get_contents($localPlaceholder);
-
-            if ($contents !== false) {
-                try {
-                    if (Storage::disk('s3')->put(self::DEMO_PLACEHOLDER_PATH, $contents)) {
-                        return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
-                    }
-                } catch (Throwable $exception) {
-                    // ignored; fallback handled below
-                }
-            }
-        }
-
         try {
-            return $this->placeholderImagePath = $this->images->storePlaceholder();
+            return $this->placeholderImagePath = $this->images->storePlaceholder(self::DEFAULT_PLACEHOLDER_SOURCE);
         } catch (Throwable $exception) {
             $this->command?->warn('Impossible de stocker le placeholder par défaut : '.$exception->getMessage());
 
