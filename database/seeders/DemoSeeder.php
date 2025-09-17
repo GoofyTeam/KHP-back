@@ -1143,6 +1143,18 @@ class DemoSeeder extends Seeder
         'Glace vanille' => 'Congélateur Maison Gustave',
     ];
 
+    private const PREPARATION_STOCK_LEVELS = [
+        'Pâté en croûte' => 24,
+        'Pickles de légumes' => 30,
+        'Brioche parisienne' => 36,
+        'Jus de marinière' => 40,
+        'Sole à la meunière' => 16,
+        'Cassolette d’artichauts' => 18,
+        'Millefeuille' => 30,
+        'Pêches pochées' => 24,
+        'Coulis de framboise' => 24,
+    ];
+
     private ImageService $images;
 
     private OpenFoodFactsService $openFoodFacts;
@@ -1160,6 +1172,16 @@ class DemoSeeder extends Seeder
     private array $productImages = [];
 
     private ?string $placeholderImagePath = null;
+
+    /** @var array<string, int> */
+    private array $ingredientLocations = [];
+
+    /** @var array<string, int> */
+    private array $preparationLocations = [];
+
+    private ?int $defaultLocationId = null;
+
+    private ?int $preparationLocationId = null;
 
     public function __construct(ImageService $images, OpenFoodFactsService $openFoodFacts)
     {
@@ -1187,6 +1209,9 @@ class DemoSeeder extends Seeder
         }
 
         $preparationLocation = $locations[self::PREPARATION_LOCATION_NAME] ?? $defaultLocation;
+
+        $this->defaultLocationId = $defaultLocation->id;
+        $this->preparationLocationId = $preparationLocation->id;
 
         $categoryIds = $this->ensureCategories($company, $locationTypes);
         $ingredients = $this->seedIngredients($company, $categoryIds, $locations, $defaultLocation);
@@ -1417,6 +1442,8 @@ class DemoSeeder extends Seeder
                 $location->id => ['quantity' => isset($meta['stock']) ? (float) $meta['stock'] : 0.0],
             ]);
 
+            $this->ingredientLocations[$name] = $location->id;
+
             $ingredients[$name] = $ingredient;
         }
 
@@ -1594,8 +1621,10 @@ class DemoSeeder extends Seeder
         );
 
         $preparation->locations()->sync([
-            $preparationLocation->id => ['quantity' => 0],
+            $preparationLocation->id => ['quantity' => $this->preparationStock($name)],
         ]);
+
+        $this->preparationLocations[$name] = $preparationLocation->id;
 
         $preparation->entities()->delete();
 
@@ -1660,6 +1689,13 @@ class DemoSeeder extends Seeder
         }
 
         return $cache[$name] = $preparation;
+    }
+
+    private function preparationStock(string $name): float
+    {
+        return isset(self::PREPARATION_STOCK_LEVELS[$name])
+            ? (float) self::PREPARATION_STOCK_LEVELS[$name]
+            : 0.0;
     }
 
     /**
@@ -1751,6 +1787,10 @@ class DemoSeeder extends Seeder
                         ? $componentUnit
                         : MeasurementUnit::from($componentUnit);
 
+                    $locationId = $this->ingredientLocations[$ingredientName]
+                        ?? $this->defaultLocationId
+                        ?? $defaultLocation->id;
+
                     MenuItem::updateOrCreate(
                         [
                             'menu_id' => $menu->id,
@@ -1758,7 +1798,7 @@ class DemoSeeder extends Seeder
                             'entity_type' => Ingredient::class,
                         ],
                         [
-                            'location_id' => $defaultLocation->id,
+                            'location_id' => $locationId,
                             'quantity' => $quantity,
                             'unit' => $componentUnit->value,
                         ]
@@ -1789,6 +1829,11 @@ class DemoSeeder extends Seeder
                         ? $componentUnit
                         : MeasurementUnit::from($componentUnit);
 
+                    $locationId = $this->preparationLocations[$preparationName]
+                        ?? $this->preparationLocationId
+                        ?? $this->defaultLocationId
+                        ?? $defaultLocation->id;
+
                     MenuItem::updateOrCreate(
                         [
                             'menu_id' => $menu->id,
@@ -1796,7 +1841,7 @@ class DemoSeeder extends Seeder
                             'entity_type' => Preparation::class,
                         ],
                         [
-                            'location_id' => $defaultLocation->id,
+                            'location_id' => $locationId,
                             'quantity' => $quantity,
                             'unit' => $componentUnit->value,
                         ]
