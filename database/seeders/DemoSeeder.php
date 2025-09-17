@@ -825,7 +825,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 10,
+            'stock' => 0,
             'barcode' => '26078410',
         ],
         'Lait' => [
@@ -849,7 +849,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 600,
-            'stock' => 12,
+            'stock' => 0,
             'barcode' => '3770000648317',
         ],
         'Haricots verts frais' => [
@@ -1148,7 +1148,7 @@ class DemoSeeder extends Seeder
         'Pickles de légumes' => 30,
         'Brioche parisienne' => 36,
         'Jus de marinière' => 40,
-        'Sole à la meunière' => 16,
+        'Sole à la meunière' => 0,
         'Cassolette d’artichauts' => 18,
         'Millefeuille' => 30,
         'Pêches pochées' => 24,
