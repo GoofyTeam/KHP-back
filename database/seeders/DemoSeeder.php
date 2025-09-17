@@ -39,25 +39,76 @@ class DemoSeeder extends Seeder
                 'name' => 'Notre pâté en croûte, pickles de légumes',
                 'price' => 28.0,
                 'ingredients' => [],
-                'preparations' => ['Pâté en croûte', 'Pickles de légumes'],
+                'preparations' => [
+                    [
+                        'name' => 'Pâté en croûte',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Pickles de légumes',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
             ],
             [
                 'name' => 'Foie gras de canard, brioche parisienne',
                 'price' => 32.0,
-                'ingredients' => ['Foie gras de canard cru'],
-                'preparations' => ['Brioche parisienne'],
+                'ingredients' => [
+                    [
+                        'name' => 'Foie gras de canard cru',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
+                'preparations' => [
+                    [
+                        'name' => 'Brioche parisienne',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
             ],
             [
                 'name' => 'Homard bleu rafraîchi, haricots verts et amandes fraîches',
                 'price' => 38.0,
                 'ingredients' => [
-                    'Homard bleu',
-                    'Haricots verts frais',
-                    'Amandes fraîches',
-                    'Huile d’olive',
-                    'Citron',
-                    'Sel',
-                    'Poivre',
+                    [
+                        'name' => 'Homard bleu',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Haricots verts frais',
+                        'quantity' => 200,
+                        'unit' => MeasurementUnit::GRAM,
+                    ],
+                    [
+                        'name' => 'Amandes fraîches',
+                        'quantity' => 40,
+                        'unit' => MeasurementUnit::GRAM,
+                    ],
+                    [
+                        'name' => 'Huile d’olive',
+                        'quantity' => 25,
+                        'unit' => MeasurementUnit::MILLILITRE,
+                    ],
+                    [
+                        'name' => 'Citron',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Sel',
+                        'quantity' => 2,
+                        'unit' => MeasurementUnit::GRAM,
+                    ],
+                    [
+                        'name' => 'Poivre',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::GRAM,
+                    ],
                 ],
                 'preparations' => [],
             ],
@@ -65,10 +116,26 @@ class DemoSeeder extends Seeder
                 'name' => 'Tomate de plein champs fondante, anchois et basilic',
                 'price' => 30.0,
                 'ingredients' => [
-                    'Tomate de plein champ',
-                    'Filets d’anchois',
-                    'Basilic frais',
-                    'Huile d’olive',
+                    [
+                        'name' => 'Tomate de plein champ',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Filets d’anchois',
+                        'quantity' => 3,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Basilic frais',
+                        'quantity' => 15,
+                        'unit' => MeasurementUnit::GRAM,
+                    ],
+                    [
+                        'name' => 'Huile d’olive',
+                        'quantity' => 20,
+                        'unit' => MeasurementUnit::MILLILITRE,
+                    ],
                 ],
                 'preparations' => [],
             ],
@@ -77,21 +144,55 @@ class DemoSeeder extends Seeder
             [
                 'name' => 'Dos de bar doré, courgette trompette et jus d’une marinière',
                 'price' => 38.0,
-                'ingredients' => ['Dos de bar', 'Courgette trompette'],
-                'preparations' => ['Jus de marinière'],
+                'ingredients' => [
+                    [
+                        'name' => 'Dos de bar',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Courgette trompette',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
+                'preparations' => [
+                    [
+                        'name' => 'Jus de marinière',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
             ],
             [
                 'name' => 'Sole à la meunière, cassolette d’artichauts (pour deux)',
                 'price' => 160.0,
                 'ingredients' => [],
-                'preparations' => ['Sole à la meunière', 'Cassolette d’artichauts'],
+                'preparations' => [
+                    [
+                        'name' => 'Sole à la meunière',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Cassolette d’artichauts',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
             ],
         ],
         'fromage' => [
             [
                 'name' => 'Fromages de France',
                 'price' => 16.0,
-                'ingredients' => ['Sélection de fromages de vache, chèvre, brebis'],
+                'ingredients' => [
+                    [
+                        'name' => 'Sélection de fromages de vache, chèvre, brebis',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
                 'preparations' => [],
             ],
         ],
@@ -100,13 +201,36 @@ class DemoSeeder extends Seeder
                 'name' => 'Millefeuille classique à la vanille',
                 'price' => 14.0,
                 'ingredients' => [],
-                'preparations' => ['Millefeuille'],
+                'preparations' => [
+                    [
+                        'name' => 'Millefeuille',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
             ],
             [
                 'name' => 'Pêche Melba',
                 'price' => 14.0,
-                'ingredients' => ['Glace vanille'],
-                'preparations' => ['Pêches pochées', 'Coulis de framboise'],
+                'ingredients' => [
+                    [
+                        'name' => 'Glace vanille',
+                        'quantity' => 2,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
+                'preparations' => [
+                    [
+                        'name' => 'Pêches pochées',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                    [
+                        'name' => 'Coulis de framboise',
+                        'quantity' => 1,
+                        'unit' => MeasurementUnit::UNIT,
+                    ],
+                ],
             ],
         ],
     ];
@@ -1095,7 +1219,6 @@ class DemoSeeder extends Seeder
                     : MeasurementUnit::from($meta['base_unit']))
                 : $unit;
             $baseQuantity = isset($meta['base_quantity']) ? (float) $meta['base_quantity'] : 0.0;
-            $stockQuantity = isset($meta['stock']) ? (float) $meta['stock'] : $baseQuantity;
 
             $ingredient = Ingredient::updateOrCreate(
                 [
@@ -1123,7 +1246,7 @@ class DemoSeeder extends Seeder
             }
 
             $ingredient->locations()->syncWithoutDetaching([
-                $defaultLocation->id => ['quantity' => $stockQuantity],
+                $defaultLocation->id,
             ]);
 
             $ingredients[$name] = $ingredient;
@@ -1284,7 +1407,7 @@ class DemoSeeder extends Seeder
         );
 
         $preparation->locations()->syncWithoutDetaching([
-            $defaultLocation->id => ['quantity' => 1],
+            $defaultLocation->id,
         ]);
 
         $preparation->entities()->delete();
@@ -1376,7 +1499,12 @@ class DemoSeeder extends Seeder
      * @param  array<string, MenuCategory>  $menuCategories
      * @param  array<string, Ingredient>  $ingredients
      * @param  array<string, Preparation>  $preparations
-     * @param  array<string, array<int, array{name: string, price: float, ingredients: array<int, string>, preparations: array<int, string>}>>  $dataset
+     * @param  array<string, array<int, array{
+     *     name: string,
+     *     price: float,
+     *     ingredients: array<int, array{name: string, quantity?: float, unit?: MeasurementUnit|string}>,
+     *     preparations: array<int, array{name: string, quantity?: float, unit?: MeasurementUnit|string}>,
+     * }>>  $dataset
      */
     private function seedMenus(
         Company $company,
@@ -1412,7 +1540,14 @@ class DemoSeeder extends Seeder
                     $menu->categories()->syncWithoutDetaching([$menuCategory->id]);
                 }
 
-                foreach ($entry['ingredients'] as $ingredientName) {
+                foreach ($entry['ingredients'] as $component) {
+                    $component = is_string($component) ? ['name' => $component] : $component;
+                    $ingredientName = $component['name'] ?? null;
+
+                    if (! $ingredientName) {
+                        continue;
+                    }
+
                     $ingredient = $ingredients[$ingredientName] ?? null;
                     if (! $ingredient) {
                         $this->missingComponents[] = $ingredientName.' (menu '.$entry['name'].')';
@@ -1420,7 +1555,14 @@ class DemoSeeder extends Seeder
                         continue;
                     }
 
-                    $locationId = $ingredient->locations()->first()?->id ?? $defaultLocation->id;
+                    $quantity = array_key_exists('quantity', $component)
+                        ? (float) $component['quantity']
+                        : 1.0;
+
+                    $componentUnit = $component['unit'] ?? $ingredient->unit ?? MeasurementUnit::UNIT;
+                    $componentUnit = $componentUnit instanceof MeasurementUnit
+                        ? $componentUnit
+                        : MeasurementUnit::from($componentUnit);
 
                     MenuItem::updateOrCreate(
                         [
@@ -1429,14 +1571,21 @@ class DemoSeeder extends Seeder
                             'entity_type' => Ingredient::class,
                         ],
                         [
-                            'location_id' => $locationId,
-                            'quantity' => 0,
-                            'unit' => $ingredient->unit->value,
+                            'location_id' => $defaultLocation->id,
+                            'quantity' => $quantity,
+                            'unit' => $componentUnit->value,
                         ]
                     );
                 }
 
-                foreach ($entry['preparations'] as $preparationName) {
+                foreach ($entry['preparations'] as $component) {
+                    $component = is_string($component) ? ['name' => $component] : $component;
+                    $preparationName = $component['name'] ?? null;
+
+                    if (! $preparationName) {
+                        continue;
+                    }
+
                     $preparation = $preparations[$preparationName] ?? null;
                     if (! $preparation) {
                         $this->missingComponents[] = $preparationName.' (menu '.$entry['name'].')';
@@ -1444,7 +1593,14 @@ class DemoSeeder extends Seeder
                         continue;
                     }
 
-                    $locationId = $preparation->locations()->first()?->id ?? $defaultLocation->id;
+                    $quantity = array_key_exists('quantity', $component)
+                        ? (float) $component['quantity']
+                        : 1.0;
+
+                    $componentUnit = $component['unit'] ?? MeasurementUnit::UNIT;
+                    $componentUnit = $componentUnit instanceof MeasurementUnit
+                        ? $componentUnit
+                        : MeasurementUnit::from($componentUnit);
 
                     MenuItem::updateOrCreate(
                         [
@@ -1453,9 +1609,9 @@ class DemoSeeder extends Seeder
                             'entity_type' => Preparation::class,
                         ],
                         [
-                            'location_id' => $locationId,
-                            'quantity' => 0,
-                            'unit' => MeasurementUnit::UNIT->value,
+                            'location_id' => $defaultLocation->id,
+                            'quantity' => $quantity,
+                            'unit' => $componentUnit->value,
                         ]
                     );
                 }
