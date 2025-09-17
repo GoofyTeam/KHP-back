@@ -289,6 +289,10 @@ class DemoSeeder extends Seeder
 
     private const TEMP_IMAGE_FOLDER = 'tmp/demo-seeder/ingredients';
 
+    private const MENU_PLACEHOLDER_SOURCE = 'public/playsolder.png';
+
+    private const DEFAULT_PLACEHOLDER_SOURCE = 'private/images/placeholder.svg';
+
     private const TEMP_PLACEHOLDER_PATH = 'tmp/demo-seeder/placeholder.svg';
 
     private ImageService $images;
@@ -522,11 +526,21 @@ class DemoSeeder extends Seeder
             return $this->placeholderImagePath;
         }
 
+        $localMenuPlaceholder = storage_path('app/'.self::MENU_PLACEHOLDER_SOURCE);
+
+        if (is_file($localMenuPlaceholder) && is_readable($localMenuPlaceholder)) {
+            try {
+                return $this->placeholderImagePath = $this->images->storePlaceholder(self::MENU_PLACEHOLDER_SOURCE);
+            } catch (Throwable $exception) {
+                $this->command?->warn('Impossible d\'utiliser playsolder.png : '.$exception->getMessage());
+            }
+        }
+
         if ($this->images->exists(self::TEMP_PLACEHOLDER_PATH)) {
             return $this->placeholderImagePath = self::TEMP_PLACEHOLDER_PATH;
         }
 
-        $localPlaceholder = storage_path('app/private/images/placeholder.svg');
+        $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
         $contents = @file_get_contents($localPlaceholder);
 
         if ($contents !== false) {
@@ -539,7 +553,7 @@ class DemoSeeder extends Seeder
             }
         }
 
-        return $this->placeholderImagePath = $this->images->storePlaceholder();
+        return $this->placeholderImagePath = $this->images->storePlaceholder(self::DEFAULT_PLACEHOLDER_SOURCE);
     }
 
     /**
