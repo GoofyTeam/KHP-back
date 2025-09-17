@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
+use App\Models\LocationType;
 use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
@@ -17,6 +18,7 @@ use App\Services\OpenFoodFactsService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class DemoSeeder extends Seeder
@@ -1066,6 +1068,81 @@ class DemoSeeder extends Seeder
 
     private const DEMO_PLACEHOLDER_PATH = 'tmp/demo-seeder/placeholder.svg';
 
+    private const DEFAULT_LOCATION_NAME = 'Chambre froide Maison Gustave';
+
+    private const PREPARATION_LOCATION_NAME = 'Laboratoire pâtisserie Maison Gustave';
+
+    private const LOCATION_BLUEPRINTS = [
+        self::DEFAULT_LOCATION_NAME => [
+            'type' => 'Réfrigérateur',
+            'aliases' => ['Réfrigérateur'],
+        ],
+        'Congélateur Maison Gustave' => [
+            'type' => 'Congélateur',
+            'aliases' => ['Congélateur'],
+        ],
+        'Réserve sèche Maison Gustave' => [
+            'type' => 'Autre',
+        ],
+        'Cave à vins Maison Gustave' => [
+            'type' => 'Autre',
+        ],
+        self::PREPARATION_LOCATION_NAME => [
+            'type' => 'Autre',
+        ],
+    ];
+
+    private const CATEGORY_SHELF_LIFE = [
+        'Farines' => ['Autre' => 720],
+        'Produits Laitiers' => ['Réfrigérateur' => 120, 'Congélateur' => 360],
+        'Boissons' => ['Autre' => 720, 'Réfrigérateur' => 120],
+        'Épicerie' => ['Autre' => 720],
+        'Viandes' => ['Réfrigérateur' => 72, 'Congélateur' => 720],
+        'Œufs' => ['Réfrigérateur' => 240],
+        'Épices' => ['Autre' => 1440],
+        'Spiritueux' => ['Autre' => 2880],
+        'Fruits de Mer' => ['Réfrigérateur' => 48, 'Congélateur' => 240],
+        'Légumes' => ['Réfrigérateur' => 168],
+        'Fruits' => ['Réfrigérateur' => 120],
+        'Fruits secs' => ['Autre' => 720],
+        'Poissons' => ['Réfrigérateur' => 48, 'Congélateur' => 240],
+        'Herbes aromatiques' => ['Réfrigérateur' => 72],
+        'Fromages' => ['Réfrigérateur' => 168],
+        'Desserts' => ['Congélateur' => 240, 'Réfrigérateur' => 72],
+        'Préparations Maison' => ['Réfrigérateur' => 48, 'Congélateur' => 168],
+        'Ingrédients Divers' => ['Autre' => 336, 'Réfrigérateur' => 96],
+    ];
+
+    private const DEFAULT_CATEGORY_SHELF_LIFE = [
+        'Réfrigérateur' => 96,
+        'Congélateur' => 360,
+        'Autre' => 720,
+    ];
+
+    private const CATEGORY_LOCATION_MAP = [
+        'Farines' => 'Réserve sèche Maison Gustave',
+        'Épicerie' => 'Réserve sèche Maison Gustave',
+        'Épices' => 'Réserve sèche Maison Gustave',
+        'Fruits secs' => 'Réserve sèche Maison Gustave',
+        'Boissons' => 'Cave à vins Maison Gustave',
+        'Spiritueux' => 'Cave à vins Maison Gustave',
+        'Desserts' => 'Congélateur Maison Gustave',
+        'Produits Laitiers' => self::DEFAULT_LOCATION_NAME,
+        'Viandes' => self::DEFAULT_LOCATION_NAME,
+        'Fruits de Mer' => self::DEFAULT_LOCATION_NAME,
+        'Poissons' => self::DEFAULT_LOCATION_NAME,
+        'Légumes' => self::DEFAULT_LOCATION_NAME,
+        'Fruits' => self::DEFAULT_LOCATION_NAME,
+        'Herbes aromatiques' => self::DEFAULT_LOCATION_NAME,
+        'Fromages' => self::DEFAULT_LOCATION_NAME,
+        'Œufs' => self::DEFAULT_LOCATION_NAME,
+        'Ingrédients Divers' => 'Réserve sèche Maison Gustave',
+    ];
+
+    private const INGREDIENT_LOCATION_OVERRIDES = [
+        'Glace vanille' => 'Congélateur Maison Gustave',
+    ];
+
     private ImageService $images;
 
     private OpenFoodFactsService $openFoodFacts;
@@ -1102,14 +1179,22 @@ class DemoSeeder extends Seeder
             Auth::setUser($authUser);
         }
 
-        $defaultLocation = $this->resolveDefaultLocation($company);
-        $categoryIds = $this->ensureCategories($company);
-        $ingredients = $this->seedIngredients($company, $categoryIds, $defaultLocation);
+        $locationTypes = $this->ensureLocationTypes($company);
+        $locations = $this->ensureLocations($company, $locationTypes);
+        $defaultLocation = $locations[self::DEFAULT_LOCATION_NAME] ?? reset($locations);
+        if (! $defaultLocation instanceof Location) {
+            throw new RuntimeException('Impossible de déterminer la localisation par défaut pour le jeu de démonstration.');
+        }
+
+        $preparationLocation = $locations[self::PREPARATION_LOCATION_NAME] ?? $defaultLocation;
+
+        $categoryIds = $this->ensureCategories($company, $locationTypes);
+        $ingredients = $this->seedIngredients($company, $categoryIds, $locations, $defaultLocation);
         $preparationCategoryId = $categoryIds['Préparations Maison'] ?? (int) reset($categoryIds);
         $preparations = $this->seedPreparations(
             $company,
             $preparationCategoryId,
-            $defaultLocation,
+            $preparationLocation,
             $ingredients
         );
         $menuCategories = $this->ensureMenuCategories($company);
@@ -1145,35 +1230,79 @@ class DemoSeeder extends Seeder
         return $firstUser;
     }
 
-    private function resolveDefaultLocation(Company $company): Location
+    /**
+     * @return array<string, LocationType>
+     */
+    private function ensureLocationTypes(Company $company): array
     {
-        $desiredName = 'Chambre froide Maison Gustave';
+        $names = array_unique(array_map(
+            static fn (array $definition) => $definition['type'] ?? 'Autre',
+            self::LOCATION_BLUEPRINTS
+        ));
 
-        $location = $company->locations()->firstWhere('name', $desiredName);
-        if ($location instanceof Location) {
-            return $location;
+        $types = [];
+        foreach ($names as $name) {
+            $types[$name] = $company->locationTypes()->updateOrCreate(
+                ['name' => $name],
+                ['is_default' => in_array($name, ['Réfrigérateur', 'Congélateur', 'Autre'], true)]
+            );
         }
 
-        $existing = $company->locations()->firstWhere('name', 'Réfrigérateur');
-        if ($existing instanceof Location) {
-            $existing->update(['name' => $desiredName]);
-
-            return $existing->refresh();
-        }
-
-        $type = $company->locationTypes()->firstWhere('name', 'Réfrigérateur')
-            ?? $company->locationTypes()->first();
-
-        return $company->locations()->create([
-            'name' => $desiredName,
-            'location_type_id' => $type?->id,
-        ]);
+        return $types;
     }
 
     /**
+     * @param  array<string, LocationType>  $locationTypes
+     * @return array<string, Location>
+     */
+    private function ensureLocations(Company $company, array $locationTypes): array
+    {
+        $locations = [];
+
+        foreach (self::LOCATION_BLUEPRINTS as $name => $config) {
+            $typeName = $config['type'] ?? 'Autre';
+            $type = $locationTypes[$typeName] ?? null;
+
+            $location = $company->locations()->where('name', $name)->first();
+
+            if (! $location && ! empty($config['aliases'])) {
+                foreach ($config['aliases'] as $alias) {
+                    $aliasLocation = $company->locations()->where('name', $alias)->first();
+
+                    if ($aliasLocation instanceof Location) {
+                        $aliasLocation->update([
+                            'name' => $name,
+                            'location_type_id' => $type?->id,
+                        ]);
+
+                        $location = $aliasLocation->fresh();
+
+                        break;
+                    }
+                }
+            }
+
+            if (! $location) {
+                $location = $company->locations()->updateOrCreate(
+                    ['name' => $name],
+                    ['location_type_id' => $type?->id]
+                );
+            } else {
+                $location->update(['location_type_id' => $type?->id]);
+                $location = $location->fresh();
+            }
+
+            $locations[$name] = $location;
+        }
+
+        return $locations;
+    }
+
+    /**
+     * @param  array<string, LocationType>  $locationTypes
      * @return array<string, int>
      */
-    private function ensureCategories(Company $company): array
+    private function ensureCategories(Company $company, array $locationTypes): array
     {
         $names = array_map(
             fn (array $meta) => $meta['category'] ?? 'Ingrédients Divers',
@@ -1193,6 +1322,8 @@ class DemoSeeder extends Seeder
                 []
             );
 
+            $this->assignCategoryShelfLife($category, $locationTypes);
+
             $categories[$name] = $category->id;
         }
 
@@ -1200,10 +1331,45 @@ class DemoSeeder extends Seeder
     }
 
     /**
+     * @param  array<string, LocationType>  $locationTypes
+     */
+    private function assignCategoryShelfLife(Category $category, array $locationTypes): void
+    {
+        $definition = self::CATEGORY_SHELF_LIFE[$category->name] ?? [];
+        $payload = [];
+
+        foreach ($definition as $typeName => $hours) {
+            if (! isset($locationTypes[$typeName])) {
+                continue;
+            }
+
+            $payload[$locationTypes[$typeName]->id] = ['shelf_life_hours' => (int) $hours];
+        }
+
+        if (empty($payload)) {
+            foreach (self::DEFAULT_CATEGORY_SHELF_LIFE as $typeName => $hours) {
+                if (! isset($locationTypes[$typeName])) {
+                    continue;
+                }
+
+                $payload[$locationTypes[$typeName]->id] = ['shelf_life_hours' => (int) $hours];
+            }
+        }
+
+        if (! empty($payload)) {
+            $category->locationTypes()->sync($payload);
+        }
+    }
+
+    /**
      * @return array<string, Ingredient>
      */
-    private function seedIngredients(Company $company, array $categoryIds, Location $defaultLocation): array
-    {
+    private function seedIngredients(
+        Company $company,
+        array $categoryIds,
+        array $locations,
+        Location $defaultLocation
+    ): array {
         $ingredients = [];
         $fallbackCategoryId = $categoryIds['Ingrédients Divers'] ?? (int) reset($categoryIds);
 
@@ -1245,14 +1411,35 @@ class DemoSeeder extends Seeder
                 $ingredient->update(['image_url' => $this->placeholderPath()]);
             }
 
-            $ingredient->locations()->syncWithoutDetaching([
-                $defaultLocation->id,
+            $location = $this->resolveIngredientLocation($name, $meta, $locations, $defaultLocation);
+
+            $ingredient->locations()->sync([
+                $location->id => ['quantity' => isset($meta['stock']) ? (float) $meta['stock'] : 0.0],
             ]);
 
             $ingredients[$name] = $ingredient;
         }
 
         return $ingredients;
+    }
+
+    /**
+     * @param  array<string, Location>  $locations
+     */
+    private function resolveIngredientLocation(
+        string $name,
+        array $meta,
+        array $locations,
+        Location $fallback
+    ): Location {
+        $preferredName = self::INGREDIENT_LOCATION_OVERRIDES[$name]
+            ?? self::CATEGORY_LOCATION_MAP[$meta['category']] ?? null;
+
+        if ($preferredName && isset($locations[$preferredName])) {
+            return $locations[$preferredName];
+        }
+
+        return $locations[self::DEFAULT_LOCATION_NAME] ?? $fallback;
     }
 
     private function storeImageFromOpenFoodFacts(string $ingredientName, string $barcode): ?string
@@ -1350,7 +1537,7 @@ class DemoSeeder extends Seeder
     private function seedPreparations(
         Company $company,
         int $categoryId,
-        Location $defaultLocation,
+        Location $preparationLocation,
         array $ingredients
     ): array {
         $cache = [];
@@ -1360,7 +1547,7 @@ class DemoSeeder extends Seeder
                 $name,
                 $company,
                 $categoryId,
-                $defaultLocation,
+                $preparationLocation,
                 $ingredients,
                 $cache
             );
@@ -1377,7 +1564,7 @@ class DemoSeeder extends Seeder
         string $name,
         Company $company,
         int $categoryId,
-        Location $defaultLocation,
+        Location $preparationLocation,
         array $ingredients,
         array &$cache
     ): ?Preparation {
@@ -1406,8 +1593,8 @@ class DemoSeeder extends Seeder
             ]
         );
 
-        $preparation->locations()->syncWithoutDetaching([
-            $defaultLocation->id,
+        $preparation->locations()->sync([
+            $preparationLocation->id => ['quantity' => 0],
         ]);
 
         $preparation->entities()->delete();
@@ -1431,7 +1618,7 @@ class DemoSeeder extends Seeder
                 $preparation->entities()->create([
                     'entity_id' => $ingredient->id,
                     'entity_type' => Ingredient::class,
-                    'location_id' => $defaultLocation->id,
+                    'location_id' => $preparationLocation->id,
                     'quantity' => $quantity,
                     'unit' => $componentUnit->value,
                 ]);
@@ -1445,7 +1632,7 @@ class DemoSeeder extends Seeder
                     $childName,
                     $company,
                     $categoryId,
-                    $defaultLocation,
+                    $preparationLocation,
                     $ingredients,
                     $cache
                 );
@@ -1465,7 +1652,7 @@ class DemoSeeder extends Seeder
                 $preparation->entities()->create([
                     'entity_id' => $child->id,
                     'entity_type' => Preparation::class,
-                    'location_id' => $defaultLocation->id,
+                    'location_id' => $preparationLocation->id,
                     'quantity' => $quantity,
                     'unit' => $componentUnit->value,
                 ]);
