@@ -127,164 +127,813 @@ class DemoSeeder extends Seeder
 
     private const PREPARATION_COMPONENTS = [
         'Pâte brisée' => [
-            ['ingredient' => 'Farine'],
-            ['ingredient' => 'Beurre'],
-            ['ingredient' => 'Eau'],
-            ['ingredient' => 'Sel'],
+            [
+                'ingredient' => 'Farine',
+                'quantity' => 500,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Beurre',
+                'quantity' => 250,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Eau',
+                'quantity' => 120,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 10,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Farce de porc maison' => [
-            ['ingredient' => 'Échine de porc'],
-            ['ingredient' => 'Veau'],
-            ['ingredient' => 'Foie de volaille'],
-            ['ingredient' => 'Œufs'],
-            ['ingredient' => 'Crème'],
-            ['ingredient' => 'Sel'],
-            ['ingredient' => 'Poivre'],
-            ['ingredient' => 'Armagnac'],
-            ['ingredient' => 'Épices'],
+            [
+                'ingredient' => 'Échine de porc',
+                'quantity' => 4,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Veau',
+                'quantity' => 3,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Foie de volaille',
+                'quantity' => 4,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Œufs',
+                'quantity' => 2,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Crème',
+                'quantity' => 200,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 12,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Poivre',
+                'quantity' => 6,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Armagnac',
+                'quantity' => 30,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Épices',
+                'quantity' => 5,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Gelée' => [
-            ['ingredient' => 'Fond de volaille'],
-            ['ingredient' => 'Gélatine'],
+            [
+                'ingredient' => 'Fond de volaille',
+                'quantity' => 600,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Gélatine',
+                'quantity' => 20,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Pâté en croûte' => [
-            ['preparation' => 'Pâte brisée'],
-            ['preparation' => 'Farce de porc maison'],
-            ['preparation' => 'Gelée'],
+            [
+                'preparation' => 'Pâte brisée',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'preparation' => 'Farce de porc maison',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'preparation' => 'Gelée',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
         ],
         'Marinade' => [
-            ['ingredient' => 'Vinaigre blanc'],
-            ['ingredient' => 'Eau'],
-            ['ingredient' => 'Sucre'],
-            ['ingredient' => 'Sel'],
-            ['ingredient' => 'Graines de moutarde'],
-            ['ingredient' => 'Poivre'],
+            [
+                'ingredient' => 'Vinaigre blanc',
+                'quantity' => 300,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Eau',
+                'quantity' => 200,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Sucre',
+                'quantity' => 80,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 20,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Graines de moutarde',
+                'quantity' => 15,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Poivre',
+                'quantity' => 8,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Pickles de légumes' => [
-            ['ingredient' => 'Carottes'],
-            ['ingredient' => 'Chou-fleur'],
-            ['ingredient' => 'Oignons'],
-            ['ingredient' => 'Cornichons'],
-            ['preparation' => 'Marinade'],
+            [
+                'ingredient' => 'Carottes',
+                'quantity' => 1.5,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Chou-fleur',
+                'quantity' => 3,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Oignons',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Cornichons',
+                'quantity' => 0.8,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'preparation' => 'Marinade',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
         ],
         'Brioche parisienne' => [
-            ['ingredient' => 'Farine'],
-            ['ingredient' => 'Œufs'],
-            ['ingredient' => 'Beurre'],
-            ['ingredient' => 'Lait'],
-            ['ingredient' => 'Sucre'],
-            ['ingredient' => 'Levure de boulanger'],
-            ['ingredient' => 'Sel'],
+            [
+                'ingredient' => 'Farine',
+                'quantity' => 1.2,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Œufs',
+                'quantity' => 8,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Beurre',
+                'quantity' => 0.5,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Lait',
+                'quantity' => 500,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Sucre',
+                'quantity' => 0.2,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Levure de boulanger',
+                'quantity' => 40,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 15,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Jus de marinière' => [
-            ['ingredient' => 'Vin blanc sec'],
-            ['ingredient' => 'Échalotes'],
-            ['ingredient' => 'Beurre'],
-            ['ingredient' => 'Persil'],
-            ['ingredient' => 'Sel'],
-            ['ingredient' => 'Poivre'],
+            [
+                'ingredient' => 'Vin blanc sec',
+                'quantity' => 0.6,
+                'unit' => MeasurementUnit::LITRE,
+            ],
+            [
+                'ingredient' => 'Échalotes',
+                'quantity' => 0.4,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Beurre',
+                'quantity' => 0.2,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Persil',
+                'quantity' => 80,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 10,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Poivre',
+                'quantity' => 5,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Sole à la meunière' => [
-            ['ingredient' => 'Sole'],
-            ['ingredient' => 'Beurre'],
-            ['ingredient' => 'Farine'],
-            ['ingredient' => 'Jus de citron'],
-            ['ingredient' => 'Persil'],
+            [
+                'ingredient' => 'Sole',
+                'quantity' => 2,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Beurre',
+                'quantity' => 0.18,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Farine',
+                'quantity' => 0.25,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Jus de citron',
+                'quantity' => 120,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Persil',
+                'quantity' => 60,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Cassolette d’artichauts' => [
-            ['ingredient' => 'Artichauts frais'],
-            ['ingredient' => 'Fond de volaille'],
-            ['ingredient' => 'Huile d’olive'],
-            ['ingredient' => 'Ail'],
-            ['ingredient' => 'Sel'],
-            ['ingredient' => 'Poivre'],
+            [
+                'ingredient' => 'Artichauts frais',
+                'quantity' => 4,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Fond de volaille',
+                'quantity' => 800,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Huile d’olive',
+                'quantity' => 120,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Ail',
+                'quantity' => 6,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 8,
+                'unit' => MeasurementUnit::GRAM,
+            ],
+            [
+                'ingredient' => 'Poivre',
+                'quantity' => 4,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Pâte feuilletée' => [
-            ['ingredient' => 'Farine'],
-            ['ingredient' => 'Beurre'],
-            ['ingredient' => 'Eau'],
-            ['ingredient' => 'Sel'],
+            [
+                'ingredient' => 'Farine',
+                'quantity' => 1.5,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Beurre',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Eau',
+                'quantity' => 600,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Sel',
+                'quantity' => 15,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Crème pâtissière à la vanille' => [
-            ['ingredient' => 'Lait'],
-            ['ingredient' => 'Sucre'],
-            ['ingredient' => 'Jaunes d’œuf'],
-            ['ingredient' => 'Fécule'],
-            ['ingredient' => 'Gousse de vanille'],
+            [
+                'ingredient' => 'Lait',
+                'quantity' => 2000,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Sucre',
+                'quantity' => 0.35,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Jaunes d’œuf',
+                'quantity' => 18,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Fécule',
+                'quantity' => 0.12,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Gousse de vanille',
+                'quantity' => 6,
+                'unit' => MeasurementUnit::UNIT,
+            ],
         ],
         'Millefeuille' => [
-            ['preparation' => 'Pâte feuilletée'],
-            ['preparation' => 'Crème pâtissière à la vanille'],
-            ['ingredient' => 'Sucre glace'],
+            [
+                'preparation' => 'Pâte feuilletée',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'preparation' => 'Crème pâtissière à la vanille',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Sucre glace',
+                'quantity' => 0.25,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
         ],
         'Pêches pochées' => [
-            ['ingredient' => 'Pêches'],
-            ['ingredient' => 'Sirop'],
-            ['ingredient' => 'Vanille'],
+            [
+                'ingredient' => 'Pêches',
+                'quantity' => 12,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Sirop',
+                'quantity' => 1500,
+                'unit' => MeasurementUnit::MILLILITRE,
+            ],
+            [
+                'ingredient' => 'Vanille',
+                'quantity' => 25,
+                'unit' => MeasurementUnit::GRAM,
+            ],
         ],
         'Coulis de framboise' => [
-            ['ingredient' => 'Framboises'],
-            ['ingredient' => 'Sucre'],
+            [
+                'ingredient' => 'Framboises',
+                'quantity' => 1.2,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
+            [
+                'ingredient' => 'Sucre',
+                'quantity' => 0.3,
+                'unit' => MeasurementUnit::KILOGRAM,
+            ],
         ],
         'Pêche Melba' => [
-            ['preparation' => 'Pêches pochées'],
-            ['preparation' => 'Coulis de framboise'],
-            ['ingredient' => 'Glace vanille'],
+            [
+                'preparation' => 'Pêches pochées',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'preparation' => 'Coulis de framboise',
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ],
+            [
+                'ingredient' => 'Glace vanille',
+                'quantity' => 1.5,
+                'unit' => MeasurementUnit::LITRE,
+            ],
         ],
     ];
 
     private const INGREDIENTS = [
-        'Farine' => ['category' => 'Farines', 'unit' => MeasurementUnit::GRAM, 'barcode' => '4056489565536'],
-        'Beurre' => ['category' => 'Produits Laitiers', 'unit' => MeasurementUnit::GRAM, 'barcode' => '26064413'],
-        'Eau' => ['category' => 'Boissons', 'unit' => MeasurementUnit::LITRE, 'barcode' => '1234500001857'],
-        'Sel' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '10020811'],
-        'Échine de porc' => ['category' => 'Viandes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '0207024022173'],
-        'Veau' => ['category' => 'Viandes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '2695314012009'],
-        'Foie de volaille' => ['category' => 'Viandes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '0215085018561'],
-        'Œufs' => ['category' => 'Œufs', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3560070432080'],
-        'Crème' => ['category' => 'Produits Laitiers', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3258561419299'],
-        'Poivre' => ['category' => 'Épices', 'unit' => MeasurementUnit::GRAM, 'barcode' => '8720254531779'],
-        'Armagnac' => ['category' => 'Spiritueux', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3560070575480'],
-        'Épices' => ['category' => 'Épices', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3700483800544'],
-        'Fond de volaille' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3256225451647'],
-        'Gélatine' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3256225731978'],
-        'Carottes' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3596710431151'],
-        'Chou-fleur' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3560070122349'],
-        'Oignons' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3363290420116'],
-        'Cornichons' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '4061464817722'],
-        'Vinaigre blanc' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3077311522405'],
-        'Sucre' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3596710473557'],
-        'Graines de moutarde' => ['category' => 'Épices', 'unit' => MeasurementUnit::GRAM, 'barcode' => '7610845400434'],
-        'Foie gras de canard cru' => ['category' => 'Viandes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '26078410'],
-        'Lait' => ['category' => 'Produits Laitiers', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3428272970017'],
-        'Levure de boulanger' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '2006050036622'],
-        'Homard bleu' => ['category' => 'Fruits de Mer', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3770000648317'],
-        'Haricots verts frais' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3760086270076'],
-        'Amandes fraîches' => ['category' => 'Fruits secs', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3700194630287'],
-        'Huile d’olive' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3424096003078'],
-        'Citron' => ['category' => 'Fruits', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3256226081881'],
-        'Tomate de plein champ' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3017800246658'],
-        'Filets d’anchois' => ['category' => 'Poissons', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3218370591821'],
-        'Basilic frais' => ['category' => 'Herbes aromatiques', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3411061111029'],
-        'Dos de bar' => ['category' => 'Poissons', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3664335055264'],
-        'Courgette trompette' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '2306375001603'],
-        'Vin blanc sec' => ['category' => 'Boissons', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3660989151932'],
-        'Échalotes' => ['category' => 'Légumes', 'unit' => MeasurementUnit::GRAM, 'barcode' => '8431876150353'],
-        'Persil' => ['category' => 'Herbes aromatiques', 'unit' => MeasurementUnit::GRAM, 'barcode' => '2006050101283'],
-        'Sole' => ['category' => 'Poissons', 'unit' => MeasurementUnit::UNIT, 'barcode' => '0059749982474'],
-        'Jus de citron' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::LITRE, 'barcode' => '3564700299043'],
-        'Artichauts frais' => ['category' => 'Légumes', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3256220652766'],
-        'Ail' => ['category' => 'Légumes', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3256228100191'],
-        'Sucre glace' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3220035730001'],
-        'Gousse de vanille' => ['category' => 'Épices', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3256225732043'],
-        'Jaunes d’œuf' => ['category' => 'Œufs', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3439496001838'],
-        'Fécule' => ['category' => 'Farines', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3347431805482'],
-        'Pêches' => ['category' => 'Fruits', 'unit' => MeasurementUnit::UNIT, 'barcode' => '3276559409466'],
-        'Sirop' => ['category' => 'Épicerie', 'unit' => MeasurementUnit::LITRE, 'barcode' => '5708776000877'],
-        'Vanille' => ['category' => 'Épices', 'unit' => MeasurementUnit::GRAM, 'barcode' => '6133798001790'],
-        'Framboises' => ['category' => 'Fruits', 'unit' => MeasurementUnit::GRAM, 'barcode' => '3385630118309'],
-        'Glace vanille' => ['category' => 'Desserts', 'unit' => MeasurementUnit::GRAM, 'barcode' => '26048154'],
-        'Sélection de fromages de vache, chèvre, brebis' => ['category' => 'Fromages', 'unit' => MeasurementUnit::GRAM, 'barcode' => '0200340018370'],
+        'Farine' => [
+            'category' => 'Farines',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 5000,
+            'barcode' => '4056489565536',
+        ],
+        'Beurre' => [
+            'category' => 'Produits Laitiers',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 250,
+            'stock' => 1500,
+            'barcode' => '26064413',
+        ],
+        'Eau' => [
+            'category' => 'Boissons',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 50,
+            'barcode' => '1234500001857',
+        ],
+        'Sel' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 2000,
+            'barcode' => '10020811',
+        ],
+        'Échine de porc' => [
+            'category' => 'Viandes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 180,
+            'stock' => 24,
+            'barcode' => '0207024022173',
+        ],
+        'Veau' => [
+            'category' => 'Viandes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 160,
+            'stock' => 18,
+            'barcode' => '2695314012009',
+        ],
+        'Foie de volaille' => [
+            'category' => 'Viandes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 90,
+            'stock' => 40,
+            'barcode' => '0215085018561',
+        ],
+        'Œufs' => [
+            'category' => 'Œufs',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::UNIT,
+            'base_quantity' => 1,
+            'stock' => 180,
+            'barcode' => '3560070432080',
+        ],
+        'Crème' => [
+            'category' => 'Produits Laitiers',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 18,
+            'barcode' => '3258561419299',
+        ],
+        'Poivre' => [
+            'category' => 'Épices',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 250,
+            'stock' => 600,
+            'barcode' => '8720254531779',
+        ],
+        'Armagnac' => [
+            'category' => 'Spiritueux',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 700,
+            'stock' => 8,
+            'barcode' => '3560070575480',
+        ],
+        'Épices' => [
+            'category' => 'Épices',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 200,
+            'stock' => 400,
+            'barcode' => '3700483800544',
+        ],
+        'Fond de volaille' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 15,
+            'barcode' => '3256225451647',
+        ],
+        'Gélatine' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 200,
+            'stock' => 300,
+            'barcode' => '3256225731978',
+        ],
+        'Carottes' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 12,
+            'barcode' => '3596710431151',
+        ],
+        'Chou-fleur' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 900,
+            'stock' => 18,
+            'barcode' => '3560070122349',
+        ],
+        'Oignons' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 10,
+            'barcode' => '3363290420116',
+        ],
+        'Cornichons' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 500,
+            'stock' => 6,
+            'barcode' => '4061464817722',
+        ],
+        'Vinaigre blanc' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 20,
+            'barcode' => '3077311522405',
+        ],
+        'Sucre' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 18,
+            'barcode' => '3596710473557',
+        ],
+        'Graines de moutarde' => [
+            'category' => 'Épices',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 200,
+            'stock' => 350,
+            'barcode' => '7610845400434',
+        ],
+        'Foie gras de canard cru' => [
+            'category' => 'Viandes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 500,
+            'stock' => 10,
+            'barcode' => '26078410',
+        ],
+        'Lait' => [
+            'category' => 'Produits Laitiers',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 30,
+            'barcode' => '3428272970017',
+        ],
+        'Levure de boulanger' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 100,
+            'stock' => 150,
+            'barcode' => '2006050036622',
+        ],
+        'Homard bleu' => [
+            'category' => 'Fruits de Mer',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 600,
+            'stock' => 12,
+            'barcode' => '3770000648317',
+        ],
+        'Haricots verts frais' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 14,
+            'barcode' => '3760086270076',
+        ],
+        'Amandes fraîches' => [
+            'category' => 'Fruits secs',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 500,
+            'stock' => 8,
+            'barcode' => '3700194630287',
+        ],
+        'Huile d’olive' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 25,
+            'barcode' => '3424096003078',
+        ],
+        'Citron' => [
+            'category' => 'Fruits',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 120,
+            'stock' => 45,
+            'barcode' => '3256226081881',
+        ],
+        'Tomate de plein champ' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 220,
+            'stock' => 60,
+            'barcode' => '3017800246658',
+        ],
+        'Filets d’anchois' => [
+            'category' => 'Poissons',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 500,
+            'stock' => 750,
+            'barcode' => '3218370591821',
+        ],
+        'Basilic frais' => [
+            'category' => 'Herbes aromatiques',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 200,
+            'stock' => 300,
+            'barcode' => '3411061111029',
+        ],
+        'Dos de bar' => [
+            'category' => 'Poissons',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 280,
+            'stock' => 16,
+            'barcode' => '3664335055264',
+        ],
+        'Courgette trompette' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 200,
+            'stock' => 32,
+            'barcode' => '2306375001603',
+        ],
+        'Vin blanc sec' => [
+            'category' => 'Boissons',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 750,
+            'stock' => 24,
+            'barcode' => '3660989151932',
+        ],
+        'Échalotes' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 8,
+            'barcode' => '8431876150353',
+        ],
+        'Persil' => [
+            'category' => 'Herbes aromatiques',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 200,
+            'stock' => 300,
+            'barcode' => '2006050101283',
+        ],
+        'Sole' => [
+            'category' => 'Poissons',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 350,
+            'stock' => 10,
+            'barcode' => '0059749982474',
+        ],
+        'Jus de citron' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 12,
+            'barcode' => '3564700299043',
+        ],
+        'Artichauts frais' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 320,
+            'stock' => 24,
+            'barcode' => '3256220652766',
+        ],
+        'Ail' => [
+            'category' => 'Légumes',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 60,
+            'stock' => 50,
+            'barcode' => '3256228100191',
+        ],
+        'Sucre glace' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 6,
+            'barcode' => '3220035730001',
+        ],
+        'Gousse de vanille' => [
+            'category' => 'Épices',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 6,
+            'stock' => 80,
+            'barcode' => '3256225732043',
+        ],
+        'Jaunes d’œuf' => [
+            'category' => 'Œufs',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::UNIT,
+            'base_quantity' => 1,
+            'stock' => 200,
+            'barcode' => '3439496001838',
+        ],
+        'Fécule' => [
+            'category' => 'Farines',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 500,
+            'stock' => 600,
+            'barcode' => '3347431805482',
+        ],
+        'Pêches' => [
+            'category' => 'Fruits',
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 180,
+            'stock' => 40,
+            'barcode' => '3276559409466',
+        ],
+        'Sirop' => [
+            'category' => 'Épicerie',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 18,
+            'barcode' => '5708776000877',
+        ],
+        'Vanille' => [
+            'category' => 'Épices',
+            'unit' => MeasurementUnit::GRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 100,
+            'stock' => 250,
+            'barcode' => '6133798001790',
+        ],
+        'Framboises' => [
+            'category' => 'Fruits',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1000,
+            'stock' => 12,
+            'barcode' => '3385630118309',
+        ],
+        'Glace vanille' => [
+            'category' => 'Desserts',
+            'unit' => MeasurementUnit::LITRE,
+            'base_unit' => MeasurementUnit::MILLILITRE,
+            'base_quantity' => 1000,
+            'stock' => 14,
+            'barcode' => '26048154',
+        ],
+        'Sélection de fromages de vache, chèvre, brebis' => [
+            'category' => 'Fromages',
+            'unit' => MeasurementUnit::KILOGRAM,
+            'base_unit' => MeasurementUnit::GRAM,
+            'base_quantity' => 1500,
+            'stock' => 9,
+            'barcode' => '0200340018370',
+        ],
     ];
 
     private const TEMP_IMAGE_FOLDER = 'tmp/demo-seeder/ingredients';
@@ -437,6 +1086,17 @@ class DemoSeeder extends Seeder
         foreach (self::INGREDIENTS as $name => $meta) {
             $categoryId = $categoryIds[$meta['category']] ?? $fallbackCategoryId;
 
+            $unit = $meta['unit'] instanceof MeasurementUnit
+                ? $meta['unit']
+                : MeasurementUnit::from($meta['unit']);
+            $baseUnit = isset($meta['base_unit'])
+                ? ($meta['base_unit'] instanceof MeasurementUnit
+                    ? $meta['base_unit']
+                    : MeasurementUnit::from($meta['base_unit']))
+                : $unit;
+            $baseQuantity = isset($meta['base_quantity']) ? (float) $meta['base_quantity'] : 0.0;
+            $stockQuantity = isset($meta['stock']) ? (float) $meta['stock'] : $baseQuantity;
+
             $ingredient = Ingredient::updateOrCreate(
                 [
                     'company_id' => $company->id,
@@ -444,9 +1104,9 @@ class DemoSeeder extends Seeder
                 ],
                 [
                     'category_id' => $categoryId,
-                    'unit' => $meta['unit']->value,
-                    'base_quantity' => 0,
-                    'base_unit' => $meta['unit']->value,
+                    'unit' => $unit->value,
+                    'base_quantity' => $baseQuantity,
+                    'base_unit' => $baseUnit->value,
                     'barcode' => $meta['barcode'] ?? null,
                 ]
             );
@@ -463,7 +1123,7 @@ class DemoSeeder extends Seeder
             }
 
             $ingredient->locations()->syncWithoutDetaching([
-                $defaultLocation->id => ['quantity' => 0],
+                $defaultLocation->id => ['quantity' => $stockQuantity],
             ]);
 
             $ingredients[$name] = $ingredient;
@@ -618,13 +1278,13 @@ class DemoSeeder extends Seeder
                 'category_id' => $categoryId,
                 'image_url' => $imagePath,
                 'unit' => MeasurementUnit::UNIT->value,
-                'base_quantity' => 0,
+                'base_quantity' => 1,
                 'base_unit' => MeasurementUnit::UNIT->value,
             ]
         );
 
         $preparation->locations()->syncWithoutDetaching([
-            $defaultLocation->id => ['quantity' => 0],
+            $defaultLocation->id => ['quantity' => 1],
         ]);
 
         $preparation->entities()->delete();
@@ -639,12 +1299,18 @@ class DemoSeeder extends Seeder
                     continue;
                 }
 
+                $quantity = isset($component['quantity']) ? (float) $component['quantity'] : 0.0;
+                $componentUnit = $component['unit'] ?? $ingredient->unit ?? MeasurementUnit::UNIT;
+                $componentUnit = $componentUnit instanceof MeasurementUnit
+                    ? $componentUnit
+                    : MeasurementUnit::from($componentUnit);
+
                 $preparation->entities()->create([
                     'entity_id' => $ingredient->id,
                     'entity_type' => Ingredient::class,
                     'location_id' => $defaultLocation->id,
-                    'quantity' => 0,
-                    'unit' => $ingredient->unit->value,
+                    'quantity' => $quantity,
+                    'unit' => $componentUnit->value,
                 ]);
 
                 continue;
@@ -667,12 +1333,18 @@ class DemoSeeder extends Seeder
                     continue;
                 }
 
+                $quantity = isset($component['quantity']) ? (float) $component['quantity'] : 1.0;
+                $componentUnit = $component['unit'] ?? MeasurementUnit::UNIT;
+                $componentUnit = $componentUnit instanceof MeasurementUnit
+                    ? $componentUnit
+                    : MeasurementUnit::from($componentUnit);
+
                 $preparation->entities()->create([
                     'entity_id' => $child->id,
                     'entity_type' => Preparation::class,
                     'location_id' => $defaultLocation->id,
-                    'quantity' => 0,
-                    'unit' => MeasurementUnit::UNIT->value,
+                    'quantity' => $quantity,
+                    'unit' => $componentUnit->value,
                 ]);
             }
         }
