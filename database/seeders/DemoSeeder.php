@@ -1128,9 +1128,6 @@ JSON;
 
     private ?string $placeholderImagePath = null;
 
-    /** @var array<string, array<int, array{name: string, price: float, ingredients: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>, preparations: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>>>|null */
-    private ?array $menuDataset = null;
-
     private ?string $menuPlaceholderImagePath = null;
 
     /** @var array<string, int> */
@@ -1202,10 +1199,6 @@ JSON;
      */
     private function menuSections(): array
     {
-        if ($this->menuDataset !== null) {
-            return $this->menuDataset;
-        }
-
         try {
             $decoded = json_decode(self::MENU_BLUEPRINT_JSON, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
@@ -1213,7 +1206,7 @@ JSON;
         }
 
         if (! is_array($decoded)) {
-            return $this->menuDataset = [];
+            return [];
         }
 
         $sections = [];
@@ -1251,7 +1244,7 @@ JSON;
             }
         }
 
-        return $this->menuDataset = $sections;
+        return $sections;
     }
 
     /**
@@ -1538,7 +1531,7 @@ JSON;
 
             $location = $this->resolveIngredientLocation($name, $meta, $locations, $defaultLocation);
 
-            $ingredient->locations()->sync([
+            $ingredient->locations()->syncWithoutDetaching([
                 $location->id => ['quantity' => isset($meta['stock']) ? (float) $meta['stock'] : 0.0],
             ]);
 
@@ -1702,128 +1695,98 @@ JSON;
         Location $preparationLocation,
         array $ingredients
     ): array {
-        $cache = [];
-
-        foreach (array_keys(self::PREPARATION_COMPONENTS) as $name) {
-            $this->buildPreparation(
-                $name,
-                $company,
-                $categoryId,
-                $preparationLocation,
-                $ingredients,
-                $cache
-            );
-        }
-
-        return $cache;
-    }
-
-    /**
-     * @param  array<string, Ingredient>  $ingredients
-     * @param  array<string, Preparation>  $cache
-     */
-    private function buildPreparation(
-        string $name,
-        Company $company,
-        int $categoryId,
-        Location $preparationLocation,
-        array $ingredients,
-        array &$cache
-    ): ?Preparation {
-        if (isset($cache[$name])) {
-            return $cache[$name];
-        }
-
-        $definition = self::PREPARATION_COMPONENTS[$name] ?? null;
-        if (! $definition) {
-            return null;
-        }
-
+        $preparations = [];
         $imagePath = $this->placeholderPath();
 
-        $preparation = Preparation::updateOrCreate(
-            [
-                'company_id' => $company->id,
-                'name' => $name,
-            ],
-            [
-                'category_id' => $categoryId,
-                'image_url' => $imagePath,
-                'unit' => MeasurementUnit::UNIT->value,
-                'base_quantity' => 1,
-                'base_unit' => MeasurementUnit::UNIT->value,
-            ]
-        );
+        foreach (array_keys(self::PREPARATION_COMPONENTS) as $name) {
+            $preparation = Preparation::updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'name' => $name,
+                ],
+                [
+                    'category_id' => $categoryId,
+                    'image_url' => $imagePath,
+                    'unit' => MeasurementUnit::UNIT->value,
+                    'base_quantity' => 1,
+                    'base_unit' => MeasurementUnit::UNIT->value,
+                ]
+            );
 
-        $preparation->locations()->sync([
-            $preparationLocation->id => ['quantity' => $this->preparationStock($name)],
-        ]);
+            $preparation->locations()->syncWithoutDetaching([
+                $preparationLocation->id => ['quantity' => $this->preparationStock($name)],
+            ]);
 
-        $this->preparationLocations[$name] = $preparationLocation->id;
+            $this->preparationLocations[$name] = $preparationLocation->id;
 
-        $preparation->entities()->delete();
+            $preparations[$name] = $preparation;
+        }
 
-        foreach ($definition as $component) {
-            if (isset($component['ingredient'])) {
-                $ingredientName = $component['ingredient'];
-                $ingredient = $ingredients[$ingredientName] ?? null;
-                if (! $ingredient) {
-                    $this->missingIngredients[] = $ingredientName.' (préparation '.$name.')';
+        foreach (self::PREPARATION_COMPONENTS as $name => $definition) {
+            $preparation = $preparations[$name] ?? null;
 
-                    continue;
-                }
-
-                $quantity = isset($component['quantity']) ? (float) $component['quantity'] : 0.0;
-                $componentUnit = $component['unit'] ?? $ingredient->unit ?? MeasurementUnit::UNIT;
-                $componentUnit = $componentUnit instanceof MeasurementUnit
-                    ? $componentUnit
-                    : MeasurementUnit::from($componentUnit);
-
-                $preparation->entities()->create([
-                    'entity_id' => $ingredient->id,
-                    'entity_type' => Ingredient::class,
-                    'location_id' => $preparationLocation->id,
-                    'quantity' => $quantity,
-                    'unit' => $componentUnit->value,
-                ]);
-
+            if (! $preparation instanceof Preparation) {
                 continue;
             }
 
-            if (isset($component['preparation'])) {
-                $childName = $component['preparation'];
-                $child = $this->buildPreparation(
-                    $childName,
-                    $company,
-                    $categoryId,
-                    $preparationLocation,
-                    $ingredients,
-                    $cache
-                );
+            $preparation->entities()->delete();
 
-                if (! $child) {
-                    $this->missingComponents[] = $childName.' (préparation '.$name.')';
+            foreach ($definition as $component) {
+                if (isset($component['ingredient'])) {
+                    $ingredientName = $component['ingredient'];
+                    $ingredient = $ingredients[$ingredientName] ?? null;
+
+                    if (! $ingredient) {
+                        $this->missingIngredients[] = $ingredientName.' (préparation '.$name.')';
+
+                        continue;
+                    }
+
+                    $quantity = isset($component['quantity']) ? (float) $component['quantity'] : 0.0;
+                    $componentUnit = $component['unit'] ?? $ingredient->unit ?? MeasurementUnit::UNIT;
+                    $componentUnit = $componentUnit instanceof MeasurementUnit
+                        ? $componentUnit
+                        : MeasurementUnit::from($componentUnit);
+
+                    $preparation->entities()->create([
+                        'entity_id' => $ingredient->id,
+                        'entity_type' => Ingredient::class,
+                        'location_id' => $preparationLocation->id,
+                        'quantity' => $quantity,
+                        'unit' => $componentUnit->value,
+                    ]);
 
                     continue;
                 }
 
-                $quantity = isset($component['quantity']) ? (float) $component['quantity'] : 1.0;
-                $componentUnit = $component['unit'] ?? MeasurementUnit::UNIT;
-                $componentUnit = $componentUnit instanceof MeasurementUnit
-                    ? $componentUnit
-                    : MeasurementUnit::from($componentUnit);
+                if (isset($component['preparation'])) {
+                    $childName = $component['preparation'];
+                    $child = $preparations[$childName] ?? null;
 
-                $preparation->entities()->create([
-                    'entity_id' => $child->id,
-                    'entity_type' => Preparation::class,
-                    'location_id' => $preparationLocation->id,
-                    'quantity' => $quantity,
-                    'unit' => $componentUnit->value,
-                ]);
+                    if (! $child instanceof Preparation) {
+                        $this->missingComponents[] = $childName.' (préparation '.$name.')';
+
+                        continue;
+                    }
+
+                    $quantity = isset($component['quantity']) ? (float) $component['quantity'] : 1.0;
+                    $componentUnit = $component['unit'] ?? MeasurementUnit::UNIT;
+                    $componentUnit = $componentUnit instanceof MeasurementUnit
+                        ? $componentUnit
+                        : MeasurementUnit::from($componentUnit);
+
+                    $preparation->entities()->create([
+                        'entity_id' => $child->id,
+                        'entity_type' => Preparation::class,
+                        'location_id' => $preparationLocation->id,
+                        'quantity' => $quantity,
+                        'unit' => $componentUnit->value,
+                    ]);
+                }
             }
         }
 
-        return $cache[$name] = $preparation;
+        return $preparations;
     }
 
     private function preparationStock(string $name): float
