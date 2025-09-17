@@ -795,7 +795,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 600,
-            'stock' => 6,
+            'stock' => 0,
             'barcode' => '3770000648317',
         ],
         'Haricots verts frais' => [
@@ -1099,15 +1099,15 @@ JSON;
     ];
 
     private const PREPARATION_STOCK_LEVELS = [
-        'Pâté en croûte' => 0,
-        'Pickles de légumes' => 0,
-        'Brioche parisienne' => 0,
-        'Jus de marinière' => 0,
+        'Pâté en croûte' => 4,
+        'Pickles de légumes' => 6,
+        'Brioche parisienne' => 8,
+        'Jus de marinière' => 6,
         'Sole à la meunière' => 0,
-        'Cassolette d’artichauts' => 0,
-        'Millefeuille' => 0,
-        'Pêches pochées' => 0,
-        'Coulis de framboise' => 0,
+        'Cassolette d’artichauts' => 5,
+        'Millefeuille' => 10,
+        'Pêches pochées' => 6,
+        'Coulis de framboise' => 6,
     ];
 
     private ImageService $images;
@@ -1291,12 +1291,16 @@ JSON;
         foreach ($components as $component) {
             $name = null;
             $unit = null;
+            $quantity = 1.0;
 
             if (is_string($component)) {
                 $name = $component;
             } elseif (is_array($component)) {
                 $name = $component['name'] ?? null;
                 $unit = $component['unit'] ?? null;
+                if (array_key_exists('quantity', $component)) {
+                    $quantity = (float) $component['quantity'];
+                }
             }
 
             if (! is_string($name) || trim($name) === '') {
@@ -1320,7 +1324,7 @@ JSON;
 
             $normalized[] = [
                 'name' => $name,
-                'quantity' => 0.0,
+                'quantity' => max(0.0, $quantity),
                 'unit' => $unit,
             ];
         }
