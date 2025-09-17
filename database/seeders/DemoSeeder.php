@@ -603,7 +603,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 6000,
             'barcode' => '4056489565536',
         ],
         'Beurre' => [
@@ -611,7 +611,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 250,
-            'stock' => 0,
+            'stock' => 3000,
             'barcode' => '26064413',
         ],
         'Eau' => [
@@ -619,7 +619,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 120,
             'barcode' => '1234500001857',
         ],
         'Sel' => [
@@ -627,7 +627,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 1500,
             'barcode' => '10020811',
         ],
         'Échine de porc' => [
@@ -635,7 +635,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 180,
-            'stock' => 0,
+            'stock' => 12,
             'barcode' => '0207024022173',
         ],
         'Veau' => [
@@ -643,7 +643,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 160,
-            'stock' => 0,
+            'stock' => 10,
             'barcode' => '2695314012009',
         ],
         'Foie de volaille' => [
@@ -651,7 +651,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 90,
-            'stock' => 0,
+            'stock' => 18,
             'barcode' => '0215085018561',
         ],
         'Œufs' => [
@@ -659,7 +659,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::UNIT,
             'base_quantity' => 1,
-            'stock' => 0,
+            'stock' => 180,
             'barcode' => '3560070432080',
         ],
         'Crème' => [
@@ -667,7 +667,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 24,
             'barcode' => '3258561419299',
         ],
         'Poivre' => [
@@ -675,7 +675,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 250,
-            'stock' => 0,
+            'stock' => 300,
             'barcode' => '8720254531779',
         ],
         'Armagnac' => [
@@ -683,7 +683,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 700,
-            'stock' => 0,
+            'stock' => 4.2,
             'barcode' => '3560070575480',
         ],
         'Épices' => [
@@ -691,7 +691,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 0,
+            'stock' => 220,
             'barcode' => '3700483800544',
         ],
         'Fond de volaille' => [
@@ -699,7 +699,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 12,
             'barcode' => '3256225451647',
         ],
         'Gélatine' => [
@@ -707,7 +707,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 0,
+            'stock' => 500,
             'barcode' => '3256225731978',
         ],
         'Carottes' => [
@@ -715,7 +715,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 18,
             'barcode' => '3596710431151',
         ],
         'Chou-fleur' => [
@@ -723,7 +723,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 900,
-            'stock' => 0,
+            'stock' => 12,
             'barcode' => '3560070122349',
         ],
         'Oignons' => [
@@ -731,7 +731,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 20,
             'barcode' => '3363290420116',
         ],
         'Cornichons' => [
@@ -739,7 +739,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 0,
+            'stock' => 6,
             'barcode' => '4061464817722',
         ],
         'Vinaigre blanc' => [
@@ -747,7 +747,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 10,
             'barcode' => '3077311522405',
         ],
         'Sucre' => [
@@ -755,7 +755,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 7000,
             'barcode' => '3596710473557',
         ],
         'Graines de moutarde' => [
@@ -763,7 +763,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 0,
+            'stock' => 180,
             'barcode' => '7610845400434',
         ],
         'Foie gras de canard cru' => [
@@ -771,7 +771,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 0,
+            'stock' => 6,
             'barcode' => '26078410',
         ],
         'Lait' => [
@@ -779,7 +779,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 40,
             'barcode' => '3428272970017',
         ],
         'Levure de boulanger' => [
@@ -787,7 +787,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 100,
-            'stock' => 0,
+            'stock' => 320,
             'barcode' => '2006050036622',
         ],
         'Homard bleu' => [
@@ -795,7 +795,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 600,
-            'stock' => 0,
+            'stock' => 6,
             'barcode' => '3770000648317',
         ],
         'Haricots verts frais' => [
@@ -803,7 +803,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 10,
             'barcode' => '3760086270076',
         ],
         'Amandes fraîches' => [
@@ -811,7 +811,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 0,
+            'stock' => 5,
             'barcode' => '3700194630287',
         ],
         'Huile d’olive' => [
@@ -819,7 +819,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 18,
             'barcode' => '3424096003078',
         ],
         'Citron' => [
@@ -827,7 +827,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 120,
-            'stock' => 0,
+            'stock' => 48,
             'barcode' => '3256226081881',
         ],
         'Tomate de plein champ' => [
@@ -835,7 +835,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 220,
-            'stock' => 0,
+            'stock' => 60,
             'barcode' => '3017800246658',
         ],
         'Filets d’anchois' => [
@@ -843,7 +843,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 0,
+            'stock' => 400,
             'barcode' => '3218370591821',
         ],
         'Basilic frais' => [
@@ -851,7 +851,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 0,
+            'stock' => 150,
             'barcode' => '3411061111029',
         ],
         'Dos de bar' => [
@@ -859,7 +859,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 280,
-            'stock' => 0,
+            'stock' => 8,
             'barcode' => '3664335055264',
         ],
         'Courgette trompette' => [
@@ -867,7 +867,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 0,
+            'stock' => 30,
             'barcode' => '2306375001603',
         ],
         'Vin blanc sec' => [
@@ -875,7 +875,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 750,
-            'stock' => 0,
+            'stock' => 18,
             'barcode' => '3660989151932',
         ],
         'Échalotes' => [
@@ -883,7 +883,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 14,
             'barcode' => '8431876150353',
         ],
         'Persil' => [
@@ -891,7 +891,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 0,
+            'stock' => 220,
             'barcode' => '2006050101283',
         ],
         'Sole' => [
@@ -899,7 +899,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 350,
-            'stock' => 0,
+            'stock' => 6,
             'barcode' => '0059749982474',
         ],
         'Jus de citron' => [
@@ -907,7 +907,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 12,
             'barcode' => '3564700299043',
         ],
         'Artichauts frais' => [
@@ -915,7 +915,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 320,
-            'stock' => 0,
+            'stock' => 20,
             'barcode' => '3256220652766',
         ],
         'Ail' => [
@@ -923,7 +923,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 60,
-            'stock' => 0,
+            'stock' => 30,
             'barcode' => '3256228100191',
         ],
         'Sucre glace' => [
@@ -931,7 +931,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 3500,
             'barcode' => '3220035730001',
         ],
         'Gousse de vanille' => [
@@ -939,7 +939,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 6,
-            'stock' => 0,
+            'stock' => 60,
             'barcode' => '3256225732043',
         ],
         'Jaunes d’œuf' => [
@@ -947,7 +947,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::UNIT,
             'base_quantity' => 1,
-            'stock' => 0,
+            'stock' => 140,
             'barcode' => '3439496001838',
         ],
         'Fécule' => [
@@ -955,7 +955,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 0,
+            'stock' => 700,
             'barcode' => '3347431805482',
         ],
         'Pêches' => [
@@ -963,7 +963,7 @@ JSON;
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 180,
-            'stock' => 0,
+            'stock' => 30,
             'barcode' => '3276559409466',
         ],
         'Sirop' => [
@@ -971,7 +971,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 16,
             'barcode' => '5708776000877',
         ],
         'Vanille' => [
@@ -979,7 +979,7 @@ JSON;
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 100,
-            'stock' => 0,
+            'stock' => 220,
             'barcode' => '6133798001790',
         ],
         'Framboises' => [
@@ -987,7 +987,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 9,
             'barcode' => '3385630118309',
         ],
         'Glace vanille' => [
@@ -995,7 +995,7 @@ JSON;
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 0,
+            'stock' => 20,
             'barcode' => '26048154',
         ],
         'Sélection de fromages de vache, chèvre, brebis' => [
@@ -1003,7 +1003,7 @@ JSON;
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1500,
-            'stock' => 0,
+            'stock' => 14,
             'barcode' => '0200340018370',
         ],
     ];
