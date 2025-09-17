@@ -18,6 +18,7 @@ use App\Services\OpenFoodFactsService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use JsonException;
 use RuntimeException;
 use Throwable;
 
@@ -35,207 +36,152 @@ class DemoSeeder extends Seeder
         ],
     ];
 
-    private const MENU_SECTIONS = [
-        'hors_doeuvres' => [
-            [
-                'name' => 'Notre pâté en croûte, pickles de légumes',
-                'price' => 28.0,
-                'ingredients' => [],
-                'preparations' => [
-                    [
-                        'name' => 'Pâté en croûte',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Pickles de légumes',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
+    private const MENU_BLUEPRINT_JSON = <<<'JSON'
+{
+    "hors_doeuvres": [
+        {
+            "nom": "Notre pâté en croûte, pickles de légumes",
+            "prix": 28,
+            "preparations": {
+                "Pâté en croûte": [
+                    "Pâte brisée (farine, beurre, eau, sel)",
+                    "Farce de porc maison (échine de porc, veau, foie de volaille, œufs, crème, sel, poivre, armagnac, épices)",
+                    "Gelée (fond de volaille, gélatine)"
                 ],
+                "Pickles de légumes": [
+                    "Carottes",
+                    "Chou-fleur",
+                    "Oignons",
+                    "Cornichons",
+                    "Marinade (vinaigre blanc, eau, sucre, sel, graines de moutarde, poivre en grain)"
+                ]
+            }
+        },
+        {
+            "nom": "Foie gras de canard, brioche parisienne",
+            "prix": 32,
+            "ingredients": [
+                "Foie gras de canard cru"
             ],
-            [
-                'name' => 'Foie gras de canard, brioche parisienne',
-                'price' => 32.0,
-                'ingredients' => [
-                    [
-                        'name' => 'Foie gras de canard cru',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-                'preparations' => [
-                    [
-                        'name' => 'Brioche parisienne',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
+            "preparations": {
+                "Brioche parisienne": [
+                    "Farine",
+                    "Œufs",
+                    "Beurre",
+                    "Lait",
+                    "Sucre",
+                    "Levure de boulanger",
+                    "Sel"
+                ]
+            }
+        },
+        {
+            "nom": "Homard bleu rafraîchi, haricots verts et amandes fraîches",
+            "prix": 38,
+            "ingredients": [
+                "Homard bleu",
+                "Haricots verts frais",
+                "Amandes fraîches",
+                "Huile d’olive",
+                "Citron",
+                "Sel",
+                "Poivre"
+            ]
+        },
+        {
+            "nom": "Tomate de plein champs fondante, anchois et basilic",
+            "prix": 30,
+            "ingredients": [
+                "Tomate de plein champ",
+                "Filets d’anchois",
+                "Basilic frais",
+                "Huile d’olive"
+            ]
+        }
+    ],
+    "plats": [
+        {
+            "nom": "Dos de bar doré, courgette trompette et jus d’une marinière",
+            "prix": 38,
+            "ingredients": [
+                "Dos de bar",
+                "Courgette trompette"
             ],
-            [
-                'name' => 'Homard bleu rafraîchi, haricots verts et amandes fraîches',
-                'price' => 38.0,
-                'ingredients' => [
-                    [
-                        'name' => 'Homard bleu',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Haricots verts frais',
-                        'quantity' => 200,
-                        'unit' => MeasurementUnit::GRAM,
-                    ],
-                    [
-                        'name' => 'Amandes fraîches',
-                        'quantity' => 40,
-                        'unit' => MeasurementUnit::GRAM,
-                    ],
-                    [
-                        'name' => 'Huile d’olive',
-                        'quantity' => 25,
-                        'unit' => MeasurementUnit::MILLILITRE,
-                    ],
-                    [
-                        'name' => 'Citron',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Sel',
-                        'quantity' => 2,
-                        'unit' => MeasurementUnit::GRAM,
-                    ],
-                    [
-                        'name' => 'Poivre',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::GRAM,
-                    ],
+            "preparations": {
+                "Jus de marinière": [
+                    "Vin blanc sec",
+                    "Échalotes",
+                    "Beurre",
+                    "Persil",
+                    "Sel",
+                    "Poivre"
+                ]
+            }
+        },
+        {
+            "nom": "Sole à la meunière, cassolette d’artichauts (pour deux)",
+            "prix": 160,
+            "preparations": {
+                "Sole à la meunière": [
+                    "Sole",
+                    "Beurre",
+                    "Farine",
+                    "Jus de citron",
+                    "Persil"
                 ],
-                'preparations' => [],
-            ],
-            [
-                'name' => 'Tomate de plein champs fondante, anchois et basilic',
-                'price' => 30.0,
-                'ingredients' => [
-                    [
-                        'name' => 'Tomate de plein champ',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Filets d’anchois',
-                        'quantity' => 3,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Basilic frais',
-                        'quantity' => 15,
-                        'unit' => MeasurementUnit::GRAM,
-                    ],
-                    [
-                        'name' => 'Huile d’olive',
-                        'quantity' => 20,
-                        'unit' => MeasurementUnit::MILLILITRE,
-                    ],
+                "Cassolette d’artichauts": [
+                    "Artichauts frais",
+                    "Fond de volaille",
+                    "Huile d’olive",
+                    "Ail",
+                    "Sel",
+                    "Poivre"
+                ]
+            }
+        }
+    ],
+    "fromage": [
+        {
+            "nom": "Fromages de France",
+            "prix": 16,
+            "ingredients": [
+                "Sélection de fromages de vache, chèvre, brebis"
+            ]
+        }
+    ],
+    "desserts": [
+        {
+            "nom": "Millefeuille classique à la vanille",
+            "prix": 14,
+            "preparations": {
+                "Millefeuille": [
+                    "Pâte feuilletée (farine, beurre, eau, sel)",
+                    "Crème pâtissière à la vanille (lait, sucre, jaunes d’œuf, fécule, gousse de vanille)",
+                    "Sucre glace"
+                ]
+            }
+        },
+        {
+            "nom": "Pêche Melba",
+            "prix": 14,
+            "preparations": {
+                "Pêches pochées": [
+                    "Pêches",
+                    "Sirop",
+                    "Vanille"
                 ],
-                'preparations' => [],
-            ],
-        ],
-        'plats' => [
-            [
-                'name' => 'Dos de bar doré, courgette trompette et jus d’une marinière',
-                'price' => 38.0,
-                'ingredients' => [
-                    [
-                        'name' => 'Dos de bar',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Courgette trompette',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-                'preparations' => [
-                    [
-                        'name' => 'Jus de marinière',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-            ],
-            [
-                'name' => 'Sole à la meunière, cassolette d’artichauts (pour deux)',
-                'price' => 160.0,
-                'ingredients' => [],
-                'preparations' => [
-                    [
-                        'name' => 'Sole à la meunière',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Cassolette d’artichauts',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-            ],
-        ],
-        'fromage' => [
-            [
-                'name' => 'Fromages de France',
-                'price' => 16.0,
-                'ingredients' => [
-                    [
-                        'name' => 'Sélection de fromages de vache, chèvre, brebis',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-                'preparations' => [],
-            ],
-        ],
-        'desserts' => [
-            [
-                'name' => 'Millefeuille classique à la vanille',
-                'price' => 14.0,
-                'ingredients' => [],
-                'preparations' => [
-                    [
-                        'name' => 'Millefeuille',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-            ],
-            [
-                'name' => 'Pêche Melba',
-                'price' => 14.0,
-                'ingredients' => [
-                    [
-                        'name' => 'Glace vanille',
-                        'quantity' => 2,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-                'preparations' => [
-                    [
-                        'name' => 'Pêches pochées',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                    [
-                        'name' => 'Coulis de framboise',
-                        'quantity' => 1,
-                        'unit' => MeasurementUnit::UNIT,
-                    ],
-                ],
-            ],
-        ],
-    ];
+                "Coulis de framboise": [
+                    "Framboises",
+                    "Sucre"
+                ]
+            },
+            "ingredients": [
+                "Glace vanille"
+            ]
+        }
+    ]
+}
+JSON;
 
     private const MENU_CATEGORY_LABELS = [
         'hors_doeuvres' => 'Entrées de la Maison',
@@ -657,7 +603,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 5000,
+            'stock' => 0,
             'barcode' => '4056489565536',
         ],
         'Beurre' => [
@@ -665,7 +611,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 250,
-            'stock' => 1500,
+            'stock' => 0,
             'barcode' => '26064413',
         ],
         'Eau' => [
@@ -673,7 +619,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 50,
+            'stock' => 0,
             'barcode' => '1234500001857',
         ],
         'Sel' => [
@@ -681,7 +627,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 2000,
+            'stock' => 0,
             'barcode' => '10020811',
         ],
         'Échine de porc' => [
@@ -689,7 +635,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 180,
-            'stock' => 24,
+            'stock' => 0,
             'barcode' => '0207024022173',
         ],
         'Veau' => [
@@ -697,7 +643,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 160,
-            'stock' => 18,
+            'stock' => 0,
             'barcode' => '2695314012009',
         ],
         'Foie de volaille' => [
@@ -705,7 +651,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 90,
-            'stock' => 40,
+            'stock' => 0,
             'barcode' => '0215085018561',
         ],
         'Œufs' => [
@@ -713,7 +659,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::UNIT,
             'base_quantity' => 1,
-            'stock' => 180,
+            'stock' => 0,
             'barcode' => '3560070432080',
         ],
         'Crème' => [
@@ -721,7 +667,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 18,
+            'stock' => 0,
             'barcode' => '3258561419299',
         ],
         'Poivre' => [
@@ -729,7 +675,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 250,
-            'stock' => 600,
+            'stock' => 0,
             'barcode' => '8720254531779',
         ],
         'Armagnac' => [
@@ -737,7 +683,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 700,
-            'stock' => 8,
+            'stock' => 0,
             'barcode' => '3560070575480',
         ],
         'Épices' => [
@@ -745,7 +691,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 400,
+            'stock' => 0,
             'barcode' => '3700483800544',
         ],
         'Fond de volaille' => [
@@ -753,7 +699,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 15,
+            'stock' => 0,
             'barcode' => '3256225451647',
         ],
         'Gélatine' => [
@@ -761,7 +707,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 300,
+            'stock' => 0,
             'barcode' => '3256225731978',
         ],
         'Carottes' => [
@@ -769,7 +715,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 12,
+            'stock' => 0,
             'barcode' => '3596710431151',
         ],
         'Chou-fleur' => [
@@ -777,7 +723,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 900,
-            'stock' => 18,
+            'stock' => 0,
             'barcode' => '3560070122349',
         ],
         'Oignons' => [
@@ -785,7 +731,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 10,
+            'stock' => 0,
             'barcode' => '3363290420116',
         ],
         'Cornichons' => [
@@ -793,7 +739,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 6,
+            'stock' => 0,
             'barcode' => '4061464817722',
         ],
         'Vinaigre blanc' => [
@@ -801,7 +747,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 20,
+            'stock' => 0,
             'barcode' => '3077311522405',
         ],
         'Sucre' => [
@@ -809,7 +755,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 18,
+            'stock' => 0,
             'barcode' => '3596710473557',
         ],
         'Graines de moutarde' => [
@@ -817,7 +763,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 350,
+            'stock' => 0,
             'barcode' => '7610845400434',
         ],
         'Foie gras de canard cru' => [
@@ -833,7 +779,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 30,
+            'stock' => 0,
             'barcode' => '3428272970017',
         ],
         'Levure de boulanger' => [
@@ -841,7 +787,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 100,
-            'stock' => 150,
+            'stock' => 0,
             'barcode' => '2006050036622',
         ],
         'Homard bleu' => [
@@ -857,7 +803,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 14,
+            'stock' => 0,
             'barcode' => '3760086270076',
         ],
         'Amandes fraîches' => [
@@ -865,7 +811,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 8,
+            'stock' => 0,
             'barcode' => '3700194630287',
         ],
         'Huile d’olive' => [
@@ -873,7 +819,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 25,
+            'stock' => 0,
             'barcode' => '3424096003078',
         ],
         'Citron' => [
@@ -881,7 +827,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 120,
-            'stock' => 45,
+            'stock' => 0,
             'barcode' => '3256226081881',
         ],
         'Tomate de plein champ' => [
@@ -889,7 +835,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 220,
-            'stock' => 60,
+            'stock' => 0,
             'barcode' => '3017800246658',
         ],
         'Filets d’anchois' => [
@@ -897,7 +843,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 750,
+            'stock' => 0,
             'barcode' => '3218370591821',
         ],
         'Basilic frais' => [
@@ -905,7 +851,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 300,
+            'stock' => 0,
             'barcode' => '3411061111029',
         ],
         'Dos de bar' => [
@@ -913,7 +859,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 280,
-            'stock' => 16,
+            'stock' => 0,
             'barcode' => '3664335055264',
         ],
         'Courgette trompette' => [
@@ -921,7 +867,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 32,
+            'stock' => 0,
             'barcode' => '2306375001603',
         ],
         'Vin blanc sec' => [
@@ -929,7 +875,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 750,
-            'stock' => 24,
+            'stock' => 0,
             'barcode' => '3660989151932',
         ],
         'Échalotes' => [
@@ -937,7 +883,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 8,
+            'stock' => 0,
             'barcode' => '8431876150353',
         ],
         'Persil' => [
@@ -945,7 +891,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 200,
-            'stock' => 300,
+            'stock' => 0,
             'barcode' => '2006050101283',
         ],
         'Sole' => [
@@ -953,7 +899,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 350,
-            'stock' => 10,
+            'stock' => 0,
             'barcode' => '0059749982474',
         ],
         'Jus de citron' => [
@@ -961,7 +907,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 12,
+            'stock' => 0,
             'barcode' => '3564700299043',
         ],
         'Artichauts frais' => [
@@ -969,7 +915,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 320,
-            'stock' => 24,
+            'stock' => 0,
             'barcode' => '3256220652766',
         ],
         'Ail' => [
@@ -977,7 +923,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 60,
-            'stock' => 50,
+            'stock' => 0,
             'barcode' => '3256228100191',
         ],
         'Sucre glace' => [
@@ -985,7 +931,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 6,
+            'stock' => 0,
             'barcode' => '3220035730001',
         ],
         'Gousse de vanille' => [
@@ -993,7 +939,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 6,
-            'stock' => 80,
+            'stock' => 0,
             'barcode' => '3256225732043',
         ],
         'Jaunes d’œuf' => [
@@ -1001,7 +947,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::UNIT,
             'base_quantity' => 1,
-            'stock' => 200,
+            'stock' => 0,
             'barcode' => '3439496001838',
         ],
         'Fécule' => [
@@ -1009,7 +955,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 500,
-            'stock' => 600,
+            'stock' => 0,
             'barcode' => '3347431805482',
         ],
         'Pêches' => [
@@ -1017,7 +963,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::UNIT,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 180,
-            'stock' => 40,
+            'stock' => 0,
             'barcode' => '3276559409466',
         ],
         'Sirop' => [
@@ -1025,7 +971,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 18,
+            'stock' => 0,
             'barcode' => '5708776000877',
         ],
         'Vanille' => [
@@ -1033,7 +979,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::GRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 100,
-            'stock' => 250,
+            'stock' => 0,
             'barcode' => '6133798001790',
         ],
         'Framboises' => [
@@ -1041,7 +987,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1000,
-            'stock' => 12,
+            'stock' => 0,
             'barcode' => '3385630118309',
         ],
         'Glace vanille' => [
@@ -1049,7 +995,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::LITRE,
             'base_unit' => MeasurementUnit::MILLILITRE,
             'base_quantity' => 1000,
-            'stock' => 14,
+            'stock' => 0,
             'barcode' => '26048154',
         ],
         'Sélection de fromages de vache, chèvre, brebis' => [
@@ -1057,7 +1003,7 @@ class DemoSeeder extends Seeder
             'unit' => MeasurementUnit::KILOGRAM,
             'base_unit' => MeasurementUnit::GRAM,
             'base_quantity' => 1500,
-            'stock' => 9,
+            'stock' => 0,
             'barcode' => '0200340018370',
         ],
     ];
@@ -1066,7 +1012,16 @@ class DemoSeeder extends Seeder
 
     private const DEFAULT_PLACEHOLDER_SOURCE = 'private/images/placeholder.svg';
 
-    private const DEMO_PLACEHOLDER_PATH = 'tmp/demo-seeder/placeholder.svg';
+    private const DEFAULT_PLACEHOLDER_DESTINATION = 'tmp/demo-seeder/placeholder.svg';
+
+    private const MENU_PLACEHOLDER_DESTINATION = 'tmp/demo-seeder/menu-placeholder.png';
+
+    private const MENU_PLACEHOLDER_SOURCES = [
+        'private/images/playsolder.png',
+        'private/images/placeholder.png',
+        'public/playsolder.png',
+        'public/placeholder.png',
+    ];
 
     private const DEFAULT_LOCATION_NAME = 'Chambre froide Maison Gustave';
 
@@ -1144,15 +1099,15 @@ class DemoSeeder extends Seeder
     ];
 
     private const PREPARATION_STOCK_LEVELS = [
-        'Pâté en croûte' => 24,
-        'Pickles de légumes' => 30,
-        'Brioche parisienne' => 36,
-        'Jus de marinière' => 40,
+        'Pâté en croûte' => 0,
+        'Pickles de légumes' => 0,
+        'Brioche parisienne' => 0,
+        'Jus de marinière' => 0,
         'Sole à la meunière' => 0,
-        'Cassolette d’artichauts' => 18,
-        'Millefeuille' => 30,
-        'Pêches pochées' => 24,
-        'Coulis de framboise' => 24,
+        'Cassolette d’artichauts' => 0,
+        'Millefeuille' => 0,
+        'Pêches pochées' => 0,
+        'Coulis de framboise' => 0,
     ];
 
     private ImageService $images;
@@ -1172,6 +1127,11 @@ class DemoSeeder extends Seeder
     private array $productImages = [];
 
     private ?string $placeholderImagePath = null;
+
+    /** @var array<string, array<int, array{name: string, price: float, ingredients: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>, preparations: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>>>|null */
+    private ?array $menuDataset = null;
+
+    private ?string $menuPlaceholderImagePath = null;
 
     /** @var array<string, int> */
     private array $ingredientLocations = [];
@@ -1223,9 +1183,11 @@ class DemoSeeder extends Seeder
             $ingredients
         );
         $menuCategories = $this->ensureMenuCategories($company);
+        $menuSections = $this->menuSections();
+
         $this->seedMenus(
             $company,
-            self::MENU_SECTIONS,
+            $menuSections,
             $menuCategories,
             $ingredients,
             $preparations,
@@ -1233,6 +1195,144 @@ class DemoSeeder extends Seeder
         );
 
         $this->report();
+    }
+
+    /**
+     * @return array<string, array<int, array{name: string, price: float, ingredients: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>, preparations: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>>>>
+     */
+    private function menuSections(): array
+    {
+        if ($this->menuDataset !== null) {
+            return $this->menuDataset;
+        }
+
+        try {
+            $decoded = json_decode(self::MENU_BLUEPRINT_JSON, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new RuntimeException('Impossible de décoder le jeu de données du menu de démonstration : '.$exception->getMessage(), 0, $exception);
+        }
+
+        if (! is_array($decoded)) {
+            return $this->menuDataset = [];
+        }
+
+        $sections = [];
+
+        foreach ($decoded as $sectionKey => $entries) {
+            if (! is_array($entries)) {
+                continue;
+            }
+
+            foreach ($entries as $entry) {
+                if (! is_array($entry)) {
+                    continue;
+                }
+
+                $name = $entry['nom'] ?? null;
+
+                if (! is_string($name) || trim($name) === '') {
+                    continue;
+                }
+
+                $price = isset($entry['prix']) ? (float) $entry['prix'] : 0.0;
+
+                $ingredients = $this->normalizeMenuComponents($entry['ingredients'] ?? [], false);
+                $preparations = $this->normalizeMenuComponents(
+                    $this->extractPreparationNames($entry['preparations'] ?? []),
+                    true
+                );
+
+                $sections[$sectionKey][] = [
+                    'name' => $name,
+                    'price' => $price,
+                    'ingredients' => $ingredients,
+                    'preparations' => $preparations,
+                ];
+            }
+        }
+
+        return $this->menuDataset = $sections;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $preparations
+     * @return array<int, string>
+     */
+    private function extractPreparationNames(array $preparations): array
+    {
+        $names = [];
+
+        foreach ($preparations as $key => $value) {
+            if (is_string($key) && trim($key) !== '') {
+                $names[] = $key;
+
+                continue;
+            }
+
+            if (is_string($value) && trim($value) !== '') {
+                $names[] = $value;
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                $candidate = $value['name'] ?? null;
+
+                if (is_string($candidate) && trim($candidate) !== '') {
+                    $names[] = $candidate;
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $components
+     * @return array<int, array{name: string, quantity: float, unit: MeasurementUnit}>
+     */
+    private function normalizeMenuComponents(array $components, bool $forPreparations): array
+    {
+        $normalized = [];
+
+        foreach ($components as $component) {
+            $name = null;
+            $unit = null;
+
+            if (is_string($component)) {
+                $name = $component;
+            } elseif (is_array($component)) {
+                $name = $component['name'] ?? null;
+                $unit = $component['unit'] ?? null;
+            }
+
+            if (! is_string($name) || trim($name) === '') {
+                continue;
+            }
+
+            if ($forPreparations) {
+                $unit = $unit ?? MeasurementUnit::UNIT;
+            } else {
+                $definition = self::INGREDIENTS[$name] ?? null;
+                $unit = $unit ?? ($definition['unit'] ?? MeasurementUnit::UNIT);
+            }
+
+            if (! $unit instanceof MeasurementUnit) {
+                try {
+                    $unit = MeasurementUnit::from($unit);
+                } catch (\ValueError) {
+                    $unit = MeasurementUnit::UNIT;
+                }
+            }
+
+            $normalized[] = [
+                'name' => $name,
+                'quantity' => 0.0,
+                'unit' => $unit,
+            ];
+        }
+
+        return $normalized;
     }
 
     private function seedUsers(Company $company): ?User
@@ -1521,8 +1621,8 @@ class DemoSeeder extends Seeder
             return $this->placeholderImagePath;
         }
 
-        if ($this->images->exists(self::DEMO_PLACEHOLDER_PATH)) {
-            return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
+        if ($this->images->exists(self::DEFAULT_PLACEHOLDER_DESTINATION)) {
+            return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_DESTINATION;
         }
 
         $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
@@ -1535,8 +1635,8 @@ class DemoSeeder extends Seeder
                 $this->command?->warn('Impossible de lire le placeholder local pour la démonstration.');
             } else {
                 try {
-                    if (Storage::disk('s3')->put(self::DEMO_PLACEHOLDER_PATH, $contents)) {
-                        return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
+                    if (Storage::disk('s3')->put(self::DEFAULT_PLACEHOLDER_DESTINATION, $contents)) {
+                        return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_DESTINATION;
                     }
 
                     $this->command?->warn('Impossible de stocker le placeholder de démonstration sur S3.');
@@ -1555,6 +1655,41 @@ class DemoSeeder extends Seeder
 
             return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_SOURCE;
         }
+    }
+
+    private function menuPlaceholderPath(): string
+    {
+        if ($this->menuPlaceholderImagePath) {
+            return $this->menuPlaceholderImagePath;
+        }
+
+        if ($this->images->exists(self::MENU_PLACEHOLDER_DESTINATION)) {
+            return $this->menuPlaceholderImagePath = self::MENU_PLACEHOLDER_DESTINATION;
+        }
+
+        foreach (self::MENU_PLACEHOLDER_SOURCES as $candidate) {
+            $localPath = storage_path('app/'.$candidate);
+
+            if (! is_file($localPath) || ! is_readable($localPath)) {
+                continue;
+            }
+
+            $contents = file_get_contents($localPath);
+
+            if ($contents === false) {
+                continue;
+            }
+
+            try {
+                if (Storage::disk('s3')->put(self::MENU_PLACEHOLDER_DESTINATION, $contents)) {
+                    return $this->menuPlaceholderImagePath = self::MENU_PLACEHOLDER_DESTINATION;
+                }
+            } catch (Throwable $exception) {
+                $this->command?->warn('Impossible de stocker le placeholder menu à partir de '.$candidate.' : '.$exception->getMessage());
+            }
+        }
+
+        return $this->menuPlaceholderImagePath = $this->placeholderPath();
     }
 
     /**
@@ -1756,14 +1891,14 @@ class DemoSeeder extends Seeder
                 );
 
                 if (! $menu->image_url) {
-                    $menu->update(['image_url' => $this->placeholderPath()]);
+                    $menu->update(['image_url' => $this->menuPlaceholderPath()]);
                 }
 
                 if ($menuCategory instanceof MenuCategory) {
                     $menu->categories()->syncWithoutDetaching([$menuCategory->id]);
                 }
 
-                foreach ($entry['ingredients'] as $component) {
+                foreach (($entry['ingredients'] ?? []) as $component) {
                     $component = is_string($component) ? ['name' => $component] : $component;
                     $ingredientName = $component['name'] ?? null;
 
@@ -1805,7 +1940,7 @@ class DemoSeeder extends Seeder
                     );
                 }
 
-                foreach ($entry['preparations'] as $component) {
+                foreach (($entry['preparations'] ?? []) as $component) {
                     $component = is_string($component) ? ['name' => $component] : $component;
                     $preparationName = $component['name'] ?? null;
 
