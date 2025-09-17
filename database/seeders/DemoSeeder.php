@@ -291,7 +291,7 @@ class DemoSeeder extends Seeder
 
     private const DEFAULT_PLACEHOLDER_SOURCE = 'private/images/placeholder.svg';
 
-    private const TEMP_PLACEHOLDER_PATH = 'tmp/demo-seeder/placeholder.svg';
+    private const DEMO_PLACEHOLDER_PATH = 'tmp/demo-seeder/placeholder.svg';
 
     private ImageService $images;
 
@@ -525,32 +525,46 @@ class DemoSeeder extends Seeder
         }
 
         $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
+        $localAvailable = is_file($localPlaceholder) && is_readable($localPlaceholder);
 
-        if (is_file($localPlaceholder) && is_readable($localPlaceholder)) {
+        if ($localAvailable) {
             try {
-                return $this->placeholderImagePath = $this->images->storePlaceholder(self::DEFAULT_PLACEHOLDER_SOURCE);
+                return $this->placeholderImagePath = $this->images->storePlaceholder(
+                    self::DEFAULT_PLACEHOLDER_SOURCE,
+                    self::DEMO_PLACEHOLDER_PATH
+                );
             } catch (Throwable $exception) {
-                $this->command?->warn('Impossible d\'utiliser le placeholder par défaut : '.$exception->getMessage());
+                $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
             }
+        } else {
+            $this->command?->warn('Placeholder local indisponible pour la démonstration.');
         }
 
-        if ($this->images->exists(self::TEMP_PLACEHOLDER_PATH)) {
-            return $this->placeholderImagePath = self::TEMP_PLACEHOLDER_PATH;
+        if ($this->images->exists(self::DEMO_PLACEHOLDER_PATH)) {
+            return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
         }
 
-        $contents = @file_get_contents($localPlaceholder);
+        if ($localAvailable) {
+            $contents = @file_get_contents($localPlaceholder);
 
-        if ($contents !== false) {
-            try {
-                if (Storage::disk('s3')->put(self::TEMP_PLACEHOLDER_PATH, $contents)) {
-                    return $this->placeholderImagePath = self::TEMP_PLACEHOLDER_PATH;
+            if ($contents !== false) {
+                try {
+                    if (Storage::disk('s3')->put(self::DEMO_PLACEHOLDER_PATH, $contents)) {
+                        return $this->placeholderImagePath = self::DEMO_PLACEHOLDER_PATH;
+                    }
+                } catch (Throwable $exception) {
+                    // ignored; fallback handled below
                 }
-            } catch (Throwable $exception) {
-                // ignored; fallback handled below
             }
         }
 
-        return $this->placeholderImagePath = $this->images->storePlaceholder(self::DEFAULT_PLACEHOLDER_SOURCE);
+        try {
+            return $this->placeholderImagePath = $this->images->storePlaceholder();
+        } catch (Throwable $exception) {
+            $this->command?->warn('Impossible de stocker le placeholder par défaut : '.$exception->getMessage());
+
+            return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_SOURCE;
+        }
     }
 
     /**
@@ -600,12 +614,7 @@ class DemoSeeder extends Seeder
             return null;
         }
 
-        $imagePath = null;
-        try {
-            $imagePath = $this->images->storePlaceholder();
-        } catch (Throwable $exception) {
-            $imagePath = null;
-        }
+        $imagePath = $this->placeholderPath();
 
         $preparation = Preparation::updateOrCreate(
             [
