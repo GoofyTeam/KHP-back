@@ -9,6 +9,7 @@ use App\Http\Controllers\LossController;
 use App\Http\Controllers\LossReasonController;
 use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PreparationController;
 use App\Http\Controllers\QuickAccessController;
 use App\Http\Controllers\RoomController;
@@ -136,6 +137,16 @@ Route::prefix('rooms')->name('rooms.')->group(function () {
     Route::put('/{room}/tables/{table}', [TableController::class, 'update'])->name('tables.update');
     Route::delete('/{room}/tables/{table}', [TableController::class, 'destroy'])->name('tables.destroy');
 });
+
+// Groupe de routes pour les commandes
+Route::prefix('orders')->name('orders.')->group(function () {
+    Route::post('/{order}/pay', [OrderController::class, 'markPayed'])->name('pay');
+    Route::post('/{order}/steps', [OrderController::class, 'storeStep'])->name('steps.store');
+    Route::put('/{order}/steps/{step}/menus', [OrderController::class, 'syncStepMenus'])->name('steps.menus.sync');
+    Route::post('/{order}/step-menus/{stepMenu}/ready', [OrderController::class, 'markStepMenuReady'])->name('step-menus.ready');
+    Route::post('/{order}/step-menus/{stepMenu}/served', [OrderController::class, 'markStepMenuServed'])->name('step-menus.served');
+});
+
 // Groupe de routes pour les Quick Access
 Route::prefix('quick-access')->name('quick-access.')->group(function () {
     // Mise à jour en masse (positions 1..5) avec payload partiel

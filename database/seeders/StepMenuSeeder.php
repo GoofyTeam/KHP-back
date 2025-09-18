@@ -60,8 +60,7 @@ class StepMenuSeeder extends Seeder
     private function statusForStep(OrderStepStatus $status): StepMenuStatus
     {
         $allowed = match ($status) {
-            OrderStepStatus::PENDING => [StepMenuStatus::PENDING],
-            OrderStepStatus::IN_PREP => [StepMenuStatus::PENDING, StepMenuStatus::IN_PREP],
+            OrderStepStatus::IN_PREP => [StepMenuStatus::IN_PREP],
             OrderStepStatus::READY => [StepMenuStatus::IN_PREP, StepMenuStatus::READY],
             OrderStepStatus::SERVED => [StepMenuStatus::READY, StepMenuStatus::SERVED],
         };

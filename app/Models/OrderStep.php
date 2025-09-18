@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStepStatus;
+use App\Enums\StepMenuStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -88,5 +89,40 @@ class OrderStep extends Model
         );
 
         return $query->whereIn('status', $values);
+    }
+
+    public function refreshStatusFromStepMenus(): void
+    {
+        $this->loadMissing('stepMenus');
+
+        if ($this->stepMenus->isEmpty()) {
+            if ($this->status !== OrderStepStatus::IN_PREP) {
+                $this->status = OrderStepStatus::IN_PREP;
+                $this->save();
+            }
+
+            return;
+        }
+
+        $allServed = $this->stepMenus->every(
+            static fn (StepMenu $stepMenu): bool => $stepMenu->status === StepMenuStatus::SERVED,
+        );
+
+        $allReadyOrServed = $this->stepMenus->every(
+            static fn (StepMenu $stepMenu): bool => in_array($stepMenu->status, [StepMenuStatus::READY, StepMenuStatus::SERVED], true),
+        );
+
+        $targetStatus = OrderStepStatus::IN_PREP;
+
+        if ($allServed) {
+            $targetStatus = OrderStepStatus::SERVED;
+        } elseif ($allReadyOrServed) {
+            $targetStatus = OrderStepStatus::READY;
+        }
+
+        if ($targetStatus !== $this->status) {
+            $this->status = $targetStatus;
+            $this->save();
+        }
     }
 }

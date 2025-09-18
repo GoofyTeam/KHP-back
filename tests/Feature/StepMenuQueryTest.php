@@ -40,7 +40,7 @@ class StepMenuQueryTest extends TestCase
         return OrderStep::create(array_merge([
             'order_id' => $order->id,
             'position' => 1,
-            'status' => OrderStepStatus::PENDING,
+            'status' => OrderStepStatus::IN_PREP,
         ], $stepAttributes));
     }
 
@@ -54,7 +54,7 @@ class StepMenuQueryTest extends TestCase
             'order_step_id' => $step->id,
             'menu_id' => $menu->id,
             'quantity' => 1,
-            'status' => StepMenuStatus::PENDING,
+            'status' => StepMenuStatus::IN_PREP,
         ]);
 
         $otherUser = User::factory()->create();
@@ -97,7 +97,7 @@ class StepMenuQueryTest extends TestCase
             'order_step_id' => $step->id,
             'menu_id' => $menu->id,
             'quantity' => 1,
-            'status' => StepMenuStatus::PENDING,
+            'status' => StepMenuStatus::IN_PREP,
         ]);
 
         $query = /** @lang GraphQL */ 'query ($statuses: [StepMenuStatusEnum!]) {
@@ -128,14 +128,14 @@ class StepMenuQueryTest extends TestCase
             'order_step_id' => $step->id,
             'menu_id' => $menuA->id,
             'quantity' => 1,
-            'status' => StepMenuStatus::PENDING,
+            'status' => StepMenuStatus::IN_PREP,
         ]);
 
         $large = StepMenu::create([
             'order_step_id' => $step->id,
             'menu_id' => $menuB->id,
             'quantity' => 4,
-            'status' => StepMenuStatus::PENDING,
+            'status' => StepMenuStatus::IN_PREP,
         ]);
 
         $response = $this->actingAs($user)->graphQL(/** @lang GraphQL */ '{

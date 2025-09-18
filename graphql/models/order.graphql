@@ -20,12 +20,6 @@ type Order {
     "Horodatage du passage de la commande en statut PENDING."
     pending_at: DateTime
 
-    "Horodatage du passage de la commande en préparation."
-    in_prep_at: DateTime
-
-    "Horodatage indiquant que la commande est prête."
-    ready_at: DateTime
-
     "Horodatage du service de la commande."
     served_at: DateTime
 
@@ -53,11 +47,9 @@ Statistiques agrégées sur les commandes.
 """
 type OrdersStats {
     pending: Int!
-    in_prep: Int!
-    ready: Int!
     served: Int!
     payed: Int!
-    cancelled: Int!
+    canceled: Int!
     total: Int!
     revenue: Float!
 }
@@ -118,8 +110,6 @@ enum OrderOrderByField {
     TABLE_ID @enum(value: "table_id")
     USER_ID @enum(value: "user_id")
     PENDING_AT @enum(value: "pending_at")
-    IN_PREP_AT @enum(value: "in_prep_at")
-    READY_AT @enum(value: "ready_at")
     SERVED_AT @enum(value: "served_at")
     PAYED_AT @enum(value: "payed_at")
     CANCELED_AT @enum(value: "canceled_at")

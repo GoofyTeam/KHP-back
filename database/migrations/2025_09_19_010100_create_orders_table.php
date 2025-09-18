@@ -24,8 +24,6 @@ return new class extends Migration
             $table->enum('status', OrderStatus::values())->nullable(false);
 
             $table->timestamp('pending_at')->nullable();
-            $table->timestamp('in_prep_at')->nullable();
-            $table->timestamp('ready_at')->nullable();
             $table->timestamp('served_at')->nullable();
             $table->timestamp('payed_at')->nullable();
             $table->timestamp('canceled_at')->nullable();

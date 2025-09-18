@@ -4,7 +4,6 @@ namespace App\Enums;
 
 enum OrderStepStatus: string
 {
-    case PENDING = 'PENDING';
     case IN_PREP = 'IN_PREP';
     case READY = 'READY';
     case SERVED = 'SERVED';
