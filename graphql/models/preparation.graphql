@@ -130,7 +130,7 @@ extend type Query @guard {
     ): Preparation @find(scopes: ["forCompany"])
 
     "List preparations that dropped below their defined threshold."
-    preparationsBelowThreshold(
+    PreparationsThreshold(
         "Filtrer selon un ou plusieurs emplacements."
         locationIds: [ID!]
     ): [Preparation!]!

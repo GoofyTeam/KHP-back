@@ -15,7 +15,7 @@ class PreparationThresholdQueryTest extends TestCase
     use MakesGraphQLRequests;
     use RefreshDatabase;
 
-    public function test_preparations_below_threshold_query_returns_understocked_preparations(): void
+    public function test_preparations_threshold_query_returns_understocked_preparations(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -41,25 +41,25 @@ class PreparationThresholdQueryTest extends TestCase
 
         $response = $this->actingAs($user)->graphQL(/** @lang GraphQL */ '
             {
-                preparationsBelowThreshold {
+                PreparationsThreshold {
                     id
                     threshold
                 }
             }
         ');
 
-        $response->assertJsonCount(1, 'data.preparationsBelowThreshold');
+        $response->assertJsonCount(1, 'data.PreparationsThreshold');
 
-        $ids = collect($response->json('data.preparationsBelowThreshold'))
+        $ids = collect($response->json('data.PreparationsThreshold'))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
 
         $this->assertSame([$below->id], $ids);
-        $this->assertEquals(10.0, $response->json('data.preparationsBelowThreshold.0.threshold'));
+        $this->assertEquals(10.0, $response->json('data.PreparationsThreshold.0.threshold'));
     }
 
-    public function test_preparations_below_threshold_query_can_filter_by_location(): void
+    public function test_preparations_threshold_query_can_filter_by_location(): void
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
@@ -77,7 +77,7 @@ class PreparationThresholdQueryTest extends TestCase
 
         $query = /** @lang GraphQL */ '
             query ($locationIds: [ID!]) {
-                preparationsBelowThreshold(locationIds: $locationIds) {
+                PreparationsThreshold(locationIds: $locationIds) {
                     id
                 }
             }
