@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             IngredientThresholdSeeder::class,
             PerishableSeeder::class,
             PreparationSeeder::class,
+            PreparationThresholdSeeder::class,
             MenuSeeder::class,
             StockMovementSeeder::class,
             LossSeeder::class,

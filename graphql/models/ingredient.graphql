@@ -116,6 +116,9 @@ extend type Query @guard {
     ): Ingredient @find(scopes: ["forCompany"])
 
     "List ingredients that dropped below their defined threshold."
-    ingredientTreshold: [Ingredient!]!
+    ingredientTreshold(
+        "Filtrer selon un ou plusieurs emplacements."
+        locationIds: [ID!]
+    ): [Ingredient!]!
         @field(resolver: "App\\GraphQL\\Queries\\IngredientTresholdQuery@resolve")
 }

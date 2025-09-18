@@ -374,4 +374,108 @@ class PreparationControllerTest extends TestCase
         $this->assertEquals(4, (int) round($payload['quantity']));
         $this->assertSame('kg', $payload['unit']);
     }
+
+    public function test_it_updates_preparation_threshold(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'threshold' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$preparation->id}/threshold", ['threshold' => 12.5])
+            ->assertStatus(200)
+            ->assertJson([
+                'message' => 'Preparation threshold updated successfully',
+                'threshold' => 12.5,
+            ]);
+
+        $this->assertDatabaseHas('preparations', [
+            'id' => $preparation->id,
+            'threshold' => 12.5,
+        ]);
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$preparation->id}/threshold", ['threshold' => null])
+            ->assertStatus(200)
+            ->assertJson([
+                'message' => 'Preparation threshold updated successfully',
+                'threshold' => null,
+            ]);
+
+        $this->assertDatabaseHas('preparations', [
+            'id' => $preparation->id,
+            'threshold' => null,
+        ]);
+    }
+
+    public function test_it_forbids_threshold_update_for_foreign_company(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create([
+            'company_id' => $otherCompany->id,
+            'threshold' => 5,
+        ]);
+
+        $this->actingAs($user)
+            ->putJson("/api/preparations/{$preparation->id}/threshold", ['threshold' => 12])
+            ->assertStatus(403)
+            ->assertJson([
+                'message' => 'Unauthorized action',
+            ]);
+
+        $this->assertDatabaseHas('preparations', [
+            'id' => $preparation->id,
+            'threshold' => 5,
+        ]);
+    }
+
+    public function test_it_resets_preparation_threshold(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create([
+            'company_id' => $company->id,
+            'threshold' => 8,
+        ]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/preparations/{$preparation->id}/threshold")
+            ->assertStatus(200)
+            ->assertJson([
+                'message' => 'Preparation threshold reset successfully',
+            ]);
+
+        $this->assertDatabaseHas('preparations', [
+            'id' => $preparation->id,
+            'threshold' => null,
+        ]);
+    }
+
+    public function test_it_forbids_threshold_reset_for_foreign_company(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $preparation = Preparation::factory()->create([
+            'company_id' => $otherCompany->id,
+            'threshold' => 7,
+        ]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/preparations/{$preparation->id}/threshold")
+            ->assertStatus(403)
+            ->assertJson([
+                'message' => 'Unauthorized action',
+            ]);
+
+        $this->assertDatabaseHas('preparations', [
+            'id' => $preparation->id,
+            'threshold' => 7,
+        ]);
+    }
 }
