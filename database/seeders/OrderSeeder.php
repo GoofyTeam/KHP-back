@@ -90,11 +90,9 @@ class OrderSeeder extends Seeder
     {
         return [
             OrderStatus::PENDING,
-            OrderStatus::IN_PREP,
-            OrderStatus::READY,
             OrderStatus::SERVED,
             OrderStatus::PAYED,
-            OrderStatus::CANCELLED,
+            OrderStatus::CANCELED,
         ];
     }
 
@@ -107,36 +105,24 @@ class OrderSeeder extends Seeder
 
         $timeline = [
             'pending_at' => $pendingAt,
-            'in_prep_at' => null,
-            'ready_at' => null,
             'served_at' => null,
             'payed_at' => null,
             'canceled_at' => null,
         ];
 
-        if ($status === OrderStatus::CANCELLED) {
+        if ($status === OrderStatus::CANCELED) {
             $timeline['canceled_at'] = $pendingAt->copy()->addMinutes(random_int(5, 45));
 
             return $timeline;
         }
 
-        if ($status !== OrderStatus::PENDING) {
-            $timeline['in_prep_at'] = $pendingAt->copy()->addMinutes(random_int(5, 20));
-        }
-
-        if (in_array($status, [OrderStatus::READY, OrderStatus::SERVED, OrderStatus::PAYED], true)) {
-            $reference = $timeline['in_prep_at'] ?? $pendingAt;
-            $timeline['ready_at'] = $reference->copy()->addMinutes(random_int(5, 20));
-        }
-
         if (in_array($status, [OrderStatus::SERVED, OrderStatus::PAYED], true)) {
-            $reference = $timeline['ready_at'] ?? $pendingAt;
-            $timeline['served_at'] = $reference->copy()->addMinutes(random_int(5, 15));
+            $timeline['served_at'] = $pendingAt->copy()->addMinutes(random_int(10, 60));
         }
 
         if ($status === OrderStatus::PAYED) {
             $reference = $timeline['served_at'] ?? $pendingAt;
-            $timeline['payed_at'] = $reference->copy()->addMinutes(random_int(5, 15));
+            $timeline['payed_at'] = $reference->copy()->addMinutes(random_int(5, 30));
         }
 
         return $timeline;

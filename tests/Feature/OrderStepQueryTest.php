@@ -43,7 +43,7 @@ class OrderStepQueryTest extends TestCase
         $step = OrderStep::create([
             'order_id' => $order->id,
             'position' => 1,
-            'status' => OrderStepStatus::PENDING,
+            'status' => OrderStepStatus::IN_PREP,
         ]);
 
         $otherUser = User::factory()->create();
@@ -79,7 +79,7 @@ class OrderStepQueryTest extends TestCase
         OrderStep::create([
             'order_id' => $order->id,
             'position' => 2,
-            'status' => OrderStepStatus::PENDING,
+            'status' => OrderStepStatus::IN_PREP,
         ]);
 
         $query = /** @lang GraphQL */ 'query ($statuses: [OrderStepStatusEnum!]) {
@@ -106,13 +106,13 @@ class OrderStepQueryTest extends TestCase
         $first = OrderStep::create([
             'order_id' => $order->id,
             'position' => 1,
-            'status' => OrderStepStatus::PENDING,
+            'status' => OrderStepStatus::IN_PREP,
         ]);
 
         $second = OrderStep::create([
             'order_id' => $order->id,
             'position' => 2,
-            'status' => OrderStepStatus::PENDING,
+            'status' => OrderStepStatus::IN_PREP,
         ]);
 
         $response = $this->actingAs($user)->graphQL(/** @lang GraphQL */ '{

@@ -69,7 +69,7 @@ class OrderQueryTest extends TestCase
     {
         $user = User::factory()->create();
         $pending = $this->createOrderForUser($user, ['status' => OrderStatus::PENDING]);
-        $ready = $this->createOrderForUser($user, ['status' => OrderStatus::READY]);
+        $served = $this->createOrderForUser($user, ['status' => OrderStatus::SERVED]);
 
         $query = /** @lang GraphQL */ 'query ($statuses: [OrderStatusEnum!]) {
             orders(statuses: $statuses) {
@@ -86,7 +86,7 @@ class OrderQueryTest extends TestCase
             'id' => (string) $pending->id,
             'status' => OrderStatus::PENDING->value,
         ]);
-        $response->assertJsonMissing(['id' => (string) $ready->id]);
+        $response->assertJsonMissing(['id' => (string) $served->id]);
     }
 
     public function test_it_filters_orders_by_start_date(): void
@@ -174,16 +174,14 @@ class OrderQueryTest extends TestCase
         ]);
 
         $this->createOrderForUser($user, ['status' => OrderStatus::PENDING]);
-        $this->createOrderForUser($user, ['status' => OrderStatus::CANCELLED]);
+        $this->createOrderForUser($user, ['status' => OrderStatus::CANCELED]);
 
         $response = $this->actingAs($user)->graphQL(/** @lang GraphQL */ '{
             ordersStats {
                 pending
-                in_prep
-                ready
                 served
                 payed
-                cancelled
+                canceled
                 total
                 revenue
             }
@@ -191,9 +189,9 @@ class OrderQueryTest extends TestCase
 
         $response->assertJsonPath('data.ordersStats.pending', 1);
         $response->assertJsonPath('data.ordersStats.payed', 1);
-        $response->assertJsonPath('data.ordersStats.cancelled', 1);
+        $response->assertJsonPath('data.ordersStats.canceled', 1);
         $response->assertJsonPath('data.ordersStats.total', 3);
-        $response->assertJsonPath('data.ordersStats.in_prep', 0);
+        $response->assertJsonPath('data.ordersStats.served', 0);
 
         $expectedRevenue = (12.5 * 2) + 5.25;
         $this->assertEqualsWithDelta($expectedRevenue, $response->json('data.ordersStats.revenue'), 0.001);
