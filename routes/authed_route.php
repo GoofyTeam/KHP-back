@@ -53,6 +53,7 @@ Route::prefix('ingredients')->name('ingredients.')->group(function () {
     Route::post('/bulk', [IngredientController::class, 'bulkStore'])->name('bulk-store');
     Route::post('/', [IngredientController::class, 'store'])->name('store');
     Route::put('/{ingredient}', [IngredientController::class, 'update'])->name('update');
+    Route::put('/{ingredient}/threshold', [IngredientController::class, 'updateThreshold'])->name('update-threshold');
     Route::delete('/{ingredient}', [IngredientController::class, 'destroy'])->name('destroy');
     Route::post('/{ingredient}/add-quantity', [IngredientController::class, 'addQuantity'])->name('add-quantity');
     Route::post('/{ingredient}/remove-quantity', [IngredientController::class, 'removeQuantity'])->name('remove-quantity');
