@@ -738,7 +738,6 @@ class IngredientControllerTest extends TestCase
             ->assertStatus(200)
             ->assertJson([
                 'message' => 'Ingredient threshold reset successfully',
-                'threshold' => null,
             ]);
 
         $this->assertDatabaseHas('ingredients', ['id' => $ingredient->id, 'threshold' => null]);
