@@ -86,7 +86,9 @@ class MenuAllergenQueryTest extends TestCase
         $query = /* @lang GraphQL */ '
             query ($allergens: [AllergenEnum!]) {
                 menus(allergens: $allergens) {
-                    id
+                    data {
+                        id
+                    }
                 }
             }
         ';
@@ -95,7 +97,7 @@ class MenuAllergenQueryTest extends TestCase
             'allergens' => [Allergen::MILK->value, Allergen::GLUTEN->value],
         ]);
 
-        $response->assertJsonCount(3, 'data.menus');
+        $response->assertJsonCount(3, 'data.menus.data');
         $response->assertJsonFragment(['id' => (string) $menuMilk->id]);
         $response->assertJsonFragment(['id' => (string) $menuGluten->id]);
         $response->assertJsonFragment(['id' => (string) $menuBoth->id]);

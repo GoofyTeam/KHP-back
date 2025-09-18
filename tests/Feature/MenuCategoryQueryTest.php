@@ -37,7 +37,9 @@ class MenuCategoryQueryTest extends TestCase
         $query = /* @lang GraphQL */ '
             query ($category_ids: [ID!]) {
                 menus(category_ids: $category_ids) {
-                    id
+                    data {
+                        id
+                    }
                 }
             }
         ';
@@ -46,7 +48,7 @@ class MenuCategoryQueryTest extends TestCase
             'category_ids' => [$halal->id, $vegan->id],
         ]);
 
-        $response->assertJsonCount(3, 'data.menus');
+        $response->assertJsonCount(3, 'data.menus.data');
         $response->assertJsonFragment(['id' => (string) $menuHalal->id]);
         $response->assertJsonFragment(['id' => (string) $menuVegan->id]);
         $response->assertJsonFragment(['id' => (string) $menuBoth->id]);
