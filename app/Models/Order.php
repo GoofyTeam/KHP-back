@@ -29,8 +29,6 @@ class Order extends Model
         'user_id',
         'status',
         'pending_at',
-        'in_prep_at',
-        'ready_at',
         'served_at',
         'payed_at',
         'canceled_at',
@@ -39,8 +37,6 @@ class Order extends Model
     protected $casts = [
         'status' => OrderStatus::class,
         'pending_at' => 'datetime',
-        'in_prep_at' => 'datetime',
-        'ready_at' => 'datetime',
         'served_at' => 'datetime',
         'payed_at' => 'datetime',
         'canceled_at' => 'datetime',

@@ -58,11 +58,9 @@ class OrdersResolver
 
         return [
             'pending' => (int) ($counts[OrderStatus::PENDING->value] ?? 0),
-            'in_prep' => (int) ($counts[OrderStatus::IN_PREP->value] ?? 0),
-            'ready' => (int) ($counts[OrderStatus::READY->value] ?? 0),
             'served' => (int) ($counts[OrderStatus::SERVED->value] ?? 0),
             'payed' => (int) ($counts[OrderStatus::PAYED->value] ?? 0),
-            'cancelled' => (int) ($counts[OrderStatus::CANCELLED->value] ?? 0),
+            'canceled' => (int) ($counts[OrderStatus::CANCELED->value] ?? 0),
             'total' => (int) array_sum($counts),
             'revenue' => $revenue,
         ];

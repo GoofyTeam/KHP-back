@@ -51,19 +51,17 @@ class OrderStepSeeder extends Seeder
     private function progressForStatus(OrderStatus $status): int
     {
         return match ($status) {
-            OrderStatus::PENDING, OrderStatus::CANCELLED => 0,
-            OrderStatus::IN_PREP => 1,
-            OrderStatus::READY => 2,
-            OrderStatus::SERVED, OrderStatus::PAYED => 3,
+            OrderStatus::PENDING, OrderStatus::CANCELED => 0,
+            OrderStatus::SERVED => 1,
+            OrderStatus::PAYED => 2,
         };
     }
 
     private function statusForProgress(int $progress): OrderStepStatus
     {
         return match ($progress) {
-            0 => OrderStepStatus::PENDING,
-            1 => OrderStepStatus::IN_PREP,
-            2 => OrderStepStatus::READY,
+            0 => OrderStepStatus::IN_PREP,
+            1 => OrderStepStatus::READY,
             default => OrderStepStatus::SERVED,
         };
     }
