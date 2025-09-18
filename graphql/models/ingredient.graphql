@@ -14,6 +14,9 @@ type Ingredient {
     "Unit for the base quantity of the ingredient."
     base_unit: UnitEnum!
 
+    "Optional minimum stock quantity before alerting."
+    threshold: Float
+
     "Allergens contained in the ingredient."
     allergens: [AllergenEnum!]!
 
@@ -111,4 +114,8 @@ extend type Query @guard {
         "Search by ingredient barcode."
         barcode: String @eq @rules(apply: ["prohibits:id,name", "required_without_all:id,name"])
     ): Ingredient @find(scopes: ["forCompany"])
+
+    "List ingredients that dropped below their defined threshold."
+    ingredientTreshold: [Ingredient!]!
+        @field(resolver: "App\\GraphQL\\Queries\\IngredientTresholdQuery@resolve")
 }

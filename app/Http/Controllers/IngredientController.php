@@ -395,6 +395,50 @@ class IngredientController extends Controller
         ], 200);
     }
 
+    public function updateThreshold(Request $request, Ingredient $ingredient): JsonResponse
+    {
+        $user = auth()->user();
+
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Unauthorized action',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'threshold' => ['present', 'nullable', 'numeric', 'min:0'],
+        ]);
+
+        $ingredient->threshold = $validated['threshold'];
+        $ingredient->save();
+
+        return response()->json([
+            'message' => 'Ingredient threshold updated successfully',
+            'threshold' => $ingredient->threshold,
+        ], 200);
+    }
+
+    /**
+     * Réinitialise le seuil d'un ingrédient à null.
+     */
+    public function resetThreshold(Request $request, Ingredient $ingredient): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Unauthorized action',
+            ], 403);
+        }
+
+        $ingredient->threshold = null;
+        $ingredient->save();
+
+        return response()->json([
+            'message' => 'Ingredient threshold reset successfully',
+        ], 200);
+    }
+
     /**
      * Cas métier : Suppression d'un ingrédient
      *

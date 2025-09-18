@@ -26,12 +26,14 @@ class Ingredient extends Model
         'barcode',
         'base_unit',
         'allergens',
+        'threshold',
     ];
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
         'base_unit' => MeasurementUnit::class,
         'allergens' => 'array',
+        'threshold' => 'float',
     ];
 
     protected $attributes = [
