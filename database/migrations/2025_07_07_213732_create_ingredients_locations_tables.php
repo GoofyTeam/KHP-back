@@ -19,7 +19,6 @@ return new class extends Migration
             $table->enum('unit', MeasurementUnit::values())
                 ->default(MeasurementUnit::UNIT)
                 ->nullable(false);
-            $table->float('threshold')->nullable();
             $table->timestamps();
 
             $table->unique(['company_id', 'name']);

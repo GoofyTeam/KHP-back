@@ -419,6 +419,27 @@ class IngredientController extends Controller
     }
 
     /**
+     * Réinitialise le seuil d'un ingrédient à null.
+     */
+    public function resetThreshold(Request $request, Ingredient $ingredient): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($ingredient->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Unauthorized action',
+            ], 403);
+        }
+
+        $ingredient->threshold = null;
+        $ingredient->save();
+
+        return response()->json([
+            'message' => 'Ingredient threshold reset successfully',
+        ], 200);
+    }
+
+    /**
      * Cas métier : Suppression d'un ingrédient
      *
      * Use cases :

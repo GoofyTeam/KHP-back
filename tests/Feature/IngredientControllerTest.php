@@ -721,6 +721,49 @@ class IngredientControllerTest extends TestCase
         $this->assertDatabaseHas('ingredients', ['id' => $ingredient->id, 'threshold' => 5]);
     }
 
+    public function test_it_resets_threshold(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+            'threshold' => 8,
+        ]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/ingredients/{$ingredient->id}/threshold")
+            ->assertStatus(200)
+            ->assertJson([
+                'message' => 'Ingredient threshold reset successfully',
+                'threshold' => null,
+            ]);
+
+        $this->assertDatabaseHas('ingredients', ['id' => $ingredient->id, 'threshold' => null]);
+    }
+
+    public function test_it_forbids_threshold_reset_for_foreign_company(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $otherCompany->id,
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+            'threshold' => 7,
+        ]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/ingredients/{$ingredient->id}/threshold")
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('ingredients', ['id' => $ingredient->id, 'threshold' => 7]);
+    }
+
     /** Update catégories : remplacées si fournies. */
     public function test_it_updates_category_when_provided(): void
     {
