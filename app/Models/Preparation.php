@@ -25,11 +25,13 @@ class Preparation extends Model
         'base_quantity',
         'base_unit',
         'image_url',
+        'threshold',
     ];
 
     protected $casts = [
         'unit' => MeasurementUnit::class,
         'base_unit' => MeasurementUnit::class,
+        'threshold' => 'float',
     ];
 
     /**

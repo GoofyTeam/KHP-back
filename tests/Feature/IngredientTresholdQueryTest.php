@@ -47,4 +47,35 @@ class IngredientTresholdQueryTest extends TestCase
         $response->assertJsonMissing(['id' => (string) $above->id]);
         $response->assertJsonMissing(['id' => (string) $withoutThreshold->id]);
     }
+
+    public function test_it_can_filter_by_location_when_checking_threshold(): void
+    {
+        $user = User::factory()->create();
+        $locationA = Location::factory()->for($user->company)->create();
+        $locationB = Location::factory()->for($user->company)->create();
+
+        $ingredient = Ingredient::factory()
+            ->for($user->company)
+            ->create(['threshold' => 10]);
+        $ingredient->locations()->attach($locationA->id, ['quantity' => 4]);
+        $ingredient->locations()->attach($locationB->id, ['quantity' => 12]);
+
+        $query = /** @lang GraphQL */ '
+            query ($locationIds: [ID!]) {
+                ingredientTreshold(locationIds: $locationIds) {
+                    id
+                }
+            }
+        ';
+
+        $responseForA = $this->actingAs($user)->graphQL($query, [
+            'locationIds' => [$locationA->id],
+        ]);
+        $responseForA->assertJsonFragment(['id' => (string) $ingredient->id]);
+
+        $responseForB = $this->actingAs($user)->graphQL($query, [
+            'locationIds' => [$locationB->id],
+        ]);
+        $responseForB->assertJsonMissing(['id' => (string) $ingredient->id]);
+    }
 }

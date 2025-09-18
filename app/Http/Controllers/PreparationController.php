@@ -330,6 +330,53 @@ class PreparationController extends Controller
     }
 
     /**
+     * Met à jour le seuil d'alerte d'une préparation.
+     */
+    public function updateThreshold(Request $request, Preparation $preparation): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($preparation->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Unauthorized action',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'threshold' => ['present', 'nullable', 'numeric', 'min:0'],
+        ]);
+
+        $preparation->threshold = $validated['threshold'];
+        $preparation->save();
+
+        return response()->json([
+            'message' => 'Preparation threshold updated successfully',
+            'threshold' => $preparation->threshold,
+        ], 200);
+    }
+
+    /**
+     * Réinitialise le seuil d'une préparation à null.
+     */
+    public function resetThreshold(Request $request, Preparation $preparation): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($preparation->company_id !== $user->company_id) {
+            return response()->json([
+                'message' => 'Unauthorized action',
+            ], 403);
+        }
+
+        $preparation->threshold = null;
+        $preparation->save();
+
+        return response()->json([
+            'message' => 'Preparation threshold reset successfully',
+        ], 200);
+    }
+
+    /**
      * Cas métier : Suppression d'une préparation
      *
      * Use cases :

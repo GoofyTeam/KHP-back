@@ -26,6 +26,7 @@ class PreparationFactory extends Factory
             'company_id' => Company::factory(),
             'base_quantity' => 1,
             'base_unit' => fake()->randomElement(MeasurementUnit::values()),
+            'threshold' => null,
         ];
     }
 

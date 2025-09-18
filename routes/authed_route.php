@@ -41,6 +41,8 @@ Route::prefix('company')->name('company.')->group(function () {
 Route::prefix('preparations')->name('preparations.')->group(function () {
     Route::post('/', [PreparationController::class, 'store'])->name('store');
     Route::put('/{id}', [PreparationController::class, 'update'])->name('update');
+    Route::put('/{preparation}/threshold', [PreparationController::class, 'updateThreshold'])->name('update-threshold');
+    Route::delete('/{preparation}/threshold', [PreparationController::class, 'resetThreshold'])->name('reset-threshold');
     Route::delete('/{id}', [PreparationController::class, 'destroy'])->name('destroy');
     Route::post('/{id}/prepare', [PreparationController::class, 'prepare'])->name('prepare');
     Route::post('/{id}/add-quantity', [PreparationController::class, 'addQuantity'])->name('add-quantity');

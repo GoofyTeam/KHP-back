@@ -20,6 +20,9 @@ type Preparation {
     "The company that produces this preparation."
     company: Company! @belongsTo
 
+    "Threshold below which the preparation is considered understocked."
+    threshold: Float
+
     entities: [PreparationEntity!]! @hasMany
 
     locations: [Location!]! @belongsToMany
@@ -125,4 +128,13 @@ extend type Query @guard {
         id: ID @eq @rules(apply: ["prohibits:name", "required_without:name"])
         name: String @eq @rules(apply: ["prohibits:id", "required_without:id"])
     ): Preparation @find(scopes: ["forCompany"])
+
+    "List preparations that dropped below their defined threshold."
+    preparationsBelowThreshold(
+        "Filtrer selon un ou plusieurs emplacements."
+        locationIds: [ID!]
+    ): [Preparation!]!
+        @field(
+            resolver: "App\\GraphQL\\Queries\\PreparationsThresholdQuery@resolve"
+        )
 }
