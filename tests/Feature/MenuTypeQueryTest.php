@@ -36,7 +36,9 @@ class MenuTypeQueryTest extends TestCase
         $query = /* @lang GraphQL */ '
             query ($types: [String!]) {
                 menus(types: $types) {
-                    id
+                    data {
+                        id
+                    }
                 }
             }
         ';
@@ -45,7 +47,7 @@ class MenuTypeQueryTest extends TestCase
             'types' => ['plat', 'dessert'],
         ]);
 
-        $response->assertJsonCount(2, 'data.menus');
+        $response->assertJsonCount(2, 'data.menus.data');
         $response->assertJsonFragment(['id' => (string) $menuPlat->id]);
         $response->assertJsonFragment(['id' => (string) $menuDessert->id]);
         $response->assertJsonMissing(['id' => (string) $menuEntree->id]);

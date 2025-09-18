@@ -36,7 +36,9 @@ class MenuPriceQueryTest extends TestCase
         $query = /* @lang GraphQL */ '
             query ($price_between: [Float!]) {
                 menus(price_between: $price_between) {
-                    id
+                    data {
+                        id
+                    }
                 }
             }
         ';
@@ -45,7 +47,7 @@ class MenuPriceQueryTest extends TestCase
             'price_between' => [10, 20],
         ]);
 
-        $response->assertJsonCount(2, 'data.menus');
+        $response->assertJsonCount(2, 'data.menus.data');
         $response->assertJsonFragment(['id' => (string) $menuLow->id]);
         $response->assertJsonFragment(['id' => (string) $menuMid->id]);
         $response->assertJsonMissing(['id' => (string) $menuCheap->id]);

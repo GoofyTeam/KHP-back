@@ -114,20 +114,22 @@ class MenuAvailabilityQueryTest extends TestCase
         $query = /** @lang GraphQL */ '
             query ($available: Boolean) {
                 menus(available: $available) {
-                    id
+                    data {
+                        id
+                    }
                 }
             }
         ';
 
         $this->actingAs($user)
             ->graphQL($query, ['available' => true])
-            ->assertJsonCount(1, 'data.menus')
+            ->assertJsonCount(1, 'data.menus.data')
             ->assertJsonFragment(['id' => (string) $menuAvailable->id])
             ->assertJsonMissing(['id' => (string) $menuUnavailable->id]);
 
         $this->actingAs($user)
             ->graphQL($query, ['available' => false])
-            ->assertJsonCount(1, 'data.menus')
+            ->assertJsonCount(1, 'data.menus.data')
             ->assertJsonFragment(['id' => (string) $menuUnavailable->id])
             ->assertJsonMissing(['id' => (string) $menuAvailable->id]);
     }

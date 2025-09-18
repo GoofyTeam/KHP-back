@@ -36,6 +36,6 @@ extend type Query @guard {
         price_between: [Float!] @scope(name: "priceBetween")
         "Filtrer par disponibilité."
         available: Boolean @scope(name: "available")
-    ): [Menu!]! @all(scopes: ["forCompany"])
+    ): [Menu!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
     menu(id: ID! @eq): Menu @find(scopes: ["forCompany"])
 }
