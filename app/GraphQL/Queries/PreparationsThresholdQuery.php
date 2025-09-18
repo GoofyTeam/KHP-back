@@ -4,7 +4,6 @@ namespace App\GraphQL\Queries;
 
 use App\Models\Preparation;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 
 class PreparationsThresholdQuery
 {
@@ -22,42 +21,30 @@ class PreparationsThresholdQuery
             )
         );
 
-        $query = Preparation::forCompany()
+        $preparations = Preparation::forCompany()
             ->with(['locations' => function ($relation) use ($locationIds) {
                 if (! empty($locationIds)) {
                     $relation->whereIn('locations.id', $locationIds);
                 }
             }])
-            ->whereNotNull('threshold');
+            ->whereNotNull('threshold')
+            ->when(! empty($locationIds), function ($query) use ($locationIds) {
+                $query->whereHas('locations', function ($locationQuery) use ($locationIds) {
+                    $locationQuery->whereIn('locations.id', $locationIds);
+                });
+            })
+            ->get();
 
-        if (! empty($locationIds)) {
-            $placeholders = implode(', ', array_fill(0, count($locationIds), '?'));
-            $sql = sprintf(
-                '(
-        select coalesce(sum(lp.quantity), 0)
-        from location_preparation as lp
-        where lp.preparation_id = preparations.id
-            and lp.location_id in (%s)
-    ) < threshold',
-                $placeholders
-            );
+        return $preparations
+            ->filter(function (Preparation $preparation): bool {
+                $totalQuantity = $preparation->locations->sum(
+                    fn ($location) => (float) ($location->pivot->quantity ?? 0)
+                );
 
-            $query
-                ->whereHas('locations', function ($relation) use ($locationIds) {
-                    $relation->whereIn('locations.id', $locationIds);
-                })
-                ->whereRaw($sql, $locationIds);
-        } else {
-            $query->whereRaw('(
-                select coalesce(sum(lp.quantity), 0)
-                from location_preparation as lp
-                where lp.preparation_id = preparations.id
-            ) < threshold');
-        }
-
-        /** @var Collection<int, Preparation> $preparations */
-        $preparations = $query->get();
-
-        return $preparations->all();
+                return $preparation->threshold !== null
+                    && $totalQuantity < $preparation->threshold;
+            })
+            ->values()
+            ->all();
     }
 }
