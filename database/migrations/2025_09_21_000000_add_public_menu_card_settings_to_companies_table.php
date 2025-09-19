@@ -13,7 +13,7 @@ return new class extends Migration
         Schema::table('companies', function (Blueprint $table) {
             if (! Schema::hasColumn('companies', 'public_menu_card_url')) {
                 $table->string('public_menu_card_url', 255)
-                    ->default(fn () => sprintf('temp-%s', Str::orderedUuid()))
+                    ->nullable()
                     ->unique();
             }
 
@@ -26,16 +26,28 @@ return new class extends Migration
             }
         });
 
+        $hasPublicCardUrl = Schema::hasColumn('companies', 'public_card_url');
+
+        $columns = ['id', 'name'];
+
+        if ($hasPublicCardUrl) {
+            $columns[] = 'public_card_url';
+        }
+
+        $columns[] = 'public_menu_card_url';
+
         DB::table('companies')
-            ->select('id', 'name', 'public_card_url', 'public_menu_card_url')
+            ->select($columns)
             ->orderBy('id')
             ->lazy()
-            ->each(function ($company) {
+            ->each(function ($company) use ($hasPublicCardUrl) {
                 if (! empty($company->public_menu_card_url)) {
                     return;
                 }
 
-                $slugSource = $company->public_card_url ?: (Str::slug($company->name) ?: (string) Str::orderedUuid());
+                $slugSource = $hasPublicCardUrl && ! empty($company->public_card_url)
+                    ? $company->public_card_url
+                    : (Str::slug($company->name) ?: (string) Str::orderedUuid());
 
                 DB::table('companies')
                     ->where('id', $company->id)
@@ -48,6 +60,12 @@ return new class extends Migration
             Schema::table('companies', function (Blueprint $table) {
                 $table->dropColumn('public_card_url');
             });
+        }
+
+        if (Schema::hasColumn('companies', 'public_menu_card_url')) {
+            DB::statement(
+                'ALTER TABLE companies ALTER COLUMN public_menu_card_url SET NOT NULL'
+            );
         }
     }
 
