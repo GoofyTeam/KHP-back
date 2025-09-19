@@ -20,7 +20,7 @@ class RestaurantCardControllerTest extends TestCase
     public function test_can_fetch_restaurant_card(): void
     {
         $company = Company::factory()->create();
-        $slug = $company->refresh()->public_card_url;
+        $slug = $company->refresh()->public_menu_card_url;
         $locationType = LocationType::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create([
             'company_id' => $company->id,
@@ -89,7 +89,7 @@ class RestaurantCardControllerTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertJsonPath('company.name', $company->name)
-            ->assertJsonPath('company.public_card_url', $slug)
+            ->assertJsonPath('company.public_menu_card_url', $slug)
             ->assertJsonCount(1, 'company.menus')
             ->assertJsonPath('company.menus.0.name', $menuAvailable->name)
             ->assertJsonPath('company.menus.0.type', $menuAvailable->type)
@@ -102,8 +102,8 @@ class RestaurantCardControllerTest extends TestCase
 
     public function test_includes_out_of_stock_menus_when_company_option_enabled(): void
     {
-        $company = Company::factory()->create(['show_out_of_stock_menus' => true]);
-        $slug = $company->refresh()->public_card_url;
+        $company = Company::factory()->create(['show_out_of_stock_menus_on_card' => true]);
+        $slug = $company->refresh()->public_menu_card_url;
         $locationType = LocationType::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create([
             'company_id' => $company->id,
@@ -172,10 +172,10 @@ class RestaurantCardControllerTest extends TestCase
         $this->getJson('/api/restaurant-card/unknown-card')->assertStatus(404);
     }
 
-    public function test_public_card_url_validation(): void
+    public function test_public_menu_card_url_validation(): void
     {
         $this->getJson('/api/restaurant-card/!!!')
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['public_card_url']);
+            ->assertJsonValidationErrors(['public_menu_card_url']);
     }
 }

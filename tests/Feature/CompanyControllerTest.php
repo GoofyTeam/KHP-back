@@ -38,9 +38,9 @@ class CompanyControllerTest extends TestCase
         $this->assertTrue($company->auto_complete_menu_orders);
         $this->assertSame(
             sprintf('%d-%s', $company->id, Str::slug($company->name)),
-            $company->public_card_url
+            $company->public_menu_card_url
         );
-        $this->assertFalse($company->show_out_of_stock_menus);
+        $this->assertFalse($company->show_out_of_stock_menus_on_card);
         $this->assertTrue($company->show_menu_images);
     }
 
@@ -64,9 +64,9 @@ class CompanyControllerTest extends TestCase
         $this->assertSame('en', $company->open_food_facts_language);
         $this->assertSame(
             sprintf('%d-%s', $company->id, Str::slug($company->name)),
-            $company->public_card_url
+            $company->public_menu_card_url
         );
-        $this->assertFalse($company->show_out_of_stock_menus);
+        $this->assertFalse($company->show_out_of_stock_menus_on_card);
         $this->assertTrue($company->show_menu_images);
     }
 }

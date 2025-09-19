@@ -9,8 +9,8 @@ use Illuminate\Support\Str;
 /**
  * @property bool $auto_complete_menu_orders
  * @property string $open_food_facts_language
- * @property string $public_card_url
- * @property bool $show_out_of_stock_menus
+ * @property string $public_menu_card_url
+ * @property bool $show_out_of_stock_menus_on_card
  * @property bool $show_menu_images
  */
 class Company extends Model
@@ -21,21 +21,21 @@ class Company extends Model
         'name',
         'auto_complete_menu_orders',
         'open_food_facts_language',
-        'public_card_url',
-        'show_out_of_stock_menus',
+        'public_menu_card_url',
+        'show_out_of_stock_menus_on_card',
         'show_menu_images',
     ];
 
     protected $casts = [
         'auto_complete_menu_orders' => 'bool',
         'open_food_facts_language' => 'string',
-        'public_card_url' => 'string',
-        'show_out_of_stock_menus' => 'bool',
+        'public_menu_card_url' => 'string',
+        'show_out_of_stock_menus_on_card' => 'bool',
         'show_menu_images' => 'bool',
     ];
 
     protected $attributes = [
-        'show_out_of_stock_menus' => false,
+        'show_out_of_stock_menus_on_card' => false,
         'show_menu_images' => true,
     ];
 
@@ -117,8 +117,8 @@ class Company extends Model
     public function getPublicMenuSettingsAttribute(): array
     {
         return [
-            'public_card_url' => $this->public_card_url,
-            'show_out_of_stock_menus' => $this->show_out_of_stock_menus,
+            'public_menu_card_url' => $this->public_menu_card_url,
+            'show_out_of_stock_menus_on_card' => $this->show_out_of_stock_menus_on_card,
             'show_menu_images' => $this->show_menu_images,
         ];
     }
@@ -126,14 +126,14 @@ class Company extends Model
     protected static function booted()
     {
         static::creating(function ($company) {
-            if (! $company->public_card_url) {
-                $company->public_card_url = 'temp-'.Str::uuid();
+            if (! $company->public_menu_card_url) {
+                $company->public_menu_card_url = 'temp-'.Str::uuid();
             }
         });
 
         static::created(function ($company) {
-            if (! $company->public_card_url || str_starts_with($company->public_card_url, 'temp-')) {
-                $company->public_card_url = sprintf('%d-%s', $company->id, Str::slug($company->name));
+            if (! $company->public_menu_card_url || str_starts_with($company->public_menu_card_url, 'temp-')) {
+                $company->public_menu_card_url = sprintf('%d-%s', $company->id, Str::slug($company->name));
                 $company->saveQuietly();
             }
 

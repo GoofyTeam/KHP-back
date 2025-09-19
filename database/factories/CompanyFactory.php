@@ -19,7 +19,7 @@ class CompanyFactory extends Factory
         return [
             'name' => $this->faker->unique()->company(),
             'open_food_facts_language' => 'fr',
-            'show_out_of_stock_menus' => false,
+            'show_out_of_stock_menus_on_card' => false,
             'show_menu_images' => true,
         ];
     }

@@ -68,10 +68,10 @@ enum CompanyOrderByField {
 
 type PublicMenuSettings {
     "Identifiant public unique pour partager la carte du restaurant."
-    public_card_url: String!
+    public_menu_card_url: String!
 
     "Affiche aussi les menus qui n'ont pas assez de stock sur la carte publique."
-    show_out_of_stock_menus: Boolean!
+    show_out_of_stock_menus_on_card: Boolean!
 
     "Affiche les images des menus sur la carte publique."
     show_menu_images: Boolean!
