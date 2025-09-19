@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\MeasurementUnit;
 use App\Enums\MenuServiceType;
 use App\Enums\OrderStatus;
 use App\Enums\OrderStepStatus;
 use App\Enums\StepMenuStatus;
+use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\OrderStep;
@@ -160,7 +163,7 @@ class OrderControllerTest extends TestCase
         self::assertNotNull($order->pending_at);
     }
 
-    public function test_it_syncs_step_menus_with_add_update_and_remove(): void
+    public function test_it_adds_step_menu_to_step(): void
     {
         $user = User::factory()->create();
         $order = $this->createOrderForUser($user);
@@ -171,19 +174,12 @@ class OrderControllerTest extends TestCase
             'served_at' => now(),
         ]);
 
-        $servedMenu = Menu::factory()->create(['company_id' => $user->company_id]);
-        $readyMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        $existingMenu = Menu::factory()->create(['company_id' => $user->company_id]);
 
-        $servedStepMenu = StepMenu::factory()->for($step, 'step')->for($servedMenu)->create([
+        StepMenu::factory()->for($step, 'step')->for($existingMenu)->create([
             'status' => StepMenuStatus::SERVED,
             'quantity' => 1,
-            'note' => 'Initial note',
             'served_at' => now(),
-        ]);
-
-        $readyStepMenu = StepMenu::factory()->for($step, 'step')->for($readyMenu)->create([
-            'status' => StepMenuStatus::READY,
-            'quantity' => 2,
         ]);
 
         $newMenu = Menu::factory()->create([
@@ -191,34 +187,25 @@ class OrderControllerTest extends TestCase
             'service_type' => MenuServiceType::PREP,
         ]);
 
-        $response = $this->actingAs($user)->putJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
-            'menus' => [
-                ['step_menu_id' => $servedStepMenu->id, 'quantity' => 3, 'note' => 'Updated note'],
-                ['step_menu_id' => $readyStepMenu->id, 'quantity' => 0],
-                ['menu_id' => $newMenu->id, 'quantity' => 2, 'note' => 'Extra spicy'],
-            ],
+        $response = $this->actingAs($user)->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+            'menu_id' => $newMenu->id,
+            'quantity' => 2,
+            'note' => 'Extra spicy',
         ]);
 
-        $response->assertOk()
+        $response->assertCreated()
+            ->assertJsonPath('message', 'Menu added to step.')
             ->assertJsonPath('step.id', $step->id)
-            ->assertJsonPath('message', 'Step menus updated successfully.')
-            ->assertJsonPath('step.status', OrderStepStatus::IN_PREP->value);
+            ->assertJsonPath('step.status', OrderStepStatus::IN_PREP->value)
+            ->assertJsonPath('step_menu.menu_id', $newMenu->id)
+            ->assertJsonPath('step_menu.quantity', 2)
+            ->assertJsonPath('step_menu.status', StepMenuStatus::IN_PREP->value)
+            ->assertJsonPath('step_menu.note', 'Extra spicy');
 
         $step->refresh();
 
         self::assertNull($step->served_at);
         self::assertSame(OrderStepStatus::IN_PREP, $step->status);
-
-        $this->assertDatabaseHas('step_menus', [
-            'id' => $servedStepMenu->id,
-            'quantity' => 3,
-            'note' => 'Updated note',
-            'status' => StepMenuStatus::SERVED->value,
-        ]);
-
-        $this->assertDatabaseMissing('step_menus', [
-            'id' => $readyStepMenu->id,
-        ]);
 
         $this->assertDatabaseHas('step_menus', [
             'order_step_id' => $step->id,
@@ -229,7 +216,7 @@ class OrderControllerTest extends TestCase
         ]);
     }
 
-    public function test_it_syncs_step_menus_with_direct_menu_and_keeps_step_ready(): void
+    public function test_it_keeps_step_ready_when_adding_direct_menu(): void
     {
         $user = User::factory()->create();
         $order = $this->createOrderForUser($user);
@@ -241,7 +228,7 @@ class OrderControllerTest extends TestCase
 
         $existingMenu = Menu::factory()->create(['company_id' => $user->company_id]);
 
-        $readyStepMenu = StepMenu::factory()->for($step, 'step')->for($existingMenu)->create([
+        StepMenu::factory()->for($step, 'step')->for($existingMenu)->create([
             'status' => StepMenuStatus::READY,
             'quantity' => 1,
         ]);
@@ -251,20 +238,18 @@ class OrderControllerTest extends TestCase
             'service_type' => MenuServiceType::DIRECT,
         ]);
 
-        $response = $this->actingAs($user)->putJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
-            'menus' => [
-                ['step_menu_id' => $readyStepMenu->id, 'quantity' => 2],
-                ['menu_id' => $directMenu->id, 'quantity' => 1],
-            ],
+        $response = $this->actingAs($user)->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+            'menu_id' => $directMenu->id,
+            'quantity' => 1,
         ]);
 
-        $response->assertOk()
-            ->assertJsonPath('step.status', OrderStepStatus::READY->value);
+        $response->assertCreated()
+            ->assertJsonPath('step.status', OrderStepStatus::READY->value)
+            ->assertJsonPath('step_menu.status', StepMenuStatus::READY->value);
 
-        $this->assertDatabaseHas('step_menus', [
-            'id' => $readyStepMenu->id,
-            'quantity' => 2,
-        ]);
+        $step->refresh();
+
+        self::assertSame(OrderStepStatus::READY, $step->status);
 
         $this->assertDatabaseHas('step_menus', [
             'order_step_id' => $step->id,
@@ -272,14 +257,9 @@ class OrderControllerTest extends TestCase
             'status' => StepMenuStatus::READY->value,
             'quantity' => 1,
         ]);
-
-        $step->refresh();
-
-        self::assertNull($step->served_at);
-        self::assertSame(OrderStepStatus::READY, $step->status);
     }
 
-    public function test_it_returns_404_when_syncing_step_menus_outside_company(): void
+    public function test_it_returns_404_when_adding_step_menu_outside_company(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -294,10 +274,9 @@ class OrderControllerTest extends TestCase
         $menu = Menu::factory()->create(['company_id' => $otherUser->company_id]);
 
         $this->actingAs($user)
-            ->putJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
-                'menus' => [
-                    ['menu_id' => $menu->id, 'quantity' => 1],
-                ],
+            ->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+                'menu_id' => $menu->id,
+                'quantity' => 1,
             ])
             ->assertStatus(404);
     }
@@ -316,15 +295,14 @@ class OrderControllerTest extends TestCase
         $menu = Menu::factory()->create(['company_id' => $user->company_id]);
 
         $this->actingAs($user)
-            ->putJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
-                'menus' => [
-                    ['menu_id' => $menu->id, 'quantity' => 1],
-                ],
+            ->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+                'menu_id' => $menu->id,
+                'quantity' => 1,
             ])
             ->assertStatus(404);
     }
 
-    public function test_it_requires_quantity_when_creating_step_menu_during_sync(): void
+    public function test_it_requires_quantity_when_adding_step_menu(): void
     {
         $user = User::factory()->create();
         $order = $this->createOrderForUser($user);
@@ -337,16 +315,14 @@ class OrderControllerTest extends TestCase
         $menu = Menu::factory()->create(['company_id' => $user->company_id]);
 
         $this->actingAs($user)
-            ->putJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
-                'menus' => [
-                    ['menu_id' => $menu->id],
-                ],
+            ->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+                'menu_id' => $menu->id,
             ])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['menus.0.quantity']);
+            ->assertJsonValidationErrors(['quantity']);
     }
 
-    public function test_it_rejects_negative_quantity_when_updating_step_menu(): void
+    public function test_it_rejects_negative_quantity_when_adding_step_menu(): void
     {
         $user = User::factory()->create();
         $order = $this->createOrderForUser($user);
@@ -358,19 +334,267 @@ class OrderControllerTest extends TestCase
 
         $menu = Menu::factory()->create(['company_id' => $user->company_id]);
 
+        $this->actingAs($user)
+            ->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+                'menu_id' => $menu->id,
+                'quantity' => -2,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+    }
+
+    public function test_it_cancels_in_prep_step_menu_without_loss(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::IN_PREP,
+        ]);
+
+        $menu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+
         $stepMenu = StepMenu::factory()->for($step, 'step')->for($menu)->create([
+            'quantity' => 3,
             'status' => StepMenuStatus::IN_PREP,
+        ]);
+
+        $response = $this->actingAs($user)->postJson(
+            "/api/orders/{$order->id}/step-menus/{$stepMenu->id}/cancel"
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Step menu canceled successfully.')
+            ->assertJsonPath('canceled_quantity', 3)
+            ->assertJsonPath('loss_recorded', false)
+            ->assertJsonPath('return_accepted', false);
+
+        self::assertNull($response->json('step_menu'));
+
+        $this->assertDatabaseMissing('step_menus', ['id' => $stepMenu->id]);
+        $this->assertDatabaseCount('losses', 0);
+
+        $step->refresh();
+        self::assertSame(OrderStepStatus::IN_PREP, $step->status);
+        self::assertNull($step->served_at);
+    }
+
+    public function test_it_records_kitchen_loss_when_canceling_ready_prep_menu(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $location = Location::factory()->create(['company_id' => $user->company_id]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $user->company_id,
+            'unit' => MeasurementUnit::GRAM,
+        ]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 200]]);
+
+        $menu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+        $menu->items()->create([
+            'entity_id' => $ingredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 25,
+            'unit' => MeasurementUnit::GRAM,
+        ]);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::READY,
+        ]);
+
+        $stepMenu = StepMenu::factory()->for($step, 'step')->for($menu)->create([
+            'quantity' => 2,
+            'status' => StepMenuStatus::READY,
+        ]);
+
+        $response = $this->actingAs($user)->postJson(
+            "/api/orders/{$order->id}/step-menus/{$stepMenu->id}/cancel",
+            ['quantity' => 1]
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('loss_recorded', true)
+            ->assertJsonPath('loss_reason', 'KITCHEN_LOSS')
+            ->assertJsonPath('step_menu.quantity', 1)
+            ->assertJsonPath('step_menu.status', StepMenuStatus::READY->value);
+
+        $this->assertDatabaseHas('step_menus', [
+            'id' => $stepMenu->id,
             'quantity' => 1,
         ]);
 
+        $this->assertDatabaseHas('losses', [
+            'loss_item_id' => $ingredient->id,
+            'loss_item_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 25.0,
+            'reason' => 'KITCHEN_LOSS',
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'quantity' => 175.0,
+        ]);
+    }
+
+    public function test_it_accepts_unopened_return_for_served_direct_menu(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $location = Location::factory()->create(['company_id' => $user->company_id]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $user->company_id,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 10]]);
+
+        $menu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::DIRECT,
+            'is_returnable' => true,
+        ]);
+        $menu->items()->create([
+            'entity_id' => $ingredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $stepMenu = StepMenu::factory()->for($step, 'step')->for($menu)->create([
+            'quantity' => 2,
+            'status' => StepMenuStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->postJson(
+            "/api/orders/{$order->id}/step-menus/{$stepMenu->id}/cancel",
+            ['unopened_return' => true]
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('return_accepted', true)
+            ->assertJsonPath('loss_recorded', false);
+
+        self::assertNull($response->json('step_menu'));
+
+        $this->assertDatabaseMissing('step_menus', ['id' => $stepMenu->id]);
+        $this->assertDatabaseCount('losses', 0);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'quantity' => 10.0,
+        ]);
+    }
+
+    public function test_it_records_loss_for_served_direct_menu_without_unopened_return(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $location = Location::factory()->create(['company_id' => $user->company_id]);
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $user->company_id,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+        $ingredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 6]]);
+
+        $menu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::DIRECT,
+            'is_returnable' => false,
+        ]);
+        $menu->items()->create([
+            'entity_id' => $ingredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $stepMenu = StepMenu::factory()->for($step, 'step')->for($menu)->create([
+            'quantity' => 3,
+            'status' => StepMenuStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->postJson(
+            "/api/orders/{$order->id}/step-menus/{$stepMenu->id}/cancel"
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('loss_recorded', true)
+            ->assertJsonPath('loss_reason', 'SERVICE_LOSS');
+
+        $this->assertDatabaseHas('losses', [
+            'loss_item_id' => $ingredient->id,
+            'loss_item_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 3.0,
+            'reason' => 'SERVICE_LOSS',
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $location->id,
+            'quantity' => 3.0,
+        ]);
+    }
+
+    public function test_it_rejects_cancelling_more_than_available(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::IN_PREP,
+        ]);
+
+        $menu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+
+        $stepMenu = StepMenu::factory()->for($step, 'step')->for($menu)->create([
+            'quantity' => 1,
+            'status' => StepMenuStatus::IN_PREP,
+        ]);
+
         $this->actingAs($user)
-            ->putJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
-                'menus' => [
-                    ['step_menu_id' => $stepMenu->id, 'quantity' => -2],
-                ],
-            ])
+            ->postJson(
+                "/api/orders/{$order->id}/step-menus/{$stepMenu->id}/cancel",
+                ['quantity' => 2]
+            )
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['menus.0.quantity']);
+            ->assertJsonValidationErrors(['quantity']);
+
+        $this->assertDatabaseHas('step_menus', ['id' => $stepMenu->id, 'quantity' => 1]);
     }
 
     public function test_it_marks_step_menu_ready_and_updates_step_when_all_ready(): void
@@ -704,5 +928,181 @@ class OrderControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/pay")
             ->assertStatus(404);
+    }
+
+    public function test_it_cancels_order_and_applies_loss_rules(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $location = Location::factory()->create(['company_id' => $user->company_id]);
+
+        $prepIngredient = Ingredient::factory()->create([
+            'company_id' => $user->company_id,
+            'unit' => MeasurementUnit::GRAM,
+        ]);
+        $prepIngredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 300]]);
+
+        $returnIngredient = Ingredient::factory()->create([
+            'company_id' => $user->company_id,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+        $returnIngredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 10]]);
+
+        $lossIngredient = Ingredient::factory()->create([
+            'company_id' => $user->company_id,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+        $lossIngredient->locations()->syncWithoutDetaching([$location->id => ['quantity' => 6]]);
+
+        $simpleMenu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+
+        $prepMenu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+        $prepMenu->items()->create([
+            'entity_id' => $prepIngredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 30,
+            'unit' => MeasurementUnit::GRAM,
+        ]);
+
+        $directReadyMenu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::DIRECT,
+            'is_returnable' => false,
+        ]);
+
+        $directReturnMenu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::DIRECT,
+            'is_returnable' => true,
+        ]);
+        $directReturnMenu->items()->create([
+            'entity_id' => $returnIngredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+
+        $directLossMenu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::DIRECT,
+            'is_returnable' => false,
+        ]);
+        $directLossMenu->items()->create([
+            'entity_id' => $lossIngredient->id,
+            'entity_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 1,
+            'unit' => MeasurementUnit::UNIT,
+        ]);
+
+        $stepA = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::READY,
+        ]);
+
+        $simpleStepMenu = StepMenu::factory()->for($stepA, 'step')->for($simpleMenu)->create([
+            'quantity' => 1,
+            'status' => StepMenuStatus::IN_PREP,
+        ]);
+
+        $prepStepMenu = StepMenu::factory()->for($stepA, 'step')->for($prepMenu)->create([
+            'quantity' => 2,
+            'status' => StepMenuStatus::READY,
+        ]);
+
+        $stepB = OrderStep::factory()->for($order)->create([
+            'position' => 2,
+            'status' => OrderStepStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $directReadyStepMenu = StepMenu::factory()->for($stepB, 'step')->for($directReadyMenu)->create([
+            'quantity' => 1,
+            'status' => StepMenuStatus::READY,
+        ]);
+
+        $directReturnStepMenu = StepMenu::factory()->for($stepB, 'step')->for($directReturnMenu)->create([
+            'quantity' => 2,
+            'status' => StepMenuStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $directLossStepMenu = StepMenu::factory()->for($stepB, 'step')->for($directLossMenu)->create([
+            'quantity' => 3,
+            'status' => StepMenuStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/orders/{$order->id}/cancel", [
+            'unopened_returns' => [$directReturnStepMenu->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('order.status', OrderStatus::CANCELED->value)
+            ->assertJsonPath('order.canceled_at', fn ($value) => $value !== null);
+
+        $lossIds = $response->json('loss_step_menu_ids');
+        $returnIds = $response->json('return_accepted_step_menu_ids');
+
+        self::assertEqualsCanonicalizing([
+            $prepStepMenu->id,
+            $directLossStepMenu->id,
+        ], $lossIds);
+
+        self::assertEqualsCanonicalizing([
+            $directReturnStepMenu->id,
+        ], $returnIds);
+
+        $order->refresh();
+        self::assertEquals(OrderStatus::CANCELED, $order->status);
+        self::assertNotNull($order->canceled_at);
+        self::assertNull($order->served_at);
+        self::assertNull($order->payed_at);
+
+        $this->assertDatabaseMissing('step_menus', ['order_step_id' => $stepA->id]);
+        $this->assertDatabaseMissing('step_menus', ['order_step_id' => $stepB->id]);
+
+        $this->assertDatabaseHas('losses', [
+            'loss_item_id' => $prepIngredient->id,
+            'loss_item_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 60.0,
+            'reason' => 'KITCHEN_LOSS',
+        ]);
+
+        $this->assertDatabaseHas('losses', [
+            'loss_item_id' => $lossIngredient->id,
+            'loss_item_type' => Ingredient::class,
+            'location_id' => $location->id,
+            'quantity' => 3.0,
+            'reason' => 'SERVICE_LOSS',
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $prepIngredient->id,
+            'location_id' => $location->id,
+            'quantity' => 240.0,
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $lossIngredient->id,
+            'location_id' => $location->id,
+            'quantity' => 3.0,
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $returnIngredient->id,
+            'location_id' => $location->id,
+            'quantity' => 10.0,
+        ]);
     }
 }

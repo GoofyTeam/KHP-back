@@ -6,18 +6,31 @@ use App\Enums\MenuServiceType;
 use App\Enums\OrderStatus;
 use App\Enums\OrderStepStatus;
 use App\Enums\StepMenuStatus;
+use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\OrderStep;
+use App\Models\Preparation;
 use App\Models\StepMenu;
+use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
+
+use function collect;
 
 class OrderController extends Controller
 {
+    private const LOSS_REASON_KITCHEN = 'KITCHEN_LOSS';
+
+    private const LOSS_REASON_SERVICE = 'SERVICE_LOSS';
+
+    public function __construct(private UnitConversionService $unitConversionService) {}
+
     /**
      * Create a new step on the order with the provided menus.
      */
@@ -78,9 +91,9 @@ class OrderController extends Controller
     }
 
     /**
-     * Synchronise the menus of an existing step in a single request.
+     * Add a new menu to an existing step.
      */
-    public function syncStepMenus(Request $request, Order $order, OrderStep $step): JsonResponse
+    public function storeStepMenu(Request $request, Order $order, OrderStep $step): JsonResponse
     {
         $user = $request->user();
 
@@ -92,67 +105,20 @@ class OrderController extends Controller
             abort(404);
         }
 
-        [$payload, $menus] = $this->validateStepMenuSyncPayload(
-            $request,
-            (int) $user->company_id,
-            $step
-        );
+        [$payload, $menu] = $this->validateStepMenuStorePayload($request, (int) $user->company_id);
 
-        $step = DB::transaction(function () use ($step, $payload, $menus) {
-            /** @var \Illuminate\Support\Collection<int, StepMenu> $existingStepMenus */
-            $existingStepMenus = $step->stepMenus()->get()->keyBy('id');
+        [$stepMenu, $step] = DB::transaction(function () use ($step, $payload, $menu) {
+            $status = $menu->service_type === MenuServiceType::DIRECT
+                ? StepMenuStatus::READY
+                : StepMenuStatus::IN_PREP;
 
-            foreach ($payload as $menuData) {
-                if (isset($menuData['step_menu_id'])) {
-                    $stepMenuId = (int) $menuData['step_menu_id'];
-                    /** @var StepMenu|null $stepMenu */
-                    $stepMenu = $existingStepMenus->get($stepMenuId);
-
-                    if (! $stepMenu) {
-                        continue;
-                    }
-
-                    if (array_key_exists('quantity', $menuData) && (int) $menuData['quantity'] === 0) {
-                        $stepMenu->delete();
-                        $existingStepMenus->forget($stepMenuId);
-
-                        continue;
-                    }
-
-                    if (array_key_exists('quantity', $menuData)) {
-                        $stepMenu->quantity = (int) $menuData['quantity'];
-                    }
-
-                    if (array_key_exists('note', $menuData)) {
-                        $stepMenu->note = $menuData['note'];
-                    }
-
-                    $stepMenu->save();
-
-                    continue;
-                }
-
-                $menuId = (int) $menuData['menu_id'];
-                $menu = $menus->get($menuId);
-
-                if (! $menu) {
-                    continue;
-                }
-
-                $status = $menu->service_type === MenuServiceType::DIRECT
-                    ? StepMenuStatus::READY
-                    : StepMenuStatus::IN_PREP;
-
-                /** @var StepMenu $created */
-                $created = $step->stepMenus()->create([
-                    'menu_id' => $menuId,
-                    'quantity' => (int) $menuData['quantity'],
-                    'status' => $status,
-                    'note' => $menuData['note'] ?? null,
-                ]);
-
-                $existingStepMenus->put($created->id, $created);
-            }
+            /** @var StepMenu $stepMenu */
+            $stepMenu = $step->stepMenus()->create([
+                'menu_id' => $menu->id,
+                'quantity' => (int) $payload['quantity'],
+                'status' => $status,
+                'note' => $payload['note'] ?? null,
+            ]);
 
             $step->refreshStatusFromStepMenus();
             $step->refresh();
@@ -163,12 +129,98 @@ class OrderController extends Controller
                 $step->refresh();
             }
 
-            return $step->load('stepMenus.menu');
+            return [
+                $stepMenu->load('menu'),
+                $step->load('stepMenus.menu'),
+            ];
         });
 
         return response()->json([
-            'message' => 'Step menus updated successfully.',
+            'message' => 'Menu added to step.',
+            'step_menu' => $stepMenu,
             'step' => $step,
+        ], 201);
+    }
+
+    /**
+     * Cancel an existing menu from a step.
+     */
+    public function cancelStepMenu(Request $request, Order $order, StepMenu $stepMenu): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($order->company_id !== $user->company_id) {
+            abort(404);
+        }
+
+        /** @var OrderStep|null $step */
+        $step = $stepMenu->step()->with('order')->first();
+
+        if (! $step || $step->order_id !== $order->id) {
+            abort(404);
+        }
+
+        /** @var Order $stepOrder */
+        $stepOrder = $step->order;
+
+        if ($stepOrder->company_id !== $user->company_id) {
+            abort(404);
+        }
+
+        $stepMenu->loadMissing('menu');
+
+        $validated = $request->validate([
+            'quantity' => ['sometimes', 'integer', 'min:1', 'max:'.$stepMenu->quantity],
+            'unopened_return' => ['sometimes', 'boolean'],
+        ]);
+
+        $quantity = (int) ($validated['quantity'] ?? $stepMenu->quantity);
+        $unopenedReturn = (bool) ($validated['unopened_return'] ?? false);
+
+        /** @var Menu|null $menu */
+        $menu = $stepMenu->menu()->with(['items.entity', 'items.location'])->first();
+
+        if (! $menu) {
+            abort(422, 'The menu associated with this step menu is invalid.');
+        }
+
+        $action = $this->determineCancellationAction($stepMenu, $menu, $unopenedReturn);
+
+        try {
+            [$updatedStepMenu, $updatedStep] = DB::transaction(function () use ($stepMenu, $step, $menu, $quantity, $action) {
+                if ($action['type'] === 'loss') {
+                    $this->recordMenuLosses($menu, $quantity, $action['reason']);
+                }
+
+                $remainingQuantity = $stepMenu->quantity - $quantity;
+
+                if ($remainingQuantity <= 0) {
+                    $stepMenu->delete();
+                    $stepMenuModel = null;
+                } else {
+                    $stepMenu->quantity = $remainingQuantity;
+                    $stepMenu->save();
+                    $stepMenuModel = $stepMenu->refresh()->load('menu');
+                }
+
+                $stepModel = $this->finalizeStepState($step);
+
+                return [$stepMenuModel, $stepModel];
+            });
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 400);
+        }
+
+        return response()->json([
+            'message' => $action['type'] === 'return' ? 'Step menu cancellation accepted as unopened return.' : 'Step menu canceled successfully.',
+            'step_menu' => $updatedStepMenu,
+            'step' => $updatedStep,
+            'canceled_quantity' => $quantity,
+            'loss_recorded' => $action['type'] === 'loss',
+            'loss_reason' => $action['type'] === 'loss' ? $action['reason'] : null,
+            'return_accepted' => $action['type'] === 'return',
         ]);
     }
 
@@ -273,6 +325,92 @@ class OrderController extends Controller
         ]);
     }
 
+    public function cancel(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($order->company_id !== $user->company_id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'unopened_returns' => ['sometimes', 'array'],
+            'unopened_returns.*' => ['integer'],
+        ]);
+
+        $order->load(['steps.stepMenus']);
+
+        $unopenedReturns = collect($validated['unopened_returns'] ?? []);
+
+        if ($unopenedReturns->isNotEmpty()) {
+            $validStepMenuIds = $order->steps
+                ->flatMap(static fn (OrderStep $step) => $step->stepMenus->pluck('id'))
+                ->unique();
+
+            $invalidIds = $unopenedReturns->diff($validStepMenuIds);
+
+            if ($invalidIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'unopened_returns' => 'Some provided step menu identifiers are invalid for this order.',
+                ]);
+            }
+        }
+
+        $order->load(['steps.stepMenus.menu.items.entity', 'steps.stepMenus.menu.items.location']);
+
+        try {
+            [$lossStepMenuIds, $returnAcceptedIds] = DB::transaction(function () use ($order, $unopenedReturns) {
+                $lossIds = [];
+                $returnIds = [];
+
+                foreach ($order->steps as $step) {
+                    foreach ($step->stepMenus as $stepMenu) {
+                        /** @var Menu|null $menu */
+                        $menu = $stepMenu->menu;
+                        if (! $menu) {
+                            throw new RuntimeException('A step menu is missing its associated menu.');
+                        }
+
+                        $unopenedReturn = $unopenedReturns->contains($stepMenu->id);
+                        $action = $this->determineCancellationAction($stepMenu, $menu, $unopenedReturn);
+
+                        if ($action['type'] === 'loss') {
+                            $this->recordMenuLosses($menu, $stepMenu->quantity, $action['reason']);
+                            $lossIds[] = $stepMenu->id;
+                        } elseif ($action['type'] === 'return') {
+                            $returnIds[] = $stepMenu->id;
+                        }
+
+                        $stepMenu->delete();
+                    }
+
+                    $this->finalizeStepState($step);
+                }
+
+                $order->status = OrderStatus::CANCELED;
+                $order->canceled_at = now();
+                $order->served_at = null;
+                $order->payed_at = null;
+                $order->save();
+
+                return [$lossIds, $returnIds];
+            });
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 400);
+        }
+
+        $order->refresh()->load('steps.stepMenus.menu');
+
+        return response()->json([
+            'message' => 'Order canceled successfully.',
+            'order' => $order,
+            'loss_step_menu_ids' => $lossStepMenuIds,
+            'return_accepted_step_menu_ids' => $returnAcceptedIds,
+        ]);
+    }
+
     public function markPayed(Request $request, Order $order): JsonResponse
     {
         $user = $request->user();
@@ -345,70 +483,122 @@ class OrderController extends Controller
     }
 
     /**
-     * @return array{0: array<int, array<string, mixed>>, 1: \Illuminate\Support\Collection<int, Menu>}
+     * @return array{0: array{menu_id: int, quantity: int, note?: string|null}, 1: Menu}
      */
-    private function validateStepMenuSyncPayload(Request $request, int $companyId, OrderStep $step): array
+    private function validateStepMenuStorePayload(Request $request, int $companyId): array
     {
-        $validator = Validator::make($request->all(), [
-            'menus' => ['required', 'array', 'min:1'],
-            'menus.*.step_menu_id' => [
-                'sometimes',
-                'integer',
-                Rule::exists('step_menus', 'id')->where(fn ($query) => $query->where('order_step_id', $step->id)),
-            ],
-            'menus.*.menu_id' => [
-                'sometimes',
+        $validated = $request->validate([
+            'menu_id' => [
+                'required',
                 'integer',
                 Rule::exists('menus', 'id')->where(fn ($query) => $query->where('company_id', $companyId)),
             ],
-            'menus.*.quantity' => ['sometimes', 'integer', 'min:0'],
-            'menus.*.note' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
 
-        $validator->after(function ($validator) use ($request) {
-            $menus = $request->input('menus', []);
-
-            foreach ($menus as $index => $menuData) {
-                if (! isset($menuData['step_menu_id'])) {
-                    if (! isset($menuData['menu_id'])) {
-                        $validator->errors()->add("menus.{$index}.menu_id", 'The menu id field is required.');
-
-                        continue;
-                    }
-
-                    if (! array_key_exists('quantity', $menuData)) {
-                        $validator->errors()->add("menus.{$index}.quantity", 'The quantity field is required.');
-
-                        continue;
-                    }
-
-                    if ((int) $menuData['quantity'] < 1) {
-                        $validator->errors()->add("menus.{$index}.quantity", 'The quantity must be at least 1.');
-                    }
-
-                    continue;
-                }
-
-                if (array_key_exists('quantity', $menuData) && (int) $menuData['quantity'] < 0) {
-                    $validator->errors()->add("menus.{$index}.quantity", 'The quantity must be at least 0.');
-                }
-            }
-        });
-
-        $validated = $validator->validate();
-
-        $menuIds = collect($validated['menus'])
-            ->filter(static fn (array $menuData): bool => ! isset($menuData['step_menu_id']))
-            ->pluck('menu_id')
-            ->unique()
-            ->values();
-
-        $menus = Menu::query()
-            ->whereIn('id', $menuIds)
+        /** @var Menu|null $menu */
+        $menu = Menu::query()
+            ->where('id', $validated['menu_id'])
             ->where('company_id', $companyId)
-            ->get()
-            ->keyBy('id');
+            ->first();
 
-        return [$validated['menus'], $menus];
+        if (! $menu) {
+            abort(422, 'The selected menu is invalid.');
+        }
+
+        $validated['quantity'] = (int) $validated['quantity'];
+
+        return [$validated, $menu];
+    }
+
+    /**
+     * @return array{type: 'simple'|'loss'|'return', reason?: string}
+     */
+    private function determineCancellationAction(StepMenu $stepMenu, Menu $menu, bool $unopenedReturn): array
+    {
+        $status = $stepMenu->status;
+        $serviceType = $menu->service_type;
+
+        if ($serviceType === MenuServiceType::PREP) {
+            if ($status === StepMenuStatus::IN_PREP) {
+                return ['type' => 'simple'];
+            }
+
+            return [
+                'type' => 'loss',
+                'reason' => self::LOSS_REASON_KITCHEN,
+            ];
+        }
+
+        if ($serviceType === MenuServiceType::DIRECT) {
+            if ($status === StepMenuStatus::SERVED) {
+                if ($menu->is_returnable && $unopenedReturn) {
+                    return ['type' => 'return'];
+                }
+
+                return [
+                    'type' => 'loss',
+                    'reason' => self::LOSS_REASON_SERVICE,
+                ];
+            }
+
+            return ['type' => 'simple'];
+        }
+
+        return ['type' => 'simple'];
+    }
+
+    private function recordMenuLosses(Menu $menu, int $quantity, string $reason): void
+    {
+        $menu->loadMissing(['items.entity', 'items.location']);
+
+        foreach ($menu->items as $item) {
+            /** @var Ingredient|Preparation|null $entity */
+            $entity = $item->entity;
+            /** @var Location|null $location */
+            $location = $item->location;
+
+            if ($entity === null || $location === null) {
+                throw new RuntimeException('Menu item is missing entity or location information for loss tracking.');
+            }
+
+            $itemUnit = $item->unit;
+            $entityUnit = $entity->unit;
+
+            $itemQuantity = (float) $item->quantity * $quantity;
+
+            if ($itemQuantity <= 0) {
+                continue;
+            }
+
+            $convertedQuantity = $itemUnit === $entityUnit
+                ? $itemQuantity
+                : $this->unitConversionService->convert($itemQuantity, $itemUnit, $entityUnit);
+
+            if ($convertedQuantity <= 0) {
+                continue;
+            }
+
+            try {
+                $entity->recordLoss($location, $convertedQuantity, $reason);
+            } catch (\Throwable $throwable) {
+                throw new RuntimeException($throwable->getMessage(), (int) $throwable->getCode(), $throwable);
+            }
+        }
+    }
+
+    private function finalizeStepState(OrderStep $step): OrderStep
+    {
+        $step->refreshStatusFromStepMenus();
+        $step->refresh();
+
+        if ($step->status !== OrderStepStatus::SERVED && $step->served_at !== null) {
+            $step->served_at = null;
+            $step->save();
+            $step->refresh();
+        }
+
+        return $step->load('stepMenus.menu');
     }
 }
