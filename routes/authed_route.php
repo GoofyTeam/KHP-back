@@ -37,6 +37,8 @@ Route::prefix('company')->name('company.')->group(function () {
     Route::put('/options', [CompanyController::class, 'updateOptions'])->name('options.update');
 });
 
+Route::put('/public-menus', [CompanyController::class, 'updateOptions'])->name('public-menus.update');
+
 // Groupe de routes pour les préparations
 Route::prefix('preparations')->name('preparations.')->group(function () {
     Route::post('/', [PreparationController::class, 'store'])->name('store');

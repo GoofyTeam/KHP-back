@@ -21,6 +21,9 @@ type Company {
     "Langue préférée pour les données OpenFoodFacts (fr ou en)."
     open_food_facts_language: String
 
+    "Paramètres visibles publiquement pour la carte des menus."
+    public_menu_settings: PublicMenuSettings!
+
     "When the company was created."
     created_at: DateTime!
 
@@ -61,4 +64,15 @@ enum CompanyOrderByField {
     NAME @enum(value: "name")
     CREATED_AT @enum(value: "created_at")
     UPDATED_AT @enum(value: "updated_at")
+}
+
+type PublicMenuSettings {
+    "Identifiant public unique pour partager la carte du restaurant."
+    public_menu_card_url: String!
+
+    "Affiche aussi les menus qui n'ont pas assez de stock sur la carte publique."
+    show_out_of_stock_menus_on_card: Boolean!
+
+    "Affiche les images des menus sur la carte publique."
+    show_menu_images: Boolean!
 }
