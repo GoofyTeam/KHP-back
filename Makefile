@@ -12,13 +12,13 @@ VENDOR_BIN = $(DC) exec $(APP) vendor/bin
 
 # Définition des cibles qui ne sont pas des fichiers
 .PHONY: help up down restart build exec shell status logs \
-		migrate migrate-fresh migrate-status \
-		seed rollback test tests coverage \
+	        migrate migrate-fresh migrate-status \
+	        seed demo-seed rollback test tests coverage \
 		cs pint larastan analyse \
 		install composer-update npm-update \
 		cache-clear optimize fresh reset-minio \
 		routes clean erd \
-        buildkhp-back-image
+	buildkhp-back-image
 
 # Cible par défaut
 .DEFAULT_GOAL := help
@@ -41,6 +41,7 @@ help:
 	@echo "  migrate-fresh : Rafraîchir la base de données"
 	@echo "  migrate-status: Vérifier le statut des migrations"
 	@echo "  seed          : Peupler la base de données"
+	@echo "  demo-seed     : Réinitialiser puis lancer le DemoSeeder"
 	@echo "  rollback      : Annuler la dernière migration"
 	@echo "--------------------------------"
 	@echo "Tests et Qualité de code :"
@@ -76,7 +77,7 @@ build:
 	$(DC) build
 
 buildkhp-back-image:
-    docker build --no-cache -t khp-back-builded:v0.0.1 -f docker/php/Dockerfile.production .
+	docker build --no-cache -t khp-back-builded:v0.0.1 -f docker/php/Dockerfile.production .
 
 exec shell:
 	$(DC) exec $(APP) bash
@@ -99,6 +100,12 @@ migrate-status:
 
 seed:
 	$(ARTISAN) db:seed
+
+demo-seed:
+	$(MAKE) reset-minio
+	$(ARTISAN) migrate:fresh
+	$(ARTISAN) db:seed --class=DemoSeeder
+	@echo "🍽️ Données de démonstration installées sur une base fraîche."
 
 rollback:
 	$(ARTISAN) migrate:rollback
@@ -163,4 +170,4 @@ clean: down
 
 erd:
 	$(ARTISAN) erd:generate
-    @echo "ERD diagram generated at localhost:8000/laravel-erd"
+	@echo "ERD diagram generated at localhost:8000/laravel-erd"
