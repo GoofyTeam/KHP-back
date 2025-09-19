@@ -582,8 +582,8 @@ class OrderController extends Controller
 
             try {
                 $entity->recordLoss($location, $convertedQuantity, $reason);
-            } catch (\Throwable $throwable) {
-                throw new RuntimeException($throwable->getMessage(), (int) $throwable->getCode(), $throwable);
+            } catch (\Exception $exception) {
+                throw new RuntimeException($exception->getMessage(), (int) $exception->getCode(), $exception);
             }
         }
     }
