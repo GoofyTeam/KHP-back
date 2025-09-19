@@ -11,6 +11,9 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MenuSeeder extends Seeder
 {
@@ -24,6 +27,14 @@ class MenuSeeder extends Seeder
                 ->get();
             $locations = Location::where('company_id', $company->id)->get();
             $categories = MenuCategory::where('company_id', $company->id)->get();
+
+            if ($company->name === 'Charlie Kirk') {
+                $this->createBoBunHayMeanMenu($company, $ingredients);
+            }
+
+            if ($company->name === 'Charlie Kirk') {
+                $this->createTastyCroustyMenu($company, $ingredients);
+            }
 
             for ($i = 0; $i < 5; $i++) {
                 $menu = Menu::factory()->create([
@@ -59,5 +70,216 @@ class MenuSeeder extends Seeder
 
             }
         }
+    }
+
+    private function createBoBunHayMeanMenu(Company $company, Collection $ingredients): void
+    {
+        $menu = Menu::firstOrNew([
+            'company_id' => $company->id,
+            'name' => 'BòBún Hay Mean',
+        ]);
+
+        $menu->description = 'Également connu sous le surnom « Chinois marrant »';
+        $menu->is_a_la_carte = true;
+        $menu->type = 'plat';
+        $menu->price = 13.9;
+
+        if ($image = $this->resolveMenuImageFromSlug('bobun-hay-mean')) {
+            $menu->image_url = $image;
+        }
+
+        $menu->save();
+        $menu->items()->delete();
+
+        if ($ingredients->isEmpty()) {
+            return;
+        }
+
+        $components = [
+            ['name' => 'Entrecôte de bœuf', 'quantity' => 0.15],
+            ['name' => 'Riz basmati et riz arborio', 'quantity' => 0.12],
+            ['name' => 'Carottes', 'quantity' => 0.08],
+            ['name' => 'Salades (mélange, batavia, roquette)', 'quantity' => 0.05],
+            ['name' => 'Basilic frais', 'quantity' => 0.01],
+        ];
+
+        foreach ($components as $component) {
+            $ingredient = $ingredients->firstWhere('name', $component['name'])
+                ?? Ingredient::where('company_id', $company->id)
+                    ->where('name', $component['name'])
+                    ->first();
+
+            if (! $ingredient) {
+                continue;
+            }
+
+            $location = $ingredient->locations()->inRandomOrder()->first();
+
+            if (! $location) {
+                continue;
+            }
+
+            MenuItem::create([
+                'menu_id' => $menu->id,
+                'entity_id' => $ingredient->id,
+                'entity_type' => Ingredient::class,
+                'quantity' => $component['quantity'],
+                'unit' => $ingredient->unit instanceof MeasurementUnit ? $ingredient->unit->value : $ingredient->unit,
+                'location_id' => $location->id,
+            ]);
+        }
+    }
+
+    private function createTastyCroustyMenu(Company $company, Collection $ingredients): void
+    {
+        $menus = [
+            [
+                'name' => 'Crousty Chicken',
+                'description' => "Base de riz, tenders de poulet,\nsauce crousty maison, sauce barbecue,\nsauce spicy légère, oignon frit,\nciboulette, persil",
+                'components' => [
+                    ['name' => 'Riz basmati et riz arborio', 'quantity' => 0.18],
+                    ['name' => 'Poitrine de poulet', 'quantity' => 0.16],
+                    ['name' => 'Oignons jaunes', 'quantity' => 0.04],
+                    ['name' => 'Herbes de Provence', 'quantity' => 0.005],
+                    ['name' => 'Huile d’olive', 'quantity' => 0.01],
+                ],
+            ],
+            [
+                'name' => 'Crousty Boursin',
+                'description' => "Base de riz boursin, tenders de poulet,\nsauce crousty maison, sauce aigre-douce,\nsauce spicy légère, oignon frit,\nciboulette, persil",
+                'components' => [
+                    ['name' => 'Riz basmati et riz arborio', 'quantity' => 0.18],
+                    ['name' => 'Poitrine de poulet', 'quantity' => 0.16],
+                    ['name' => 'Crème fraîche', 'quantity' => 0.06],
+                    ['name' => 'Fromages affinés (camembert, chèvre, bleu, etc.)', 'quantity' => 0.05],
+                    ['name' => 'Herbes de Provence', 'quantity' => 0.005],
+                ],
+            ],
+            [
+                'name' => 'Crousty Curry',
+                'description' => "Base de riz curry, tenders de poulet,\nsauce crousty maison, sauce curry,\nsauce spicy légère, oignon frit,\nciboulette, persil",
+                'components' => [
+                    ['name' => 'Riz basmati et riz arborio', 'quantity' => 0.18],
+                    ['name' => 'Poitrine de poulet', 'quantity' => 0.16],
+                    ['name' => 'Carottes', 'quantity' => 0.05],
+                    ['name' => 'Oignons jaunes', 'quantity' => 0.04],
+                    ['name' => 'Paprika fumé', 'quantity' => 0.004],
+                ],
+            ],
+            [
+                'name' => 'Crousty Cordon',
+                'description' => "Base de riz, cordon bleu, sauce crousty\nmaison, sauce biggy, oignon frit,\nciboulette, persil",
+                'components' => [
+                    ['name' => 'Riz basmati et riz arborio', 'quantity' => 0.18],
+                    ['name' => 'Poitrine de poulet', 'quantity' => 0.14],
+                    ['name' => 'Jambon cru', 'quantity' => 0.04],
+                    ['name' => 'Fromage râpé (emmental, parmesan)', 'quantity' => 0.05],
+                    ['name' => 'Herbes de Provence', 'quantity' => 0.004],
+                ],
+            ],
+            [
+                'name' => 'Burger Brioché',
+                'description' => "2 gros tenders, cheddar, oignons frits,\nsauce biggy",
+                'components' => [
+                    ['name' => 'Poitrine de poulet', 'quantity' => 0.2],
+                    ['name' => 'Fromage râpé (emmental, parmesan)', 'quantity' => 0.05],
+                    ['name' => 'Oignons jaunes', 'quantity' => 0.04],
+                    ['name' => 'Beurre doux', 'quantity' => 0.02],
+                    ['name' => 'Herbes de Provence', 'quantity' => 0.003],
+                ],
+            ],
+        ];
+
+        foreach ($menus as $data) {
+            $menu = Menu::firstOrNew([
+                'company_id' => $company->id,
+                'name' => $data['name'],
+            ]);
+
+            $menu->description = $data['description'];
+            $menu->is_a_la_carte = true;
+            $menu->type = 'plat';
+            $menu->price = 12.0;
+
+            if ($image = $this->resolveMenuImageFromSlug(Str::slug($data['name']))) {
+                $menu->image_url = $image;
+            }
+
+            $menu->save();
+            $menu->items()->delete();
+
+            if ($ingredients->isEmpty()) {
+                continue;
+            }
+
+            foreach ($data['components'] as $component) {
+                $ingredient = $ingredients->firstWhere('name', $component['name'])
+                    ?? Ingredient::where('company_id', $company->id)
+                        ->where('name', $component['name'])
+                        ->first();
+
+                if (! $ingredient) {
+                    continue;
+                }
+
+                $location = $ingredient->locations()->inRandomOrder()->first();
+
+                if (! $location) {
+                    continue;
+                }
+
+                MenuItem::create([
+                    'menu_id' => $menu->id,
+                    'entity_id' => $ingredient->id,
+                    'entity_type' => Ingredient::class,
+                    'quantity' => $component['quantity'],
+                    'unit' => $ingredient->unit instanceof MeasurementUnit ? $ingredient->unit->value : $ingredient->unit,
+                    'location_id' => $location->id,
+                ]);
+            }
+        }
+    }
+
+    private function resolveMenuImageFromSlug(string $slug): ?string
+    {
+        $localDisk = Storage::disk('local');
+        $directories = ['images/seeders/images', 'seeders/images'];
+        $extensions = ['jpeg', 'jpg', 'png', 'webp', 'gif', 'avif'];
+
+        foreach ($directories as $directory) {
+            $normalizedDirectory = ltrim(preg_replace('#^private/#', '', $directory), '/');
+            if ($normalizedDirectory === '') {
+                continue;
+            }
+
+            foreach ($extensions as $extension) {
+                $relativePath = trim($normalizedDirectory, '/')."/{$slug}.{$extension}";
+
+                if (! $localDisk->exists($relativePath)) {
+                    continue;
+                }
+
+                $normalizedPath = 'storage/app/private/'.ltrim($relativePath, '/');
+
+                try {
+                    $contents = $localDisk->get($relativePath);
+
+                    try {
+                        $s3 = Storage::disk('s3');
+                        if (! $s3->exists($normalizedPath)) {
+                            $s3->put($normalizedPath, $contents);
+                        }
+                    } catch (\Throwable $e) {
+                        // Ignore S3 errors and keep local path fallback
+                    }
+                } catch (\Throwable $e) {
+                    // Cannot read file contents, still return local path fallback
+                }
+
+                return $normalizedPath;
+            }
+        }
+
+        return null;
     }
 }
