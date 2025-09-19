@@ -2,25 +2,25 @@
 
 namespace Database\Seeders;
 
-use Throwable;
-use JsonException;
-use App\Models\Menu;
-use App\Models\User;
-use RuntimeException;
-use App\Models\Company;
-use App\Models\Category;
-use App\Models\Location;
-use App\Models\MenuItem;
-use App\Models\Ingredient;
-use App\Models\Preparation;
-use App\Models\LocationType;
-use App\Models\MenuCategory;
 use App\Enums\MeasurementUnit;
+use App\Models\Category;
+use App\Models\Company;
+use App\Models\Ingredient;
+use App\Models\Location;
+use App\Models\LocationType;
+use App\Models\Menu;
+use App\Models\MenuCategory;
+use App\Models\MenuItem;
+use App\Models\Preparation;
+use App\Models\User;
 use App\Services\ImageService;
+use App\Services\OpenFoodFactsService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
-use App\Services\OpenFoodFactsService;
 use Illuminate\Support\Facades\Storage;
+use JsonException;
+use RuntimeException;
+use Throwable;
 
 class DemoSeeder extends Seeder
 {
@@ -1202,7 +1202,7 @@ JSON;
         try {
             $decoded = json_decode(self::MENU_BLUEPRINT_JSON, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
-            throw new RuntimeException('Impossible de décoder le jeu de données du menu de démonstration : ' . $exception->getMessage(), 0, $exception);
+            throw new RuntimeException('Impossible de décoder le jeu de données du menu de démonstration : '.$exception->getMessage(), 0, $exception);
         }
 
         if (! is_array($decoded)) {
@@ -1358,7 +1358,7 @@ JSON;
     private function ensureLocationTypes(Company $company): array
     {
         $names = array_unique(array_map(
-            static fn(array $definition) => $definition['type'] ?? 'Autre',
+            static fn (array $definition) => $definition['type'] ?? 'Autre',
             self::LOCATION_BLUEPRINTS
         ));
 
@@ -1427,7 +1427,7 @@ JSON;
     private function ensureCategories(Company $company, array $locationTypes): array
     {
         $names = array_map(
-            fn(array $meta) => $meta['category'] ?? 'Ingrédients Divers',
+            fn (array $meta) => $meta['category'] ?? 'Ingrédients Divers',
             self::INGREDIENTS
         );
         $names[] = 'Préparations Maison';
@@ -1575,13 +1575,13 @@ JSON;
         try {
             $data = $this->openFoodFacts->searchByBarcode($barcode);
         } catch (Throwable $exception) {
-            $this->missingImages[] = $ingredientName . ' (erreur API)';
+            $this->missingImages[] = $ingredientName.' (erreur API)';
 
             return $this->productImages[$barcode] = null;
         }
 
         if (! is_array($data)) {
-            $this->missingImages[] = $ingredientName . ' (produit introuvable)';
+            $this->missingImages[] = $ingredientName.' (produit introuvable)';
 
             return $this->productImages[$barcode] = null;
         }
@@ -1596,7 +1596,7 @@ JSON;
         }
 
         if (! is_string($imageUrl) || ! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-            $this->missingImages[] = $ingredientName . ' (image manquante)';
+            $this->missingImages[] = $ingredientName.' (image manquante)';
 
             return $this->productImages[$barcode] = null;
         }
@@ -1604,7 +1604,7 @@ JSON;
         try {
             $stored = $this->images->storeFromUrl($imageUrl, self::TEMP_IMAGE_FOLDER);
         } catch (Throwable $exception) {
-            $this->missingImages[] = $ingredientName . ' (téléchargement)';
+            $this->missingImages[] = $ingredientName.' (téléchargement)';
 
             return $this->productImages[$barcode] = null;
         }
@@ -1622,7 +1622,7 @@ JSON;
             return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_DESTINATION;
         }
 
-        $localPlaceholder = storage_path('app/' . self::DEFAULT_PLACEHOLDER_SOURCE);
+        $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
         $localAvailable = is_file($localPlaceholder) && is_readable($localPlaceholder);
 
         if ($localAvailable) {
@@ -1638,7 +1638,7 @@ JSON;
 
                     $this->command?->warn('Impossible de stocker le placeholder de démonstration sur S3.');
                 } catch (Throwable $exception) {
-                    $this->command?->warn('Impossible de publier le placeholder de démonstration : ' . $exception->getMessage());
+                    $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
                 }
             }
         } else {
@@ -1648,7 +1648,7 @@ JSON;
         try {
             return $this->placeholderImagePath = $this->images->storePlaceholder(self::DEFAULT_PLACEHOLDER_SOURCE);
         } catch (Throwable $exception) {
-            $this->command?->warn('Impossible de stocker le placeholder par défaut : ' . $exception->getMessage());
+            $this->command?->warn('Impossible de stocker le placeholder par défaut : '.$exception->getMessage());
 
             return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_SOURCE;
         }
@@ -1665,7 +1665,7 @@ JSON;
         }
 
         foreach (self::MENU_PLACEHOLDER_SOURCES as $candidate) {
-            $localPath = storage_path('app/' . $candidate);
+            $localPath = storage_path('app/'.$candidate);
 
             if (! is_file($localPath) || ! is_readable($localPath)) {
                 continue;
@@ -1682,7 +1682,7 @@ JSON;
                     return $this->menuPlaceholderImagePath = self::MENU_PLACEHOLDER_DESTINATION;
                 }
             } catch (Throwable $exception) {
-                $this->command?->warn('Impossible de stocker le placeholder menu à partir de ' . $candidate . ' : ' . $exception->getMessage());
+                $this->command?->warn('Impossible de stocker le placeholder menu à partir de '.$candidate.' : '.$exception->getMessage());
             }
         }
 
@@ -1741,7 +1741,7 @@ JSON;
                     $ingredient = $ingredients[$ingredientName] ?? null;
 
                     if (! $ingredient) {
-                        $this->missingIngredients[] = $ingredientName . ' (préparation ' . $name . ')';
+                        $this->missingIngredients[] = $ingredientName.' (préparation '.$name.')';
 
                         continue;
                     }
@@ -1768,7 +1768,7 @@ JSON;
                     $child = $preparations[$childName] ?? null;
 
                     if (! $child instanceof Preparation) {
-                        $this->missingComponents[] = $childName . ' (préparation ' . $name . ')';
+                        $this->missingComponents[] = $childName.' (préparation '.$name.')';
 
                         continue;
                     }
@@ -1875,7 +1875,7 @@ JSON;
 
                     $ingredient = $ingredients[$ingredientName] ?? null;
                     if (! $ingredient) {
-                        $this->missingComponents[] = $ingredientName . ' (menu ' . $entry['name'] . ')';
+                        $this->missingComponents[] = $ingredientName.' (menu '.$entry['name'].')';
 
                         continue;
                     }
@@ -1917,7 +1917,7 @@ JSON;
 
                     $preparation = $preparations[$preparationName] ?? null;
                     if (! $preparation) {
-                        $this->missingComponents[] = $preparationName . ' (menu ' . $entry['name'] . ')';
+                        $this->missingComponents[] = $preparationName.' (menu '.$entry['name'].')';
 
                         continue;
                     }
@@ -1956,15 +1956,15 @@ JSON;
     private function report(): void
     {
         if (! empty($this->missingIngredients)) {
-            $this->command?->warn('Ingrédients manquants : ' . implode(', ', array_unique($this->missingIngredients)));
+            $this->command?->warn('Ingrédients manquants : '.implode(', ', array_unique($this->missingIngredients)));
         }
 
         if (! empty($this->missingComponents)) {
-            $this->command?->warn('Références indisponibles : ' . implode(', ', array_unique($this->missingComponents)));
+            $this->command?->warn('Références indisponibles : '.implode(', ', array_unique($this->missingComponents)));
         }
 
         if (! empty($this->missingImages)) {
-            $this->command?->warn('Images non récupérées : ' . implode(', ', array_unique($this->missingImages)));
+            $this->command?->warn('Images non récupérées : '.implode(', ', array_unique($this->missingImages)));
         }
     }
 }
