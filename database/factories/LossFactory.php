@@ -11,7 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Loss>
+ * @extends Factory<Loss>
  */
 class LossFactory extends Factory
 {
@@ -24,12 +24,14 @@ class LossFactory extends Factory
      */
     public function definition(): array
     {
+        $company = Company::factory();
+
         return [
-            'loss_item_id' => Ingredient::factory(),
+            'loss_item_id' => Ingredient::factory()->for($company),
             'loss_item_type' => Ingredient::class,
-            'location_id' => Location::factory(),
-            'company_id' => Company::factory(),
-            'user_id' => User::factory(),
+            'location_id' => Location::factory()->for($company),
+            'company_id' => $company,
+            'user_id' => User::factory()->for($company),
             'quantity' => fake()->randomFloat(2, 0.1, 5),
             'reason' => fake()->sentence(),
         ];
@@ -40,9 +42,19 @@ class LossFactory extends Factory
      */
     public function preparation(): static
     {
-        return $this->state(fn () => [
-            'loss_item_id' => Preparation::factory(),
-            'loss_item_type' => Preparation::class,
-        ]);
+        return $this->state(function (array $attributes) {
+            $companyAttribute = $attributes['company_id'] ?? Company::factory();
+
+            $preparationFactory = $companyAttribute instanceof Company || $companyAttribute instanceof Factory
+                ? Preparation::factory()->for($companyAttribute)
+                : Preparation::factory()->state([
+                    'company_id' => $companyAttribute,
+                ]);
+
+            return [
+                'loss_item_id' => $preparationFactory,
+                'loss_item_type' => Preparation::class,
+            ];
+        });
     }
 }
