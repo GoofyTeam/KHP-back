@@ -144,9 +144,11 @@ Route::prefix('rooms')->name('rooms.')->group(function () {
 Route::prefix('orders')->name('orders.')->group(function () {
     Route::post('/{order}/pay', [OrderController::class, 'markPayed'])->name('pay');
     Route::post('/{order}/steps', [OrderController::class, 'storeStep'])->name('steps.store');
-    Route::put('/{order}/steps/{step}/menus', [OrderController::class, 'syncStepMenus'])->name('steps.menus.sync');
+    Route::post('/{order}/steps/{step}/menus', [OrderController::class, 'storeStepMenu'])->name('steps.menus.store');
+    Route::post('/{order}/step-menus/{stepMenu}/cancel', [OrderController::class, 'cancelStepMenu'])->name('step-menus.cancel');
     Route::post('/{order}/step-menus/{stepMenu}/ready', [OrderController::class, 'markStepMenuReady'])->name('step-menus.ready');
     Route::post('/{order}/step-menus/{stepMenu}/served', [OrderController::class, 'markStepMenuServed'])->name('step-menus.served');
+    Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
 });
 
 // Groupe de routes pour les Quick Access
