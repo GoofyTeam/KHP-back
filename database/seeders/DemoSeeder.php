@@ -37,151 +37,151 @@ class DemoSeeder extends Seeder
     ];
 
     private const MENU_BLUEPRINT_JSON = <<<'JSON'
-{
-    "hors_doeuvres": [
-        {
-            "nom": "Notre pâté en croûte, pickles de légumes",
-            "prix": 28,
-            "preparations": {
-                "Pâté en croûte": [
-                    "Pâte brisée (farine, beurre, eau, sel)",
-                    "Farce de porc maison (échine de porc, veau, foie de volaille, œufs, crème, sel, poivre, armagnac, épices)",
-                    "Gelée (fond de volaille, gélatine)"
+    {
+        "hors_doeuvres": [
+            {
+                "nom": "Notre pâté en croûte, pickles de légumes",
+                "prix": 28,
+                "preparations": {
+                    "Pâté en croûte": [
+                        "Pâte brisée (farine, beurre, eau, sel)",
+                        "Farce de porc maison (échine de porc, veau, foie de volaille, œufs, crème, sel, poivre, armagnac, épices)",
+                        "Gelée (fond de volaille, gélatine)"
+                    ],
+                    "Pickles de légumes": [
+                        "Carottes",
+                        "Chou-fleur",
+                        "Oignons",
+                        "Cornichons",
+                        "Marinade (vinaigre blanc, eau, sucre, sel, graines de moutarde, poivre en grain)"
+                    ]
+                }
+            },
+            {
+                "nom": "Foie gras de canard, brioche parisienne",
+                "prix": 32,
+                "ingredients": [
+                    "Foie gras de canard cru"
                 ],
-                "Pickles de légumes": [
-                    "Carottes",
-                    "Chou-fleur",
-                    "Oignons",
-                    "Cornichons",
-                    "Marinade (vinaigre blanc, eau, sucre, sel, graines de moutarde, poivre en grain)"
-                ]
-            }
-        },
-        {
-            "nom": "Foie gras de canard, brioche parisienne",
-            "prix": 32,
-            "ingredients": [
-                "Foie gras de canard cru"
-            ],
-            "preparations": {
-                "Brioche parisienne": [
-                    "Farine",
-                    "Œufs",
-                    "Beurre",
-                    "Lait",
-                    "Sucre",
-                    "Levure de boulanger",
-                    "Sel"
-                ]
-            }
-        },
-        {
-            "nom": "Homard bleu rafraîchi, haricots verts et amandes fraîches",
-            "prix": 38,
-            "ingredients": [
-                "Homard bleu",
-                "Haricots verts frais",
-                "Amandes fraîches",
-                "Huile d’olive",
-                "Citron",
-                "Sel",
-                "Poivre"
-            ]
-        },
-        {
-            "nom": "Tomate de plein champs fondante, anchois et basilic",
-            "prix": 30,
-            "ingredients": [
-                "Tomate de plein champ",
-                "Filets d’anchois",
-                "Basilic frais",
-                "Huile d’olive"
-            ]
-        }
-    ],
-    "plats": [
-        {
-            "nom": "Dos de bar doré, courgette trompette et jus d’une marinière",
-            "prix": 38,
-            "ingredients": [
-                "Dos de bar",
-                "Courgette trompette"
-            ],
-            "preparations": {
-                "Jus de marinière": [
-                    "Vin blanc sec",
-                    "Échalotes",
-                    "Beurre",
-                    "Persil",
-                    "Sel",
-                    "Poivre"
-                ]
-            }
-        },
-        {
-            "nom": "Sole à la meunière, cassolette d’artichauts (pour deux)",
-            "prix": 160,
-            "preparations": {
-                "Sole à la meunière": [
-                    "Sole",
-                    "Beurre",
-                    "Farine",
-                    "Jus de citron",
-                    "Persil"
-                ],
-                "Cassolette d’artichauts": [
-                    "Artichauts frais",
-                    "Fond de volaille",
+                "preparations": {
+                    "Brioche parisienne": [
+                        "Farine",
+                        "Œufs",
+                        "Beurre",
+                        "Lait",
+                        "Sucre",
+                        "Levure de boulanger",
+                        "Sel"
+                    ]
+                }
+            },
+            {
+                "nom": "Homard bleu rafraîchi, haricots verts et amandes fraîches",
+                "prix": 38,
+                "ingredients": [
+                    "Homard bleu",
+                    "Haricots verts frais",
+                    "Amandes fraîches",
                     "Huile d’olive",
-                    "Ail",
+                    "Citron",
                     "Sel",
                     "Poivre"
-                ]
-            }
-        }
-    ],
-    "fromage": [
-        {
-            "nom": "Fromages de France",
-            "prix": 16,
-            "ingredients": [
-                "Sélection de fromages de vache, chèvre, brebis"
-            ]
-        }
-    ],
-    "desserts": [
-        {
-            "nom": "Millefeuille classique à la vanille",
-            "prix": 14,
-            "preparations": {
-                "Millefeuille": [
-                    "Pâte feuilletée (farine, beurre, eau, sel)",
-                    "Crème pâtissière à la vanille (lait, sucre, jaunes d’œuf, fécule, gousse de vanille)",
-                    "Sucre glace"
-                ]
-            }
-        },
-        {
-            "nom": "Pêche Melba",
-            "prix": 14,
-            "preparations": {
-                "Pêches pochées": [
-                    "Pêches",
-                    "Sirop",
-                    "Vanille"
-                ],
-                "Coulis de framboise": [
-                    "Framboises",
-                    "Sucre"
                 ]
             },
-            "ingredients": [
-                "Glace vanille"
-            ]
-        }
-    ]
-}
-JSON;
+            {
+                "nom": "Tomate de plein champs fondante, anchois et basilic",
+                "prix": 30,
+                "ingredients": [
+                    "Tomate de plein champ",
+                    "Filets d’anchois",
+                    "Basilic frais",
+                    "Huile d’olive"
+                ]
+            }
+        ],
+        "plats": [
+            {
+                "nom": "Dos de bar doré, courgette trompette et jus d’une marinière",
+                "prix": 38,
+                "ingredients": [
+                    "Dos de bar",
+                    "Courgette trompette"
+                ],
+                "preparations": {
+                    "Jus de marinière": [
+                        "Vin blanc sec",
+                        "Échalotes",
+                        "Beurre",
+                        "Persil",
+                        "Sel",
+                        "Poivre"
+                    ]
+                }
+            },
+            {
+                "nom": "Sole à la meunière, cassolette d’artichauts (pour deux)",
+                "prix": 160,
+                "preparations": {
+                    "Sole à la meunière": [
+                        "Sole",
+                        "Beurre",
+                        "Farine",
+                        "Jus de citron",
+                        "Persil"
+                    ],
+                    "Cassolette d’artichauts": [
+                        "Artichauts frais",
+                        "Fond de volaille",
+                        "Huile d’olive",
+                        "Ail",
+                        "Sel",
+                        "Poivre"
+                    ]
+                }
+            }
+        ],
+        "fromage": [
+            {
+                "nom": "Fromages de France",
+                "prix": 16,
+                "ingredients": [
+                    "Sélection de fromages de vache, chèvre, brebis"
+                ]
+            }
+        ],
+        "desserts": [
+            {
+                "nom": "Millefeuille classique à la vanille",
+                "prix": 14,
+                "preparations": {
+                    "Millefeuille": [
+                        "Pâte feuilletée (farine, beurre, eau, sel)",
+                        "Crème pâtissière à la vanille (lait, sucre, jaunes d’œuf, fécule, gousse de vanille)",
+                        "Sucre glace"
+                    ]
+                }
+            },
+            {
+                "nom": "Pêche Melba",
+                "prix": 14,
+                "preparations": {
+                    "Pêches pochées": [
+                        "Pêches",
+                        "Sirop",
+                        "Vanille"
+                    ],
+                    "Coulis de framboise": [
+                        "Framboises",
+                        "Sucre"
+                    ]
+                },
+                "ingredients": [
+                    "Glace vanille"
+                ]
+            }
+        ]
+    }
+    JSON;
 
     private const MENU_CATEGORY_LABELS = [
         'hors_doeuvres' => 'Entrées de la Maison',
