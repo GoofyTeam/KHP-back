@@ -11,6 +11,7 @@ use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PreparationController;
+use App\Http\Controllers\PublicMenuSettingsController;
 use App\Http\Controllers\QuickAccessController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TableController;
@@ -36,6 +37,8 @@ Route::prefix('user')->name('user.')->group(function () {
 Route::prefix('company')->name('company.')->group(function () {
     Route::put('/options', [CompanyController::class, 'updateOptions'])->name('options.update');
 });
+
+Route::put('/public-menus', PublicMenuSettingsController::class)->name('public-menus.update');
 
 // Groupe de routes pour les préparations
 Route::prefix('preparations')->name('preparations.')->group(function () {

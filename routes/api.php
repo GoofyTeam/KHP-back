@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RestaurantCardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -10,6 +11,8 @@ Route::middleware('web')->group(function () {
 
     Route::post('password/send/resetpassword', [AuthController::class, 'sendEmailToken'])->name('email_token');
     Route::post('password/reset', [AuthController::class, 'resetPassword'])->name('password_reset');
+
+    Route::get('/restaurant-card/{public_card_url}', RestaurantCardController::class)->name('restaurant-card.show');
 
     Route::middleware('auth')->group(function () {
         include base_path('routes/authed_route.php');

@@ -4,10 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * @property bool $auto_complete_menu_orders
  * @property string $open_food_facts_language
+ * @property string $public_card_url
+ * @property bool $show_out_of_stock_menus
+ * @property bool $show_menu_images
  */
 class Company extends Model
 {
@@ -17,11 +21,22 @@ class Company extends Model
         'name',
         'auto_complete_menu_orders',
         'open_food_facts_language',
+        'public_card_url',
+        'show_out_of_stock_menus',
+        'show_menu_images',
     ];
 
     protected $casts = [
         'auto_complete_menu_orders' => 'bool',
         'open_food_facts_language' => 'string',
+        'public_card_url' => 'string',
+        'show_out_of_stock_menus' => 'bool',
+        'show_menu_images' => 'bool',
+    ];
+
+    protected $attributes = [
+        'show_out_of_stock_menus' => false,
+        'show_menu_images' => true,
     ];
 
     /**
@@ -74,6 +89,14 @@ class Company extends Model
         return $this->hasMany(Category::class);
     }
 
+    /**
+     * Get the menus belonging to the company.
+     */
+    public function menus()
+    {
+        return $this->hasMany(Menu::class);
+    }
+
     public function locationTypes()
     {
         return $this->hasMany(LocationType::class);
@@ -91,9 +114,29 @@ class Company extends Model
 
     // Removed: specialQuickAccess relation (merged into QuickAccess index 5)
 
+    public function getPublicMenuSettingsAttribute(): array
+    {
+        return [
+            'public_card_url' => $this->public_card_url,
+            'show_out_of_stock_menus' => $this->show_out_of_stock_menus,
+            'show_menu_images' => $this->show_menu_images,
+        ];
+    }
+
     protected static function booted()
     {
+        static::creating(function ($company) {
+            if (! $company->public_card_url) {
+                $company->public_card_url = 'temp-'.Str::uuid();
+            }
+        });
+
         static::created(function ($company) {
+            if (! $company->public_card_url || str_starts_with($company->public_card_url, 'temp-')) {
+                $company->public_card_url = sprintf('%d-%s', $company->id, Str::slug($company->name));
+                $company->saveQuietly();
+            }
+
             // Créer les types de localisation par défaut
             $defaultTypes = [
                 ['name' => 'Congélateur', 'is_default' => true],
