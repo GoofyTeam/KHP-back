@@ -69,15 +69,35 @@ return new class extends Migration
             }
         }
 
-        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return;
+        }
+
+        if ($driver === 'mysql') {
             DB::statement('ALTER TABLE menus MODIFY menu_type_id BIGINT UNSIGNED NOT NULL');
+        }
+
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE menus ALTER COLUMN menu_type_id SET NOT NULL');
         }
     }
 
     public function down(): void
     {
-        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return;
+        }
+
+        if ($driver === 'mysql') {
             DB::statement('ALTER TABLE menus MODIFY menu_type_id BIGINT UNSIGNED NULL');
+        }
+
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE menus ALTER COLUMN menu_type_id DROP NOT NULL');
         }
     }
 };
