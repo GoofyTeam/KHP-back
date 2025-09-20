@@ -63,9 +63,18 @@ return new class extends Migration
         }
 
         if (Schema::hasColumn('companies', 'public_menu_card_url')) {
-            DB::statement(
-                'ALTER TABLE companies ALTER COLUMN public_menu_card_url SET NOT NULL'
-            );
+            $driver = DB::getDriverName();
+
+            $statements = [
+                'pgsql' => 'ALTER TABLE companies ALTER COLUMN public_menu_card_url SET NOT NULL',
+                'mysql' => 'ALTER TABLE companies MODIFY public_menu_card_url VARCHAR(255) NOT NULL',
+                'mariadb' => 'ALTER TABLE companies MODIFY public_menu_card_url VARCHAR(255) NOT NULL',
+                'sqlsrv' => 'ALTER TABLE companies ALTER COLUMN public_menu_card_url NVARCHAR(255) NOT NULL',
+            ];
+
+            if (array_key_exists($driver, $statements)) {
+                DB::statement($statements[$driver]);
+            }
         }
     }
 
