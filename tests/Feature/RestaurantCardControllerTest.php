@@ -10,6 +10,7 @@ use App\Models\LocationType;
 use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use App\Models\MenuType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -39,10 +40,17 @@ class RestaurantCardControllerTest extends TestCase
 
         $category = MenuCategory::factory()->create(['company_id' => $company->id]);
 
+        $menuType = MenuType::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Plat',
+        ]);
+        $menuType->publicOrder()->update(['position' => 2]);
+
         $menuAvailable = Menu::factory()->create([
             'company_id' => $company->id,
             'is_a_la_carte' => true,
-            'type' => 'plat',
+            'menu_type_id' => $menuType->id,
+            'public_priority' => 3,
             'price' => 15.5,
         ]);
         $menuAvailable->update(['image_url' => 'menus/menu.jpg']);
@@ -69,6 +77,7 @@ class RestaurantCardControllerTest extends TestCase
         $menuInsufficient = Menu::factory()->create([
             'company_id' => $company->id,
             'is_a_la_carte' => true,
+            'menu_type_id' => $menuType->id,
         ]);
 
         MenuItem::create([
@@ -93,7 +102,10 @@ class RestaurantCardControllerTest extends TestCase
             ->assertJsonPath('company.public_menu_card_url', $slug)
             ->assertJsonCount(1, 'company.menus')
             ->assertJsonPath('company.menus.0.name', $menuAvailable->name)
-            ->assertJsonPath('company.menus.0.type', $menuAvailable->type)
+            ->assertJsonPath('company.menus.0.type', $menuType->name)
+            ->assertJsonPath('company.menus.0.type_index', $menuType->publicOrder->position)
+            ->assertJsonPath('company.menus.0.priority', $menuAvailable->public_priority)
+            ->assertJsonPath('company.menus.0.menu_type_id', $menuType->id)
             ->assertJsonPath('company.menus.0.price', $menuAvailable->price)
             ->assertJsonPath('company.menus.0.categories.0.name', $category->name)
             ->assertJsonPath('company.menus.0.allergens.0', 'gluten')
@@ -120,9 +132,17 @@ class RestaurantCardControllerTest extends TestCase
         ]);
         $ingredient->locations()->attach($location->id, ['quantity' => 1]);
 
+        $menuType = MenuType::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Plat',
+        ]);
+        $menuType->publicOrder()->update(['position' => 1]);
+
         $menuAvailable = Menu::factory()->create([
             'company_id' => $company->id,
             'is_a_la_carte' => true,
+            'menu_type_id' => $menuType->id,
+            'public_priority' => 1,
         ]);
         $menuAvailable->update(['image_url' => 'menus/available.jpg']);
 
@@ -138,6 +158,8 @@ class RestaurantCardControllerTest extends TestCase
         $menuInsufficient = Menu::factory()->create([
             'company_id' => $company->id,
             'is_a_la_carte' => true,
+            'menu_type_id' => $menuType->id,
+            'public_priority' => 2,
         ]);
         $menuInsufficient->update(['image_url' => 'menus/unavailable.jpg']);
 
@@ -166,6 +188,90 @@ class RestaurantCardControllerTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('company.menus.0.image_url', null)
             ->assertJsonPath('company.menus.1.image_url', null);
+    }
+
+    public function test_menus_are_sorted_by_type_priority_and_name(): void
+    {
+        $company = Company::factory()->create();
+        $slug = $company->refresh()->public_menu_card_url;
+        $locationType = LocationType::factory()->create(['company_id' => $company->id]);
+        $location = Location::factory()->create([
+            'company_id' => $company->id,
+            'location_type_id' => $locationType->id,
+        ]);
+
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'unit' => MeasurementUnit::UNIT,
+            'base_unit' => MeasurementUnit::UNIT,
+            'base_quantity' => 1,
+        ]);
+        $ingredient->locations()->attach($location->id, ['quantity' => 10]);
+
+        $platType = MenuType::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Plat',
+        ]);
+        $platType->publicOrder()->update(['position' => 1]);
+
+        $dessertType = MenuType::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Dessert',
+        ]);
+        $dessertType->publicOrder()->update(['position' => 2]);
+
+        $menuTypeOneFirst = Menu::factory()->create([
+            'company_id' => $company->id,
+            'is_a_la_carte' => true,
+            'menu_type_id' => $platType->id,
+            'public_priority' => 1,
+            'name' => 'Alpha Plat',
+        ]);
+
+        $menuTypeOneSecond = Menu::factory()->create([
+            'company_id' => $company->id,
+            'is_a_la_carte' => true,
+            'menu_type_id' => $platType->id,
+            'public_priority' => 1,
+            'name' => 'Bravo Plat',
+        ]);
+
+        $menuTypeOneLater = Menu::factory()->create([
+            'company_id' => $company->id,
+            'is_a_la_carte' => true,
+            'menu_type_id' => $platType->id,
+            'public_priority' => 5,
+            'name' => 'Charlie Plat',
+        ]);
+
+        $menuTypeTwo = Menu::factory()->create([
+            'company_id' => $company->id,
+            'is_a_la_carte' => true,
+            'menu_type_id' => $dessertType->id,
+            'public_priority' => 1,
+            'name' => 'Dessert Gourmand',
+        ]);
+
+        foreach ([$menuTypeOneFirst, $menuTypeOneSecond, $menuTypeOneLater, $menuTypeTwo] as $menu) {
+            MenuItem::create([
+                'menu_id' => $menu->id,
+                'entity_id' => $ingredient->id,
+                'entity_type' => Ingredient::class,
+                'location_id' => $location->id,
+                'quantity' => 1,
+                'unit' => MeasurementUnit::UNIT,
+            ]);
+        }
+
+        $response = $this->getJson("/api/restaurant-card/{$slug}");
+
+        $response
+            ->assertStatus(200)
+            ->assertJsonCount(4, 'company.menus')
+            ->assertJsonPath('company.menus.0.id', $menuTypeOneFirst->id)
+            ->assertJsonPath('company.menus.1.id', $menuTypeOneSecond->id)
+            ->assertJsonPath('company.menus.2.id', $menuTypeOneLater->id)
+            ->assertJsonPath('company.menus.3.id', $menuTypeTwo->id);
     }
 
     public function test_public_image_proxy_serves_menu_images(): void

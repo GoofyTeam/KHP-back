@@ -94,6 +94,11 @@ class Company extends Model
         return $this->hasMany(Menu::class);
     }
 
+    public function menuTypes()
+    {
+        return $this->hasMany(MenuType::class);
+    }
+
     public function locationTypes()
     {
         return $this->hasMany(LocationType::class);
@@ -153,6 +158,32 @@ class Company extends Model
                 'name' => 'Réfrigérateur',
                 'location_type_id' => $locationTypes[1]->id,
             ]);
+
+            $defaultMenuTypes = [
+                ['name' => 'Entrées', 'position' => 0],
+                ['name' => 'Plats', 'position' => 1],
+                ['name' => 'Desserts', 'position' => 2],
+                ['name' => 'Accompagnements', 'position' => 3],
+            ];
+
+            foreach ($defaultMenuTypes as $type) {
+                $menuType = MenuType::firstOrCreate(
+                    [
+                        'company_id' => $company->id,
+                        'name' => $type['name'],
+                    ]
+                );
+
+                MenuTypePublicOrder::updateOrCreate(
+                    [
+                        'company_id' => $company->id,
+                        'menu_type_id' => $menuType->id,
+                    ],
+                    [
+                        'position' => $type['position'],
+                    ]
+                );
+            }
 
             // Créer les raisons de perte par défaut
             $company->lossReasons()->createMany(array_map(fn ($name) => ['name' => $name], [
