@@ -46,7 +46,7 @@ class MenuCardMenuResource extends JsonResource
             'name' => $this->resource->name,
             'description' => $this->resource->description,
             'type' => $this->resource->type,
-            'type_index' => $publicOrder ? $publicOrder->position : 0,
+            'menu_type_index' => $publicOrder ? $publicOrder->position : 0,
             'menu_type_id' => $this->resource->menu_type_id,
             'priority' => (int) ($this->resource->public_priority ?? 0),
             'price' => $this->resource->price,

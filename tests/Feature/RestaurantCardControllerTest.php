@@ -103,7 +103,7 @@ class RestaurantCardControllerTest extends TestCase
             ->assertJsonCount(1, 'company.menus')
             ->assertJsonPath('company.menus.0.name', $menuAvailable->name)
             ->assertJsonPath('company.menus.0.type', $menuType->name)
-            ->assertJsonPath('company.menus.0.type_index', $menuType->publicOrder->position)
+            ->assertJsonPath('company.menus.0.menu_type_index', $menuType->publicOrder->position)
             ->assertJsonPath('company.menus.0.priority', $menuAvailable->public_priority)
             ->assertJsonPath('company.menus.0.menu_type_id', $menuType->id)
             ->assertJsonPath('company.menus.0.price', $menuAvailable->price)
