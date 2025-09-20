@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\MeasurementUnit;
+use App\Enums\MenuServiceType;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -27,6 +28,8 @@ class MenuSeeder extends Seeder
             for ($i = 0; $i < 5; $i++) {
                 $menu = Menu::factory()->create([
                     'company_id' => $company->id,
+                    'service_type' => fake()->randomElement(MenuServiceType::values()),
+                    'is_returnable' => fake()->boolean(),
                     'type' => fake()->randomElement(['entrée', 'plat', 'dessert', 'side']),
                     'price' => fake()->randomFloat(2, 5, 50),
                 ]);

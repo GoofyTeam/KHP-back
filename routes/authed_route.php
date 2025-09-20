@@ -8,8 +8,8 @@ use App\Http\Controllers\LocationTypeController;
 use App\Http\Controllers\LossController;
 use App\Http\Controllers\LossReasonController;
 use App\Http\Controllers\MenuCategoryController;
-use App\Http\Controllers\MenuCommandController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PreparationController;
 use App\Http\Controllers\QuickAccessController;
 use App\Http\Controllers\RoomController;
@@ -108,15 +108,11 @@ Route::get('/image-proxy/{bucket}/{path}', function ($bucket, $path) {
     }
 })->where('path', '.*')->name('image-proxy');
 
-// Groupe de routes pour les menus et leurs commandes
+// Groupe de routes pour les menus
 Route::prefix('menus')->name('menus.')->group(function () {
     Route::post('/', [MenuController::class, 'store'])->name('store');
     Route::put('/{id}', [MenuController::class, 'update'])->name('update');
     Route::delete('/{id}', [MenuController::class, 'destroy'])->name('destroy');
-
-    Route::post('/{menu}/command', [MenuCommandController::class, 'store'])->name('command.store');
-    Route::put('/command/{id}/status', [MenuCommandController::class, 'updateStatus'])->name('command.update-status');
-    Route::post('/command/{id}/cancel', [MenuCommandController::class, 'cancel'])->name('command.cancel');
 });
 
 // Groupe de routes pour les catégories
@@ -143,6 +139,18 @@ Route::prefix('rooms')->name('rooms.')->group(function () {
     Route::put('/{room}/tables/{table}', [TableController::class, 'update'])->name('tables.update');
     Route::delete('/{room}/tables/{table}', [TableController::class, 'destroy'])->name('tables.destroy');
 });
+
+// Groupe de routes pour les commandes
+Route::prefix('orders')->name('orders.')->group(function () {
+    Route::post('/{order}/pay', [OrderController::class, 'markPayed'])->name('pay');
+    Route::post('/{order}/steps', [OrderController::class, 'storeStep'])->name('steps.store');
+    Route::post('/{order}/steps/{step}/menus', [OrderController::class, 'storeStepMenu'])->name('steps.menus.store');
+    Route::post('/{order}/step-menus/{stepMenu}/cancel', [OrderController::class, 'cancelStepMenu'])->name('step-menus.cancel');
+    Route::post('/{order}/step-menus/{stepMenu}/ready', [OrderController::class, 'markStepMenuReady'])->name('step-menus.ready');
+    Route::post('/{order}/step-menus/{stepMenu}/served', [OrderController::class, 'markStepMenuServed'])->name('step-menus.served');
+    Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+});
+
 // Groupe de routes pour les Quick Access
 Route::prefix('quick-access')->name('quick-access.')->group(function () {
     // Mise à jour en masse (positions 1..5) avec payload partiel

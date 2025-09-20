@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MeasurementUnit;
+use App\Enums\MenuServiceType;
 use App\Models\Ingredient;
 use App\Models\Menu;
 use App\Models\MenuItem;
@@ -35,6 +36,8 @@ class MenuController extends Controller
                 Rule::unique('menus')->where(fn ($q) => $q->where('company_id', $user->company_id)),
             ],
             'type' => ['required', 'string', 'max:255'],
+            'service_type' => ['required', 'string', Rule::in(MenuServiceType::values())],
+            'is_returnable' => ['required', 'boolean'],
             'price' => ['required', 'numeric', 'min:0'],
             'category_ids' => ['sometimes', 'array'],
             'category_ids.*' => [
@@ -89,6 +92,8 @@ class MenuController extends Controller
             'is_a_la_carte' => $validated['is_a_la_carte'] ?? false,
             'image_url' => $imagePath,
             'type' => $validated['type'],
+            'service_type' => $validated['service_type'],
+            'is_returnable' => $validated['is_returnable'],
             'price' => $validated['price'],
         ]);
 
@@ -141,6 +146,8 @@ class MenuController extends Controller
                 Rule::unique('menus')->where(fn ($q) => $q->where('company_id', $user->company_id))->ignore($menu->id),
             ],
             'type' => ['sometimes', 'string', 'max:255'],
+            'service_type' => ['sometimes', 'string', Rule::in(MenuServiceType::values())],
+            'is_returnable' => ['sometimes', 'boolean'],
             'price' => ['sometimes', 'numeric', 'min:0'],
             'category_ids' => ['sometimes', 'array'],
             'category_ids.*' => [
@@ -198,6 +205,12 @@ class MenuController extends Controller
         }
         if (array_key_exists('type', $validated)) {
             $menu->type = $validated['type'];
+        }
+        if (array_key_exists('service_type', $validated)) {
+            $menu->service_type = $validated['service_type'];
+        }
+        if (array_key_exists('is_returnable', $validated)) {
+            $menu->is_returnable = $validated['is_returnable'];
         }
         if (array_key_exists('price', $validated)) {
             $menu->price = $validated['price'];

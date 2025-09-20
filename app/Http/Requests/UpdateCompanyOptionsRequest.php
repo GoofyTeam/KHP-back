@@ -40,7 +40,6 @@ class UpdateCompanyOptionsRequest extends FormRequest
         $companyId = $this->user()?->company_id;
 
         return [
-            'auto_complete_menu_orders' => 'sometimes|boolean',
             'open_food_facts_language' => 'sometimes|in:fr,en',
             'public_menu_card_url' => [
                 'sometimes',

@@ -11,8 +11,6 @@ class LocationFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
-     *
-     * @var string
      */
     protected $model = Location::class;
 
@@ -26,10 +24,12 @@ class LocationFactory extends Factory
         static $counter = 0;
         $counter++;
 
+        $company = Company::factory();
+
         return [
             'name' => $this->faker->unique()->word.'-'.$counter, // Garantir l'unicité
-            'company_id' => Company::factory(),
-            'location_type_id' => LocationType::factory(),
+            'company_id' => $company,
+            'location_type_id' => LocationType::factory()->for($company),
             'created_at' => now(),
             'updated_at' => now(),
         ];

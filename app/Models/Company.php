@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
- * @property bool $auto_complete_menu_orders
  * @property string $open_food_facts_language
  * @property string $public_menu_card_url
  * @property bool $show_out_of_stock_menus_on_card
@@ -19,7 +18,6 @@ class Company extends Model
 
     protected $fillable = [
         'name',
-        'auto_complete_menu_orders',
         'open_food_facts_language',
         'public_menu_card_url',
         'show_out_of_stock_menus_on_card',
@@ -27,7 +25,6 @@ class Company extends Model
     ];
 
     protected $casts = [
-        'auto_complete_menu_orders' => 'bool',
         'open_food_facts_language' => 'string',
         'public_menu_card_url' => 'string',
         'show_out_of_stock_menus_on_card' => 'bool',
@@ -218,8 +215,6 @@ class Company extends Model
                     ]
                 );
             }
-
-            // Removed: SpecialQuickAccess creation, handled as QuickAccess index 5
         });
     }
 }

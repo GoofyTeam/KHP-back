@@ -15,9 +15,6 @@ type Company {
     "Types de localisation associés à cette entreprise."
     locationTypes: [LocationType!]! @hasMany
 
-    "Option pour activer ou désactiver la complétion automatique des commandes de menu."
-    auto_complete_menu_orders: Boolean
-
     "Langue préférée pour les données OpenFoodFacts (fr ou en)."
     open_food_facts_language: String
 

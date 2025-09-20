@@ -26,7 +26,9 @@ class DatabaseSeeder extends Seeder
             StockMovementSeeder::class,
             LossSeeder::class,
             QuickAccessSeeder::class,
-            MenuOrderSeeder::class,
+            OrderSeeder::class,
+            OrderStepSeeder::class,
+            StepMenuSeeder::class,
         ]);
     }
 }

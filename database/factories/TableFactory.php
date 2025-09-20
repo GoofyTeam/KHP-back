@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Room;
 use App\Models\Table;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class TableFactory extends Factory
 {
@@ -13,11 +14,13 @@ class TableFactory extends Factory
 
     public function definition(): array
     {
+        $company = Company::factory();
+
         return [
-            'label' => 'T'.uniqid(),
-            'seats' => 4,
-            'room_id' => Room::factory(),
-            'company_id' => Company::factory(),
+            'label' => 'T-'.Str::padLeft((string) $this->faker->unique()->numberBetween(1, 999), 3, '0'),
+            'seats' => $this->faker->numberBetween(2, 8),
+            'company_id' => $company,
+            'room_id' => Room::factory()->for($company),
         ];
     }
 }

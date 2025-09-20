@@ -28,18 +28,10 @@ return new class extends Migration
             $table->unique(['menu_id', 'entity_id', 'entity_type']);
         });
 
-        Schema::create('menu_orders', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('menu_id')->constrained('menus')->onDelete('cascade');
-            $table->enum('status', ['pending', 'completed', 'canceled'])->default('pending');
-            $table->integer('quantity')->default(1);
-            $table->timestamps();
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('menu_orders');
         Schema::dropIfExists('menu_items');
         Schema::dropIfExists('menus');
     }
