@@ -64,6 +64,7 @@ class PerishableTest extends TestCase
         $service->remove($ingredient->id, $location->id, $company->id, 3);
 
         $this->assertSame(2, Perishable::count());
+        $this->assertSame(0, Perishable::onlyTrashed()->count());
         $this->assertDatabaseHas('perishables', [
             'ingredient_id' => $ingredient->id,
             'location_id' => $location->id,

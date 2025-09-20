@@ -70,15 +70,19 @@ class PerishableService
                 break;
             }
 
-            $remove = min($perishable->quantity, $quantity);
-            $perishable->quantity -= $remove;
-            $quantity -= $remove;
+            $currentQuantity = (float) $perishable->quantity;
+            $remove = min($currentQuantity, $quantity);
+            $remaining = round($currentQuantity - $remove, 2);
+            $quantity = max(0, round($quantity - $remove, 2));
 
-            if ($perishable->quantity <= 0) {
-                $perishable->delete();
-            } else {
-                $perishable->save();
+            if ($remaining <= 0) {
+                $perishable->forceDelete();
+
+                continue;
             }
+
+            $perishable->quantity = $remaining;
+            $perishable->save();
         }
     }
 
