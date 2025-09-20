@@ -10,7 +10,7 @@ type Menu {
     type: String!
     menu_type_id: ID!
     public_priority: Int!
-    menu_type: MenuType! @belongsTo
+    menu_type: MenuType @belongsTo(relation: "menuType")
     price: Float!
     categories: [MenuCategory!]! @belongsToMany
     allergens: [AllergenEnum!]!
