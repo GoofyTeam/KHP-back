@@ -142,6 +142,7 @@ class MenuSeeder extends Seeder
                     ['name' => 'Oignons jaunes', 'quantity' => 0.04],
                     ['name' => 'Herbes de Provence', 'quantity' => 0.005],
                     ['name' => 'Huile d’olive', 'quantity' => 0.01],
+                    ['name' => 'Coca Cherry', 'quantity' => 1.0],
                 ],
             ],
             [
@@ -153,6 +154,7 @@ class MenuSeeder extends Seeder
                     ['name' => 'Crème fraîche', 'quantity' => 0.06],
                     ['name' => 'Fromages affinés (camembert, chèvre, bleu, etc.)', 'quantity' => 0.05],
                     ['name' => 'Herbes de Provence', 'quantity' => 0.005],
+                    ['name' => 'Coca Cherry', 'quantity' => 1.0],
                 ],
             ],
             [
@@ -164,6 +166,7 @@ class MenuSeeder extends Seeder
                     ['name' => 'Carottes', 'quantity' => 0.05],
                     ['name' => 'Oignons jaunes', 'quantity' => 0.04],
                     ['name' => 'Paprika fumé', 'quantity' => 0.004],
+                    ['name' => 'Coca Cherry', 'quantity' => 1.0],
                 ],
             ],
             [
@@ -175,6 +178,7 @@ class MenuSeeder extends Seeder
                     ['name' => 'Jambon cru', 'quantity' => 0.04],
                     ['name' => 'Fromage râpé (emmental, parmesan)', 'quantity' => 0.05],
                     ['name' => 'Herbes de Provence', 'quantity' => 0.004],
+                    ['name' => 'Coca Cherry', 'quantity' => 1.0],
                 ],
             ],
             [
@@ -186,6 +190,7 @@ class MenuSeeder extends Seeder
                     ['name' => 'Oignons jaunes', 'quantity' => 0.04],
                     ['name' => 'Beurre doux', 'quantity' => 0.02],
                     ['name' => 'Herbes de Provence', 'quantity' => 0.003],
+                    ['name' => 'Coca Cherry', 'quantity' => 1.0],
                 ],
             ],
         ];
