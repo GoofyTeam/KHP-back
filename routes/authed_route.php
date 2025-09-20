@@ -10,6 +10,7 @@ use App\Http\Controllers\LossReasonController;
 use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PerishableController;
 use App\Http\Controllers\PreparationController;
 use App\Http\Controllers\QuickAccessController;
 use App\Http\Controllers\RoomController;
@@ -63,6 +64,10 @@ Route::prefix('ingredients')->name('ingredients.')->group(function () {
     Route::post('/{ingredient}/add-quantity', [IngredientController::class, 'addQuantity'])->name('add-quantity');
     Route::post('/{ingredient}/remove-quantity', [IngredientController::class, 'removeQuantity'])->name('remove-quantity');
     Route::post('/{ingredient}/move-quantity', [IngredientController::class, 'moveQuantity'])->name('move-quantity');
+});
+
+Route::prefix('perishables')->name('perishables.')->group(function () {
+    Route::patch('/{perishable}/read', [PerishableController::class, 'markAsRead'])->name('mark-as-read');
 });
 
 // Groupe de routes pour les types de localisation
