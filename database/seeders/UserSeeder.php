@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
-        $company = Company::where('name', 'GoofyTeam')->first();
+        $goofyCompany = Company::where('name', 'GoofyTeam')->first();
 
         $users = [
             ['name' => 'Luca',    'email' => 'luca@example.com'],
@@ -31,11 +31,20 @@ class UserSeeder extends Seeder
                 ->create([
                     'name' => $userData['name'],
                     'email' => $userData['email'],
-                    'company_id' => $company->id,
+                    'company_id' => $goofyCompany->id,
                 ]);
         }
 
-        $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
+        $charlieCompany = Company::where('name', 'Charlie Kirk')->first();
+
+        User::factory()
+            ->create([
+                'name' => 'Charlie',
+                'email' => 'charlie@example.com',
+                'company_id' => $charlieCompany->id,
+            ]);
+
+        $otherCompanies = Company::whereNotIn('name', ['GoofyTeam', 'Charlie Kirk'])->get();
 
         foreach ($otherCompanies as $company) {
             User::factory()
