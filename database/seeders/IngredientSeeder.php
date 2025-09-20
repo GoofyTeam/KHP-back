@@ -118,10 +118,17 @@ class IngredientSeeder extends Seeder
         $items = [
             [
                 'name' => 'Coca Cherry',
-                'qty' => 24.0,
+                'qty' => 100.0,
                 'unit' => MeasurementUnit::UNIT,
                 'barcode' => '5449000131805',
                 'category' => 'Sodas',
+            ],
+            [
+                'name' => 'Crousty',
+                'qty' => 100.0,
+                'unit' => MeasurementUnit::UNIT,
+                'barcode' => '3512345678901',
+                'category' => 'Plats Préparés',
             ],
         ];
 
