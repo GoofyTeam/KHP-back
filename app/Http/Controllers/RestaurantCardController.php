@@ -24,6 +24,7 @@ class RestaurantCardController extends Controller
             ->get()
             ->map(function (Menu $menu) use ($company) {
                 $menu->setAttribute('has_sufficient_stock', $menu->hasSufficientStock());
+                $menu->setAttribute('public_menu_card_url', $company->public_menu_card_url);
 
                 if (! $company->show_menu_images) {
                     $menu->image_url = null;

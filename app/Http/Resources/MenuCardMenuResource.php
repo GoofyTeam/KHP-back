@@ -17,13 +17,32 @@ class MenuCardMenuResource extends JsonResource
             $hasStock = $this->resource->hasSufficientStock();
         }
 
+        $imageUrl = null;
+        $imagePath = $this->resource->image_url;
+
+        if (is_string($imagePath) && filter_var($imagePath, FILTER_VALIDATE_URL)) {
+            $imageUrl = $imagePath;
+        } elseif ($imagePath && $slug = $this->resource->getAttribute('public_menu_card_url')) {
+            $segments = explode('/', $imagePath, 2);
+
+            if (count($segments) === 2 && $segments[0] !== '' && $segments[1] !== '') {
+                [$bucket, $path] = $segments;
+                $imageUrl = url(sprintf(
+                    '/api/public/image-proxy/%s/%s/%s',
+                    $slug,
+                    $bucket,
+                    $path
+                ));
+            }
+        }
+
         return [
             'id' => $this->resource->id,
             'name' => $this->resource->name,
             'description' => $this->resource->description,
             'type' => $this->resource->type,
             'price' => $this->resource->price,
-            'image_url' => $this->resource->image_url,
+            'image_url' => $imageUrl,
             'has_sufficient_stock' => $hasStock,
             'categories' => $this->resource->categories
                 ->map(fn ($category) => [

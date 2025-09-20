@@ -11,6 +11,7 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RestaurantCardControllerTest extends TestCase
@@ -44,7 +45,7 @@ class RestaurantCardControllerTest extends TestCase
             'type' => 'plat',
             'price' => 15.5,
         ]);
-        $menuAvailable->update(['image_url' => 'https://example.com/menu.jpg']);
+        $menuAvailable->update(['image_url' => 'menus/menu.jpg']);
         $menuAvailable->categories()->sync([$category->id]);
 
         MenuItem::create([
@@ -97,7 +98,7 @@ class RestaurantCardControllerTest extends TestCase
             ->assertJsonPath('company.menus.0.categories.0.name', $category->name)
             ->assertJsonPath('company.menus.0.allergens.0', 'gluten')
             ->assertJsonPath('company.menus.0.has_sufficient_stock', true)
-            ->assertJsonPath('company.menus.0.image_url', 'https://example.com/menu.jpg');
+            ->assertJsonPath('company.menus.0.image_url', url('/api/public/image-proxy/'.$slug.'/menus/menu.jpg'));
     }
 
     public function test_includes_out_of_stock_menus_when_company_option_enabled(): void
@@ -123,7 +124,7 @@ class RestaurantCardControllerTest extends TestCase
             'company_id' => $company->id,
             'is_a_la_carte' => true,
         ]);
-        $menuAvailable->update(['image_url' => 'https://example.com/available.jpg']);
+        $menuAvailable->update(['image_url' => 'menus/available.jpg']);
 
         MenuItem::create([
             'menu_id' => $menuAvailable->id,
@@ -138,7 +139,7 @@ class RestaurantCardControllerTest extends TestCase
             'company_id' => $company->id,
             'is_a_la_carte' => true,
         ]);
-        $menuInsufficient->update(['image_url' => 'https://example.com/unavailable.jpg']);
+        $menuInsufficient->update(['image_url' => 'menus/unavailable.jpg']);
 
         MenuItem::create([
             'menu_id' => $menuInsufficient->id,
@@ -156,8 +157,8 @@ class RestaurantCardControllerTest extends TestCase
             ->assertJsonCount(2, 'company.menus')
             ->assertJsonPath('company.menus.0.has_sufficient_stock', true)
             ->assertJsonPath('company.menus.1.has_sufficient_stock', false)
-            ->assertJsonPath('company.menus.0.image_url', 'https://example.com/available.jpg')
-            ->assertJsonPath('company.menus.1.image_url', 'https://example.com/unavailable.jpg');
+            ->assertJsonPath('company.menus.0.image_url', url('/api/public/image-proxy/'.$slug.'/menus/available.jpg'))
+            ->assertJsonPath('company.menus.1.image_url', url('/api/public/image-proxy/'.$slug.'/menus/unavailable.jpg'));
 
         $company->update(['show_menu_images' => false]);
 
@@ -165,6 +166,39 @@ class RestaurantCardControllerTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('company.menus.0.image_url', null)
             ->assertJsonPath('company.menus.1.image_url', null);
+    }
+
+    public function test_public_image_proxy_serves_menu_images(): void
+    {
+        Storage::fake('s3');
+
+        $company = Company::factory()->create();
+        $slug = $company->refresh()->public_menu_card_url;
+
+        Menu::factory()->create([
+            'company_id' => $company->id,
+            'is_a_la_carte' => true,
+            'image_url' => 'menus/sample.jpg',
+        ]);
+
+        $path = 'menus/sample.jpg';
+        Storage::disk('s3')->put($path, 'fake-image');
+        $fullPath = Storage::disk('s3')->path($path);
+
+        $disk = \Mockery::mock(Storage::disk('s3'))->makePartial();
+        $disk->shouldReceive('exists')->with($path)->andReturnTrue();
+        $disk->shouldReceive('temporaryUrl')
+            ->with($path, \Mockery::type('DateTimeInterface'))
+            ->andReturn($fullPath);
+        $disk->shouldReceive('mimeType')->with($path)->andReturn('image/jpeg');
+
+        Storage::shouldReceive('disk')->with('s3')->andReturn($disk);
+
+        $response = $this->get("/api/public/image-proxy/{$slug}/menus/sample.jpg")
+            ->assertStatus(200);
+
+        $this->assertSame('fake-image', $response->getContent());
+        $this->assertSame('image/jpeg', $response->headers->get('Content-Type'));
     }
 
     public function test_restaurant_card_not_found(): void
