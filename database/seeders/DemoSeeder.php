@@ -11,6 +11,8 @@ use App\Models\LocationType;
 use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use App\Models\MenuType;
+use App\Models\MenuTypePublicOrder;
 use App\Models\Preparation;
 use App\Models\User;
 use App\Services\ImageService;
@@ -191,10 +193,17 @@ class DemoSeeder extends Seeder
     ];
 
     private const MENU_TYPE_MAP = [
-        'hors_doeuvres' => 'entrée',
-        'plats' => 'plat',
-        'fromage' => 'dessert',
-        'desserts' => 'dessert',
+        'hors_doeuvres' => 'Entrées',
+        'plats' => 'Plats',
+        'fromage' => 'Accompagnements',
+        'desserts' => 'Desserts',
+    ];
+
+    private const MENU_TYPE_POSITIONS = [
+        'Entrées' => 0,
+        'Plats' => 1,
+        'Desserts' => 2,
+        'Accompagnements' => 3,
     ];
 
     private const PREPARATION_COMPONENTS = [
@@ -1820,6 +1829,30 @@ class DemoSeeder extends Seeder
         return $result;
     }
 
+    private function resolveMenuType(Company $company, string $name): MenuType
+    {
+        $menuType = MenuType::firstOrCreate(
+            [
+                'company_id' => $company->id,
+                'name' => $name,
+            ]
+        );
+
+        $position = self::MENU_TYPE_POSITIONS[$name] ?? null;
+
+        if ($position === null) {
+            $position = MenuTypePublicOrder::where('company_id', $company->id)->max('position');
+            $position = is_numeric($position) ? ((int) $position) + 1 : 0;
+        }
+
+        $menuType->publicOrder()->updateOrCreate(
+            ['company_id' => $company->id],
+            ['position' => $position]
+        );
+
+        return $menuType;
+    }
+
     /**
      * @param  array<string, MenuCategory>  $menuCategories
      * @param  array<string, Ingredient>  $ingredients
@@ -1839,11 +1872,19 @@ class DemoSeeder extends Seeder
         array $preparations,
         Location $defaultLocation
     ): void {
+        $menuTypeCounters = [];
+
         foreach ($dataset as $section => $entries) {
             $menuCategory = $menuCategories[$section] ?? null;
-            $menuType = self::MENU_TYPE_MAP[$section] ?? 'plat';
+            $menuTypeName = self::MENU_TYPE_MAP[$section] ?? 'Plats';
+            $menuType = $this->resolveMenuType($company, $menuTypeName);
+            $menuTypeId = $menuType->id;
+            $menuTypeCounters[$menuTypeId] = $menuTypeCounters[$menuTypeId] ?? 0;
 
             foreach ($entries as $entry) {
+                $priority = $menuTypeCounters[$menuTypeId];
+                $menuTypeCounters[$menuTypeId]++;
+
                 $menu = Menu::updateOrCreate(
                     [
                         'company_id' => $company->id,
@@ -1852,7 +1893,8 @@ class DemoSeeder extends Seeder
                     [
                         'description' => null,
                         'is_a_la_carte' => true,
-                        'type' => $menuType,
+                        'menu_type_id' => $menuTypeId,
+                        'public_priority' => $priority,
                         'price' => $entry['price'],
                     ]
                 );

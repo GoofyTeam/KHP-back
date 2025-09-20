@@ -35,7 +35,12 @@ class MenuController extends Controller
                 'max:255',
                 Rule::unique('menus')->where(fn ($q) => $q->where('company_id', $user->company_id)),
             ],
-            'type' => ['required', 'string', 'max:255'],
+            'menu_type_id' => [
+                'required',
+                'integer',
+                Rule::exists('menu_types', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'priority' => ['sometimes', 'integer', 'min:0'],
             'service_type' => ['required', 'string', Rule::in(MenuServiceType::values())],
             'is_returnable' => ['required', 'boolean'],
             'price' => ['required', 'numeric', 'min:0'],
@@ -91,7 +96,8 @@ class MenuController extends Controller
             'description' => $validated['description'] ?? null,
             'is_a_la_carte' => $validated['is_a_la_carte'] ?? false,
             'image_url' => $imagePath,
-            'type' => $validated['type'],
+            'menu_type_id' => $validated['menu_type_id'],
+            'public_priority' => $validated['priority'] ?? 0,
             'service_type' => $validated['service_type'],
             'is_returnable' => $validated['is_returnable'],
             'price' => $validated['price'],
@@ -122,7 +128,7 @@ class MenuController extends Controller
 
         return response()->json([
             'message' => 'Menu created',
-            'menu' => $menu->load('items.entity', 'categories'),
+            'menu' => $menu->load('items.entity', 'categories', 'menuType'),
         ], 201);
     }
 
@@ -145,7 +151,12 @@ class MenuController extends Controller
                 'max:255',
                 Rule::unique('menus')->where(fn ($q) => $q->where('company_id', $user->company_id))->ignore($menu->id),
             ],
-            'type' => ['sometimes', 'string', 'max:255'],
+            'menu_type_id' => [
+                'sometimes',
+                'integer',
+                Rule::exists('menu_types', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'priority' => ['sometimes', 'integer', 'min:0'],
             'service_type' => ['sometimes', 'string', Rule::in(MenuServiceType::values())],
             'is_returnable' => ['sometimes', 'boolean'],
             'price' => ['sometimes', 'numeric', 'min:0'],
@@ -181,6 +192,18 @@ class MenuController extends Controller
 
         $this->ensureUniqueItems($validated['items']);
 
+        $willBePublic = array_key_exists('is_a_la_carte', $validated)
+            ? (bool) $validated['is_a_la_carte']
+            : $menu->is_a_la_carte;
+
+        $menuTypeId = $validated['menu_type_id'] ?? $menu->menu_type_id;
+
+        if ($willBePublic && ! $menuTypeId) {
+            throw ValidationException::withMessages([
+                'menu_type_id' => ['Le type de menu est requis pour les menus publics.'],
+            ]);
+        }
+
         if ($request->hasFile('image') && $request->filled('image_url')) {
             throw ValidationException::withMessages([
                 'image' => 'Ne fournissez pas "image" et "image_url" en même temps.',
@@ -203,8 +226,11 @@ class MenuController extends Controller
         if (array_key_exists('is_a_la_carte', $validated)) {
             $menu->is_a_la_carte = $validated['is_a_la_carte'];
         }
-        if (array_key_exists('type', $validated)) {
-            $menu->type = $validated['type'];
+        if (array_key_exists('menu_type_id', $validated)) {
+            $menu->menu_type_id = $validated['menu_type_id'];
+        }
+        if (array_key_exists('priority', $validated)) {
+            $menu->public_priority = $validated['priority'];
         }
         if (array_key_exists('service_type', $validated)) {
             $menu->service_type = $validated['service_type'];
@@ -245,7 +271,7 @@ class MenuController extends Controller
 
         return response()->json([
             'message' => 'Menu updated',
-            'menu' => $menu->load('items.entity', 'categories'),
+            'menu' => $menu->load('items.entity', 'categories', 'menuType'),
         ], 200);
     }
 
