@@ -8,12 +8,21 @@ type Menu {
     is_returnable: Boolean!
     available(quantity: Int! = 1): Boolean! @field(resolver: "App\\GraphQL\\Resolvers\\MenuResolver@available")
     type: String!
+    menu_type_id: ID!
+    public_priority: Int!
+    menu_type: MenuType! @belongsTo
     price: Float!
     categories: [MenuCategory!]! @belongsToMany
     allergens: [AllergenEnum!]!
     items: [MenuItem!]! @hasMany
     created_at: DateTime!
     updated_at: DateTime!
+}
+
+type MenuType {
+    id: ID!
+    name: String!
+    public_index: Int!
 }
 
 type MenuItem {
@@ -42,4 +51,5 @@ extend type Query @guard {
         available: Boolean @scope(name: "available")
     ): [Menu!]! @paginate(defaultCount: 10, scopes: ["forCompany"])
     menu(id: ID! @eq): Menu @find(scopes: ["forCompany"])
+    menuTypes: [MenuType!]! @all(scopes: ["forCompany", "ordered"])
 }

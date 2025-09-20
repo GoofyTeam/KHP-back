@@ -23,18 +23,23 @@ class Menu extends Model
         'description',
         'image_url',
         'is_a_la_carte',
+        'menu_type_id',
         'service_type',
         'is_returnable',
-        'type',
+        'public_priority',
         'price',
     ];
 
     protected $casts = [
         'is_a_la_carte' => 'boolean',
+        'menu_type_id' => 'integer',
         'service_type' => MenuServiceType::class,
         'is_returnable' => 'boolean',
         'price' => 'float',
+        'public_priority' => 'integer',
     ];
+
+    protected $appends = ['type'];
 
     public function company(): BelongsTo
     {
@@ -49,6 +54,11 @@ class Menu extends Model
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(MenuCategory::class, 'menu_category_menu');
+    }
+
+    public function menuType(): BelongsTo
+    {
+        return $this->belongsTo(MenuType::class);
     }
 
     public function getAllergensAttribute(): array
@@ -112,7 +122,39 @@ class Menu extends Model
 
         $types = is_array($types) ? $types : [$types];
 
-        return $query->whereIn('type', $types);
+        $ids = [];
+        $names = [];
+
+        foreach ($types as $type) {
+            if (is_numeric($type)) {
+                $ids[] = (int) $type;
+            } else {
+                $names[] = $type;
+            }
+        }
+
+        return $query->whereHas('menuType', function ($q) use ($ids, $names) {
+            $q->where(function ($inner) use ($ids, $names) {
+                if (! empty($names)) {
+                    $inner->whereIn('name', $names);
+                }
+
+                if (! empty($ids)) {
+                    if (! empty($names)) {
+                        $inner->orWhereIn('id', $ids);
+                    } else {
+                        $inner->whereIn('id', $ids);
+                    }
+                }
+            });
+        });
+    }
+
+    public function getTypeAttribute(): ?string
+    {
+        $menuType = $this->getRelationValue('menuType');
+
+        return $menuType?->name;
     }
 
     public function scopeServiceType($query, $serviceTypes)
