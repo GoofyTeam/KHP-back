@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\MenuTypePublicOrder;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class MenuCardMenuResource extends JsonResource
@@ -19,6 +20,10 @@ class MenuCardMenuResource extends JsonResource
 
         $imageUrl = null;
         $imagePath = $this->resource->image_url;
+        $menuType = $this->resource->menuType;
+        $publicOrder = $menuType?->publicOrder;
+
+        $publicOrder = $publicOrder instanceof MenuTypePublicOrder ? $publicOrder : null;
 
         if (is_string($imagePath) && filter_var($imagePath, FILTER_VALIDATE_URL)) {
             $imageUrl = $imagePath;
@@ -41,7 +46,7 @@ class MenuCardMenuResource extends JsonResource
             'name' => $this->resource->name,
             'description' => $this->resource->description,
             'type' => $this->resource->type,
-            'type_index' => $this->resource->menuType?->publicOrder?->position ?? 0,
+            'type_index' => $publicOrder ? $publicOrder->position : 0,
             'menu_type_id' => $this->resource->menu_type_id,
             'priority' => (int) ($this->resource->public_priority ?? 0),
             'price' => $this->resource->price,

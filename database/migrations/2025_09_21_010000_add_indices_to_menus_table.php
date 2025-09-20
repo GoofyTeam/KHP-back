@@ -1,23 +1,17 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('menus', function (Blueprint $table) {
-            $table->unsignedInteger('type_index')->default(0)->after('type');
-            $table->unsignedInteger('menu_index')->default(0)->after('type_index');
-        });
+        // Cette migration est désormais gérée par la refonte des types de menus
+        // (2025_09_20_171040_refactor_menu_types_for_public_menu_card).
     }
 
     public function down(): void
     {
-        Schema::table('menus', function (Blueprint $table) {
-            $table->dropColumn(['type_index', 'menu_index']);
-        });
+        // Aucune action nécessaire lors du rollback.
     }
 };

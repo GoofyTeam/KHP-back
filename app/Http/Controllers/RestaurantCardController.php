@@ -6,6 +6,8 @@ use App\Http\Requests\ShowRestaurantCardRequest;
 use App\Http\Resources\MenuCardMenuResource;
 use App\Models\Company;
 use App\Models\Menu;
+use App\Models\MenuType;
+use App\Models\MenuTypePublicOrder;
 use Illuminate\Http\JsonResponse;
 
 class RestaurantCardController extends Controller
@@ -48,8 +50,21 @@ class RestaurantCardController extends Controller
 
         $menus = $menus
             ->sort(function (Menu $first, Menu $second) {
-                $firstTypeIndex = $first->menuType?->publicOrder?->position ?? PHP_INT_MAX;
-                $secondTypeIndex = $second->menuType?->publicOrder?->position ?? PHP_INT_MAX;
+                /** @var MenuType|null $firstMenuType */
+                $firstMenuType = $first->menuType;
+                /** @var MenuType|null $secondMenuType */
+                $secondMenuType = $second->menuType;
+
+                $firstPublicOrder = $firstMenuType?->publicOrder;
+                $secondPublicOrder = $secondMenuType?->publicOrder;
+
+                $firstTypeIndex = $firstPublicOrder instanceof MenuTypePublicOrder
+                    ? $firstPublicOrder->position
+                    : PHP_INT_MAX;
+
+                $secondTypeIndex = $secondPublicOrder instanceof MenuTypePublicOrder
+                    ? $secondPublicOrder->position
+                    : PHP_INT_MAX;
 
                 $firstKey = [
                     $firstTypeIndex,

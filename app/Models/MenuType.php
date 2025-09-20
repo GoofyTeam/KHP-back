@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property-read MenuTypePublicOrder|null $publicOrder
+ */
 class MenuType extends Model
 {
     use HasFactory;
@@ -39,7 +42,10 @@ class MenuType extends Model
 
     public function getPublicIndexAttribute(): int
     {
-        return $this->publicOrder?->position ?? 0;
+        /** @var MenuTypePublicOrder|null $publicOrder */
+        $publicOrder = $this->publicOrder;
+
+        return $publicOrder ? $publicOrder->position : 0;
     }
 
     public function scopeForCompany(Builder $query): Builder
