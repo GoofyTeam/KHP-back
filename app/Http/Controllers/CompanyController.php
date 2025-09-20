@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateCompanyOptionsRequest;
 use App\Models\Company;
 use Illuminate\Http\JsonResponse;
-use App\Http\Requests\UpdateCompanyOptionsRequest;
 
 class CompanyController extends Controller
 {

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Support\Str;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * @property string $open_food_facts_language
@@ -124,7 +124,7 @@ class Company extends Model
     {
         static::creating(function ($company) {
             if (! $company->public_menu_card_url) {
-                $company->public_menu_card_url = 'temp-' . Str::uuid();
+                $company->public_menu_card_url = 'temp-'.Str::uuid();
             }
         });
 
@@ -155,7 +155,7 @@ class Company extends Model
             ]);
 
             // Créer les raisons de perte par défaut
-            $company->lossReasons()->createMany(array_map(fn($name) => ['name' => $name], [
+            $company->lossReasons()->createMany(array_map(fn ($name) => ['name' => $name], [
                 'Expired',
                 'Broken',
                 'Spilled',
