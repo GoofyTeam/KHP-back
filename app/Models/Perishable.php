@@ -19,6 +19,11 @@ class Perishable extends Model
         'location_id',
         'company_id',
         'quantity',
+        'is_read',
+    ];
+
+    protected $casts = [
+        'is_read' => 'bool',
     ];
 
     public function ingredient(): BelongsTo

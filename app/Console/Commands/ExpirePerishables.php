@@ -28,6 +28,10 @@ class ExpirePerishables extends Command
                 $ingredient->recordLoss($location, $perishable->quantity, 'expired');
             }
 
+            if ($perishable->is_read) {
+                $perishable->forceFill(['is_read' => false])->save();
+            }
+
             $perishable->delete();
         }
 

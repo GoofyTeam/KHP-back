@@ -15,14 +15,27 @@ class PerishableQuery
     public function resolve(mixed $_, array $args, GraphQLContext $context, ResolveInfo $info)
     {
         $filter = $args['filter'] ?? 'FRESH';
+        $hasIsReadFilter = array_key_exists('is_read', $args);
+        $isRead = $hasIsReadFilter ? (bool) $args['is_read'] : null;
 
         if ($filter === 'EXPIRED') {
-            return Perishable::onlyTrashed()->forCompany()->get();
+            $query = Perishable::onlyTrashed()->forCompany();
+
+            if ($hasIsReadFilter) {
+                $query->where('is_read', $isRead);
+            }
+
+            return $query->get();
         }
 
-        $perishables = Perishable::with(['ingredient.category.locationTypes', 'location'])
-            ->forCompany()
-            ->get();
+        $query = Perishable::with(['ingredient.category.locationTypes', 'location'])
+            ->forCompany();
+
+        if ($hasIsReadFilter) {
+            $query->where('is_read', $isRead);
+        }
+
+        $perishables = $query->get();
 
         $threshold = Carbon::now()->addHours(48);
 
