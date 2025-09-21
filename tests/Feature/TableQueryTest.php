@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
 use App\Models\Room;
 use App\Models\Table;
 use App\Models\User;
@@ -96,5 +97,78 @@ class TableQueryTest extends TestCase
         $response = $this->actingAs($user)->graphQL($query, ['id' => $table->id]);
 
         $response->assertJsonFragment(['id' => (string) $table->id]);
+    }
+
+    public function test_orders_field_returns_null_when_table_has_no_orders(): void
+    {
+        $user = User::factory()->create();
+        $room = Room::factory()->for($user->company)->create();
+        $table = Table::factory()->for($room)->for($user->company)->create();
+
+        $query = /** @lang GraphQL */ 'query ($id: ID!) {
+            table(id: $id) {
+                orders { id }
+            }
+        }';
+
+        $response = $this->actingAs($user)->graphQL($query, ['id' => $table->id]);
+
+        $response->assertJsonPath('data.table.orders', null);
+    }
+
+    public function test_orders_field_returns_pending_orders_for_table(): void
+    {
+        $user = User::factory()->create();
+        $room = Room::factory()->for($user->company)->create();
+        $table = Table::factory()->for($room)->for($user->company)->create();
+
+        $pendingOrder = Order::factory()
+            ->for($table, 'table')
+            ->for($user->company, 'company')
+            ->for($user, 'user')
+            ->create();
+
+        Order::factory()
+            ->for($table, 'table')
+            ->for($user->company, 'company')
+            ->for($user, 'user')
+            ->served()
+            ->create();
+
+        $query = /** @lang GraphQL */ 'query ($id: ID!) {
+            table(id: $id) {
+                orders { id status }
+            }
+        }';
+
+        $response = $this->actingAs($user)->graphQL($query, ['id' => $table->id]);
+
+        $response->assertJsonCount(1, 'data.table.orders');
+        $response->assertJsonPath('data.table.orders.0.id', (string) $pendingOrder->id);
+        $response->assertJsonPath('data.table.orders.0.status', $pendingOrder->status->value);
+    }
+
+    public function test_orders_field_returns_null_when_no_pending_order(): void
+    {
+        $user = User::factory()->create();
+        $room = Room::factory()->for($user->company)->create();
+        $table = Table::factory()->for($room)->for($user->company)->create();
+
+        Order::factory()
+            ->for($table, 'table')
+            ->for($user->company, 'company')
+            ->for($user, 'user')
+            ->served()
+            ->create();
+
+        $query = /** @lang GraphQL */ 'query ($id: ID!) {
+            table(id: $id) {
+                orders { id }
+            }
+        }';
+
+        $response = $this->actingAs($user)->graphQL($query, ['id' => $table->id]);
+
+        $response->assertJsonPath('data.table.orders', null);
     }
 }
