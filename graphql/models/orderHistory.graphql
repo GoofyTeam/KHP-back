@@ -1,0 +1,47 @@
+"Historique des actions effectuées sur une commande."
+type OrderHistory {
+    "Identifiant unique de l'entrée."
+    id: ID!
+
+    "Commande associée à l'entrée."
+    order: Order! @belongsTo
+
+    "Étape concernée, le cas échéant."
+    order_step: OrderStep @belongsTo
+
+    "Menu d'étape concerné, le cas échéant."
+    step_menu: StepMenu @belongsTo
+
+    "Entreprise liée à l'entrée."
+    company: Company! @belongsTo
+
+    "Utilisateur ayant réalisé l'action."
+    user: User @belongsTo
+
+    "Type d'action enregistrée."
+    action: OrderHistoryActionEnum!
+
+    "Informations métier associées à l'action."
+    payload: JSON
+
+    "Raison associée à l'action (si applicable)."
+    reason: String
+
+    "Date de création de l'entrée."
+    created_at: DateTime!
+
+    "Date de dernière mise à jour."
+    updated_at: DateTime!
+}
+
+"Liste des actions possibles sur l'historique des commandes."
+enum OrderHistoryActionEnum {
+    ORDER_CREATED @enum(value: "order.created")
+    ORDER_STATUS_UPDATED @enum(value: "order.status_updated")
+    ORDER_STEP_CREATED @enum(value: "order_step.created")
+    ORDER_STEP_STATUS_UPDATED @enum(value: "order_step.status_updated")
+    STEP_MENU_ADDED @enum(value: "step_menu.added")
+    STEP_MENU_UPDATED @enum(value: "step_menu.updated")
+    STEP_MENU_REMOVED @enum(value: "step_menu.removed")
+    STEP_MENU_STATUS_UPDATED @enum(value: "step_menu.status_updated")
+}
