@@ -32,6 +32,37 @@ class OrderController extends Controller
     public function __construct(private UnitConversionService $unitConversionService) {}
 
     /**
+     * Create a new order for the authenticated user's company.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'table_id' => [
+                'required',
+                'integer',
+                Rule::exists('tables', 'id')->where(fn ($query) => $query->where('company_id', $user->company_id)),
+            ],
+        ]);
+
+        $order = Order::query()->create([
+            'table_id' => (int) $validated['table_id'],
+            'company_id' => $user->company_id,
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'pending_at' => now(),
+        ]);
+
+        $order->load(['table', 'steps.stepMenus.menu']);
+
+        return response()->json([
+            'message' => 'Order created successfully.',
+            'order' => $order,
+        ], 201);
+    }
+
+    /**
      * Create a new step on the order with the provided menus.
      */
     public function storeStep(Request $request, Order $order): JsonResponse

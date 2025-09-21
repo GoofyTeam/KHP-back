@@ -154,6 +154,7 @@ Route::prefix('rooms')->name('rooms.')->group(function () {
 
 // Groupe de routes pour les commandes
 Route::prefix('orders')->name('orders.')->group(function () {
+    Route::post('/', [OrderController::class, 'store'])->name('store');
     Route::post('/{order}/pay', [OrderController::class, 'markPayed'])->name('pay');
     Route::post('/{order}/steps', [OrderController::class, 'storeStep'])->name('steps.store');
     Route::post('/{order}/steps/{step}/menus', [OrderController::class, 'storeStepMenu'])->name('steps.menus.store');

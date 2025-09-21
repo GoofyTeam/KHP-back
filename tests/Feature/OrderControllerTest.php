@@ -16,6 +16,7 @@ use App\Models\Room;
 use App\Models\StepMenu;
 use App\Models\Table;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,6 +44,56 @@ class OrderControllerTest extends TestCase
         ], $attributes);
 
         return Order::create($attributes);
+    }
+
+    public function test_it_creates_simple_order(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2024-01-01 12:34:56'));
+
+        $user = User::factory()->create();
+        $table = $this->createTableForUser($user);
+
+        try {
+            $response = $this->actingAs($user)->postJson('/api/orders', [
+                'table_id' => $table->id,
+            ]);
+
+            $response->assertCreated()
+                ->assertJsonPath('message', 'Order created successfully.')
+                ->assertJsonPath('order.table_id', $table->id)
+                ->assertJsonPath('order.company_id', $user->company_id)
+                ->assertJsonPath('order.user_id', $user->id)
+                ->assertJsonPath('order.status', OrderStatus::PENDING->value)
+                ->assertJsonPath('order.steps', []);
+
+            $this->assertDatabaseHas('orders', [
+                'table_id' => $table->id,
+                'company_id' => $user->company_id,
+                'user_id' => $user->id,
+                'status' => OrderStatus::PENDING->value,
+            ]);
+
+            self::assertSame(
+                Carbon::now()->toISOString(),
+                Carbon::parse($response->json('order.pending_at'))->toISOString(),
+            );
+
+            self::assertSame(0.0, (float) $response->json('order.price'));
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_it_validates_table_belongs_to_company(): void
+    {
+        $user = User::factory()->create();
+        $foreignTable = Table::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/orders', [
+            'table_id' => $foreignTable->id,
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['table_id']);
     }
 
     public function test_it_creates_order_step_from_menus(): void
