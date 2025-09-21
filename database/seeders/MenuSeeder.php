@@ -2,20 +2,21 @@
 
 namespace Database\Seeders;
 
-use App\Enums\MeasurementUnit;
-use App\Enums\MenuServiceType;
-use App\Models\Company;
-use App\Models\Ingredient;
-use App\Models\Location;
 use App\Models\Menu;
-use App\Models\MenuCategory;
+use App\Models\Company;
+use App\Models\Location;
 use App\Models\MenuItem;
 use App\Models\MenuType;
+use App\Models\Ingredient;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use App\Models\MenuCategory;
+use App\Enums\MeasurementUnit;
+use App\Enums\MenuServiceType;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class MenuSeeder extends Seeder
 {
