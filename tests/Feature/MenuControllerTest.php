@@ -8,6 +8,7 @@ use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Menu;
 use App\Models\MenuCategory;
+use App\Models\MenuType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -34,10 +35,13 @@ class MenuControllerTest extends TestCase
         $location = Location::factory()->create(['company_id' => $company->id]);
 
         // Création initiale avec un seul ingrédient
+        $menuType = MenuType::factory()->create(['company_id' => $company->id, 'name' => 'Plat']);
+
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Incremental Menu',
-                'type' => 'plat',
+                'menu_type_id' => $menuType->id,
+                'is_a_la_carte' => true,
                 'service_type' => MenuServiceType::DIRECT->value,
                 'is_returnable' => false,
                 'price' => 9.0,
@@ -107,10 +111,13 @@ class MenuControllerTest extends TestCase
 
         $location = Location::factory()->create(['company_id' => $company->id]);
 
+        $menuType = MenuType::factory()->create(['company_id' => $company->id, 'name' => 'Plat']);
+
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Quantity Menu',
-                'type' => 'plat',
+                'menu_type_id' => $menuType->id,
+                'is_a_la_carte' => true,
                 'service_type' => MenuServiceType::PREP->value,
                 'is_returnable' => true,
                 'price' => 9.0,
@@ -158,10 +165,13 @@ class MenuControllerTest extends TestCase
         $categoryA = MenuCategory::factory()->create(['company_id' => $company->id]);
         $categoryB = MenuCategory::factory()->create(['company_id' => $company->id]);
 
+        $menuType = MenuType::factory()->create(['company_id' => $company->id, 'name' => 'Plat']);
+
         $this->actingAs($user)
             ->postJson('/api/menus', [
                 'name' => 'Cat Menu',
-                'type' => 'plat',
+                'menu_type_id' => $menuType->id,
+                'is_a_la_carte' => true,
                 'service_type' => MenuServiceType::DIRECT->value,
                 'is_returnable' => false,
                 'price' => 9.0,
@@ -207,9 +217,12 @@ class MenuControllerTest extends TestCase
 
         $location = Location::factory()->create(['company_id' => $company->id]);
 
+        $menuType = MenuType::factory()->create(['company_id' => $company->id, 'name' => 'Plat']);
+
         $payload = [
             'name' => 'Dup Menu',
-            'type' => 'plat',
+            'menu_type_id' => $menuType->id,
+            'is_a_la_carte' => true,
             'service_type' => MenuServiceType::DIRECT->value,
             'is_returnable' => false,
             'price' => 9.0,
@@ -235,5 +248,36 @@ class MenuControllerTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/menus', $payload)
             ->assertStatus(422);
+    }
+
+    public function test_menu_requires_menu_type(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id]);
+        $location = Location::factory()->create(['company_id' => $company->id]);
+
+        $payload = [
+            'name' => 'Public Menu',
+            'is_a_la_carte' => false,
+            'service_type' => MenuServiceType::DIRECT->value,
+            'is_returnable' => false,
+            'price' => 9.0,
+            'category_ids' => [],
+            'items' => [
+                [
+                    'entity_id' => $ingredient->id,
+                    'entity_type' => 'ingredient',
+                    'quantity' => 1,
+                    'unit' => 'unit',
+                    'location_id' => $location->id,
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/menus', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['menu_type_id']);
     }
 }

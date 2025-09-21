@@ -6,6 +6,8 @@ use App\Http\Requests\ShowRestaurantCardRequest;
 use App\Http\Resources\MenuCardMenuResource;
 use App\Models\Company;
 use App\Models\Menu;
+use App\Models\MenuType;
+use App\Models\MenuTypePublicOrder;
 use Illuminate\Http\JsonResponse;
 
 class RestaurantCardController extends Controller
@@ -18,9 +20,18 @@ class RestaurantCardController extends Controller
         $company = Company::where('public_menu_card_url', $slug)->firstOrFail();
 
         $menus = Menu::query()
-            ->where('company_id', $company->id)
-            ->where('is_a_la_carte', true)
-            ->with(['categories:id,name'])
+            ->select('menus.*')
+            ->where('menus.company_id', $company->id)
+            ->where('menus.is_a_la_carte', true)
+            ->leftJoin('menu_type_public_orders as mtpo', function ($join) use ($company) {
+                $join->on('mtpo.menu_type_id', '=', 'menus.menu_type_id')
+                    ->where('mtpo.company_id', '=', $company->id);
+            })
+            ->with(['categories:id,name', 'menuType.publicOrder'])
+            ->orderByRaw('COALESCE(mtpo.position, 2147483647)')
+            ->orderBy('menus.public_priority')
+            ->orderBy('menus.name')
+            ->orderBy('menus.id')
             ->get()
             ->map(function (Menu $menu) use ($company) {
                 $menu->setAttribute('has_sufficient_stock', $menu->hasSufficientStock());
@@ -38,7 +49,41 @@ class RestaurantCardController extends Controller
         }
 
         $menus = $menus
-            ->sortByDesc(fn (Menu $menu) => (int) $menu->getAttribute('has_sufficient_stock'))
+            ->sort(function (Menu $first, Menu $second) {
+                /** @var MenuType|null $firstMenuType */
+                $firstMenuType = $first->menuType;
+                /** @var MenuType|null $secondMenuType */
+                $secondMenuType = $second->menuType;
+
+                $firstPublicOrder = $firstMenuType?->publicOrder;
+                $secondPublicOrder = $secondMenuType?->publicOrder;
+
+                $firstTypeIndex = $firstPublicOrder instanceof MenuTypePublicOrder
+                    ? $firstPublicOrder->position
+                    : PHP_INT_MAX;
+
+                $secondTypeIndex = $secondPublicOrder instanceof MenuTypePublicOrder
+                    ? $secondPublicOrder->position
+                    : PHP_INT_MAX;
+
+                $firstKey = [
+                    $firstTypeIndex,
+                    $first->getAttribute('has_sufficient_stock') ? 0 : 1,
+                    (int) ($first->public_priority ?? 0),
+                    mb_strtolower($first->name ?? ''),
+                    (int) $first->id,
+                ];
+
+                $secondKey = [
+                    $secondTypeIndex,
+                    $second->getAttribute('has_sufficient_stock') ? 0 : 1,
+                    (int) ($second->public_priority ?? 0),
+                    mb_strtolower($second->name ?? ''),
+                    (int) $second->id,
+                ];
+
+                return $firstKey <=> $secondKey;
+            })
             ->values();
 
         return response()->json([

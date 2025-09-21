@@ -9,6 +9,7 @@ use App\Http\Controllers\LossController;
 use App\Http\Controllers\LossReasonController;
 use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\MenuTypeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PerishableController;
 use App\Http\Controllers\PreparationController;
@@ -67,7 +68,7 @@ Route::prefix('ingredients')->name('ingredients.')->group(function () {
 });
 
 Route::prefix('perishables')->name('perishables.')->group(function () {
-    Route::patch('/{perishable}/read', [PerishableController::class, 'markAsRead'])->name('mark-as-read');
+    Route::patch('/{perishableId}/read', [PerishableController::class, 'markAsRead'])->name('mark-as-read');
 });
 
 // Groupe de routes pour les types de localisation
@@ -132,6 +133,12 @@ Route::prefix('menu-categories')->name('menu-categories.')->group(function () {
     Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
     Route::put('/{id}', [MenuCategoryController::class, 'update'])->name('update');
     Route::delete('/{id}', [MenuCategoryController::class, 'destroy'])->name('destroy');
+});
+
+Route::prefix('menu-types')->name('menu-types.')->group(function () {
+    Route::post('/', [MenuTypeController::class, 'store'])->name('store');
+    Route::put('/{id}', [MenuTypeController::class, 'update'])->name('update');
+    Route::delete('/{id}', [MenuTypeController::class, 'destroy'])->name('destroy');
 });
 
 // Groupe de routes pour les salles et tables

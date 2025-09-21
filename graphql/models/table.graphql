@@ -5,6 +5,8 @@ type Table {
     label: String!
     seats: Int!
     room: Room! @belongsTo
+    orders: [Order!]
+        @field(resolver: "App\\GraphQL\\Resolvers\\TableResolver@orders")
     created_at: DateTime!
     updated_at: DateTime!
 }

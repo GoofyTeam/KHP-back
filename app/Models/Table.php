@@ -6,6 +6,7 @@ use App\Traits\HasSearchScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Table extends Model
 {
@@ -29,6 +30,17 @@ class Table extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * @phpstan-return HasMany<Order, Table>
+     */
+    public function orders(): HasMany
+    {
+        /** @var HasMany<Order, Table> $relation */
+        $relation = $this->hasMany(Order::class);
+
+        return $relation;
     }
 
     public function scopeForCompany($query)
