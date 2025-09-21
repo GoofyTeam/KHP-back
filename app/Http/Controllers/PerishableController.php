@@ -7,9 +7,13 @@ use Illuminate\Http\JsonResponse;
 
 class PerishableController extends Controller
 {
-    public function markAsRead(Perishable $perishable): JsonResponse
+    public function markAsRead(int $perishableId): JsonResponse
     {
         $user = auth()->user();
+
+        $perishable = Perishable::withTrashed()
+            ->whereKey($perishableId)
+            ->firstOrFail();
 
         if ($perishable->company_id !== $user->company_id) {
             abort(403);
@@ -20,7 +24,7 @@ class PerishableController extends Controller
         }
 
         return response()->json([
-            'perishable' => $perishable->fresh(['ingredient.category.locationTypes', 'location']),
+            'perishable' => $perishable->load(['ingredient.category.locationTypes', 'location']),
         ]);
     }
 }
