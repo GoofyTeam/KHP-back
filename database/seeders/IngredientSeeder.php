@@ -27,6 +27,11 @@ class IngredientSeeder extends Seeder
         // Seed liste spécifique GoofyTeam
         $goofyTeam = Company::where('name', 'GoofyTeam')->firstOrFail();
         $this->seedGoofyTeamIngredients($goofyTeam);
+
+        // Seed spécifique Charlie Kirk
+        if ($charlieKirk = Company::where('name', 'Charlie Kirk')->first()) {
+            $this->seedCharlieKirkIngredients($charlieKirk);
+        }
     }
 
     /**
@@ -34,20 +39,6 @@ class IngredientSeeder extends Seeder
      */
     protected function seedGoofyTeamIngredients(Company $company): void
     {
-        // Map des catégories disponibles pour l'entreprise (nom => id)
-        $categoriesByName = Category::where('company_id', $company->id)
-            ->pluck('id', 'name')
-            ->all();
-        $fallbackCategoryId = $categoriesByName['Ingrédients Divers']
-            ?? (reset($categoriesByName) ?: null);
-
-        // Pré-liste les images locales disponibles pour matcher par nom
-        $localImages = $this->listLocalImageFiles();
-
-        // Récupère les emplacements disponibles pour l'entreprise
-        // afin de pouvoir répartir des quantités initiales de stock
-        $locationIds = $company->locations()->pluck('id')->all();
-
         $items = [
             // Produits carnés & poisson
             ['name' => 'Poitrine de poulet', 'qty' => 10.0, 'unit' => MeasurementUnit::KILOGRAM, 'barcode' => '7290006739353'],
@@ -66,7 +57,7 @@ class IngredientSeeder extends Seeder
             ['name' => 'Poireaux', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM],
             ['name' => 'Tomates fraîches', 'qty' => 10.0, 'unit' => MeasurementUnit::KILOGRAM],
             ['name' => 'Courgettes', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM],
-            ['name' => 'Salades (mélange, batavia, roquette)', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM],
+            ['name' => 'Salades', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM],
             ['name' => 'Citron', 'qty' => 5.0, 'unit' => MeasurementUnit::KILOGRAM],
             ['name' => 'Pommes', 'qty' => 8.0, 'unit' => MeasurementUnit::KILOGRAM],
             ['name' => 'Bananes', 'qty' => 6.0, 'unit' => MeasurementUnit::KILOGRAM],
@@ -116,6 +107,57 @@ class IngredientSeeder extends Seeder
             ['name' => 'Œufs frais', 'qty' => 3.0, 'unit' => MeasurementUnit::UNIT, 'barcode' => '3245412846991', 'allergens' => [Allergen::EGGS->value]],
         ];
 
+        $this->seedIngredientsForCompany($company, $items);
+    }
+
+    /**
+     * Seed la liste d'ingrédients spécifique pour Charlie Kirk
+     */
+    protected function seedCharlieKirkIngredients(Company $company): void
+    {
+        $items = [
+            [
+                'name' => 'Coca Cherry',
+                'qty' => 100.0,
+                'unit' => MeasurementUnit::UNIT,
+                'barcode' => '5449000131805',
+                'category' => 'Sodas',
+            ],
+            [
+                'name' => 'Crousty',
+                'qty' => 100.0,
+                'unit' => MeasurementUnit::UNIT,
+                'barcode' => '3512345678901',
+                'category' => 'Plats Préparés',
+            ],
+        ];
+
+        $this->seedIngredientsForCompany($company, $items);
+    }
+
+    /**
+     * Seed un ensemble d'ingrédients pour une entreprise donnée.
+     */
+    protected function seedIngredientsForCompany(Company $company, array $items): void
+    {
+        if (empty($items)) {
+            return;
+        }
+
+        // Map des catégories disponibles pour l'entreprise (nom => id)
+        $categoriesByName = Category::where('company_id', $company->id)
+            ->pluck('id', 'name')
+            ->all();
+        $fallbackCategoryId = $categoriesByName['Ingrédients Divers']
+            ?? (reset($categoriesByName) ?: null);
+
+        // Pré-liste les images locales disponibles pour matcher par nom
+        $localImages = $this->listLocalImageFiles();
+
+        // Récupère les emplacements disponibles pour l'entreprise
+        // afin de pouvoir répartir des quantités initiales de stock
+        $locationIds = $company->locations()->pluck('id')->all();
+
         $items = array_map(
             fn ($item) => $item + ['allergens' => $item['allergens'] ?? []],
             $items
@@ -123,7 +165,7 @@ class IngredientSeeder extends Seeder
 
         foreach ($items as $item) {
             // Déduire une catégorie à partir du nom
-            $catName = $this->guessCategoryNameForItem($item['name']);
+            $catName = $item['category'] ?? $this->guessCategoryNameForItem($item['name']);
             $categoryId = $categoriesByName[$catName] ?? $fallbackCategoryId;
 
             // Associe une image locale correspondant au nom
@@ -151,7 +193,7 @@ class IngredientSeeder extends Seeder
                 'image_url' => $imageUrl,
                 'barcode' => $item['barcode'] ?? null,
                 'category_id' => $categoryId,
-                'allergens' => $item['allergens'] ?? [],
+                'allergens' => $item['allergens'],
             ]);
 
             // Met à jour une catégorie manquante
@@ -264,7 +306,7 @@ class IngredientSeeder extends Seeder
             ->filter(function (string $path) {
                 $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
-                return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'avif']);
             })
             ->values()
             ->all();
@@ -279,68 +321,24 @@ class IngredientSeeder extends Seeder
             return null;
         }
 
-        $candidates = $this->nameCandidates($name);
+        $target = $this->imageBasename($name);
 
-        $indexed = array_map(function ($rel) {
-            $base = pathinfo($rel, PATHINFO_FILENAME);
-
-            return [
-                'rel' => $rel,
-                'base' => $base,
-                'norm' => $this->normalize($base),
-            ];
-        }, $files);
-
-        // 1) égalité exacte normalisée
-        foreach ($candidates as $cand) {
-            $norm = $this->normalize($cand);
-            foreach ($indexed as $it) {
-                if ($it['norm'] === $norm) {
-                    return $it['rel'];
-                }
+        foreach ($files as $path) {
+            $basename = pathinfo($path, PATHINFO_FILENAME);
+            if ($this->imageBasename($basename) === $target) {
+                return $path;
             }
         }
 
-        // 2) inclusion dans un sens ou l'autre
-        foreach ($candidates as $cand) {
-            $norm = $this->normalize($cand);
-            foreach ($indexed as $it) {
-                if (str_contains($it['norm'], $norm) || str_contains($norm, $it['norm'])) {
-                    return $it['rel'];
-                }
-            }
-        }
-
-        // 3) meilleure correspondance fuzzy
-        $best = null;
-        $bestPct = 0.0;
-        foreach ($candidates as $cand) {
-            $normCand = $this->normalize($cand);
-            foreach ($indexed as $it) {
-                similar_text($normCand, $it['norm'], $pct);
-                if ($pct > $bestPct) {
-                    $bestPct = $pct;
-                    $best = $it['rel'];
-                }
-            }
-        }
-
-        return $bestPct >= 60 ? $best : null;
+        return null;
     }
 
-    protected function nameCandidates(string $name): array
+    protected function imageBasename(string $value): string
     {
-        $cands = [$name];
-        $noParen = trim(preg_replace('/\s*\(.*\)/', '', $name));
-        if ($noParen !== '' && $noParen !== $name) {
-            $cands[] = $noParen;
-        }
-        $first = strtok($noParen ?: $name, ' ');
-        if ($first && $first !== $name) {
-            $cands[] = $first;
-        }
+        $lower = mb_strtolower($value, 'UTF-8');
+        $formatted = preg_replace('/\s+/', '-', $lower);
 
-        return array_values(array_unique($cands));
+        return is_string($formatted) ? $formatted : $lower;
     }
 
     protected function normalize(string $value): string
