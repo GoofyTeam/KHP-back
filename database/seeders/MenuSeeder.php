@@ -120,7 +120,7 @@ class MenuSeeder extends Seeder
 
         $menu->description = 'Également connu sous le surnom « Chinois marrant »';
         $menu->is_a_la_carte = true;
-        $menu->type = 'plat';
+        $menu->menu_type_id = $this->resolveMenuTypeId($company, 'Plats');
         $menu->price = 13.9;
 
         if ($image = $this->resolveMenuImageFromSlug('bobun-hay-mean')) {
@@ -222,7 +222,7 @@ class MenuSeeder extends Seeder
 
             $menu->description = $data['description'];
             $menu->is_a_la_carte = true;
-            $menu->type = 'plat';
+            $menu->menu_type_id = $this->resolveMenuTypeId($company, 'Plats');
             $menu->price = 12.0;
 
             if ($image = $this->resolveMenuImageFromSlug(Str::slug($data['name']))) {
@@ -305,5 +305,17 @@ class MenuSeeder extends Seeder
         }
 
         return null;
+    }
+
+    private function resolveMenuTypeId(Company $company, string $typeName): ?int
+    {
+        $menuType = MenuType::firstOrCreate(
+            [
+                'company_id' => $company->id,
+                'name' => $typeName,
+            ]
+        );
+
+        return $menuType->id;
     }
 }
