@@ -68,7 +68,7 @@ Route::prefix('ingredients')->name('ingredients.')->group(function () {
 });
 
 Route::prefix('perishables')->name('perishables.')->group(function () {
-    Route::patch('/{perishable}/read', [PerishableController::class, 'markAsRead'])->name('mark-as-read');
+    Route::patch('/{perishableId}/read', [PerishableController::class, 'markAsRead'])->name('mark-as-read');
 });
 
 // Groupe de routes pour les types de localisation
