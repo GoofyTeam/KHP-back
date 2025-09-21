@@ -67,6 +67,11 @@ class Order extends Model
         return $this->hasMany(OrderStep::class);
     }
 
+    public function histories(): HasMany
+    {
+        return $this->hasMany(OrderHistory::class)->orderBy('created_at');
+    }
+
     public function menus(): HasManyThrough
     {
         return $this->hasManyThrough(

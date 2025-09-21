@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MenuServiceType;
+use App\Enums\OrderHistoryAction;
 use App\Enums\OrderStatus;
 use App\Enums\OrderStepStatus;
 use App\Enums\StepMenuStatus;
@@ -13,6 +14,7 @@ use App\Models\Order;
 use App\Models\OrderStep;
 use App\Models\Preparation;
 use App\Models\StepMenu;
+use App\Services\OrderHistoryService;
 use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +31,10 @@ class OrderController extends Controller
 
     private const LOSS_REASON_SERVICE = 'SERVICE_LOSS';
 
-    public function __construct(private UnitConversionService $unitConversionService) {}
+    public function __construct(
+        private UnitConversionService $unitConversionService,
+        private OrderHistoryService $orderHistoryService,
+    ) {}
 
     /**
      * Create a new order for the authenticated user's company.
@@ -54,6 +59,16 @@ class OrderController extends Controller
             'pending_at' => now(),
         ]);
 
+        $this->orderHistoryService->record(
+            order: $order,
+            action: OrderHistoryAction::ORDER_CREATED,
+            user: $user,
+            payload: [
+                'table_id' => $order->table_id,
+                'status' => $order->status->value,
+            ],
+        );
+
         $order->load(['table', 'steps.stepMenus.menu']);
 
         return response()->json([
@@ -75,7 +90,7 @@ class OrderController extends Controller
 
         [$payload, $menus] = $this->validateMenuPayload($request, (int) $user->company_id);
 
-        $step = DB::transaction(function () use ($order, $payload, $menus) {
+        $step = DB::transaction(function () use ($order, $payload, $menus, $user) {
             $position = ((int) $order->steps()->max('position')) + 1;
 
             /** @var OrderStep $step */
@@ -84,18 +99,43 @@ class OrderController extends Controller
                 'status' => OrderStepStatus::IN_PREP,
             ]);
 
+            $this->orderHistoryService->record(
+                order: $order,
+                action: OrderHistoryAction::ORDER_STEP_CREATED,
+                user: $user,
+                orderStep: $step,
+                payload: [
+                    'position' => $position,
+                ],
+            );
+
             foreach ($payload as $menuData) {
                 $menu = $menus->get($menuData['menu_id']);
                 $status = ($menu && $menu->service_type === MenuServiceType::DIRECT)
                     ? StepMenuStatus::READY
                     : StepMenuStatus::IN_PREP;
 
-                $step->stepMenus()->create([
+                /** @var StepMenu $stepMenu */
+                $stepMenu = $step->stepMenus()->create([
                     'menu_id' => $menuData['menu_id'],
                     'quantity' => $menuData['quantity'],
                     'status' => $status,
                     'note' => $menuData['note'] ?? null,
                 ]);
+
+                $this->orderHistoryService->record(
+                    order: $order,
+                    action: OrderHistoryAction::STEP_MENU_ADDED,
+                    user: $user,
+                    orderStep: $step,
+                    stepMenu: $stepMenu,
+                    payload: [
+                        'menu_id' => $menuData['menu_id'],
+                        'quantity' => $menuData['quantity'],
+                        'status' => $status->value,
+                        'note' => $menuData['note'] ?? null,
+                    ],
+                );
             }
 
             if ($order->pending_at === null) {
@@ -103,9 +143,20 @@ class OrderController extends Controller
                 $order->save();
             }
 
+            $previousStatus = $step->status;
             $step->refreshStatusFromStepMenus();
 
             $step->refresh();
+
+            if ($previousStatus !== $step->status) {
+                $this->orderHistoryService->recordStepStatusChange(
+                    order: $order,
+                    step: $step,
+                    from: $previousStatus,
+                    to: $step->status,
+                    user: $user,
+                );
+            }
 
             if ($step->status !== OrderStepStatus::SERVED && $step->served_at !== null) {
                 $step->served_at = null;
@@ -138,7 +189,7 @@ class OrderController extends Controller
 
         [$payload, $menu] = $this->validateStepMenuStorePayload($request, (int) $user->company_id);
 
-        [$stepMenu, $step] = DB::transaction(function () use ($step, $payload, $menu) {
+        [$stepMenu, $step] = DB::transaction(function () use ($order, $step, $payload, $menu, $user) {
             $status = $menu->service_type === MenuServiceType::DIRECT
                 ? StepMenuStatus::READY
                 : StepMenuStatus::IN_PREP;
@@ -151,6 +202,21 @@ class OrderController extends Controller
                 'note' => $payload['note'] ?? null,
             ]);
 
+            $this->orderHistoryService->record(
+                order: $order,
+                action: OrderHistoryAction::STEP_MENU_ADDED,
+                user: $user,
+                orderStep: $step,
+                stepMenu: $stepMenu,
+                payload: [
+                    'menu_id' => $menu->id,
+                    'quantity' => (int) $payload['quantity'],
+                    'status' => $status->value,
+                    'note' => $payload['note'] ?? null,
+                ],
+            );
+
+            $previousStepStatus = $step->status;
             $step->refreshStatusFromStepMenus();
             $step->refresh();
 
@@ -158,6 +224,16 @@ class OrderController extends Controller
                 $step->served_at = null;
                 $step->save();
                 $step->refresh();
+            }
+
+            if ($previousStepStatus !== $step->status) {
+                $this->orderHistoryService->recordStepStatusChange(
+                    order: $order,
+                    step: $step,
+                    from: $previousStepStatus,
+                    to: $step->status,
+                    user: $user,
+                );
             }
 
             return [
@@ -217,24 +293,84 @@ class OrderController extends Controller
 
         $action = $this->determineCancellationAction($stepMenu, $menu, $unopenedReturn);
 
+        $previousQuantity = $stepMenu->quantity;
+        $previousStepStatus = $step->status;
+
+        $historyReason = null;
+        if ($action['type'] === 'loss') {
+            $historyReason = $action['reason'] ?? null;
+        } elseif ($action['type'] === 'return') {
+            $historyReason = 'RETURN_ACCEPTED';
+        }
+
         try {
-            [$updatedStepMenu, $updatedStep] = DB::transaction(function () use ($stepMenu, $step, $menu, $quantity, $action) {
+            [$updatedStepMenu, $updatedStep] = DB::transaction(function () use ($order, $user, $stepMenu, $step, $menu, $quantity, $action, $previousQuantity, $previousStepStatus, $historyReason) {
                 if ($action['type'] === 'loss') {
                     $this->recordMenuLosses($menu, $quantity, $action['reason']);
                 }
 
                 $remainingQuantity = $stepMenu->quantity - $quantity;
 
+                $historyPayload = [
+                    'menu_id' => $stepMenu->menu_id,
+                    'step_menu_id' => $stepMenu->id,
+                    'quantity_before' => $previousQuantity,
+                    'canceled_quantity' => $quantity,
+                    'type' => $action['type'],
+                ];
+
+                if ($action['type'] === 'return') {
+                    $historyPayload['return_accepted'] = true;
+                }
+
+                if ($action['type'] === 'loss' && isset($action['reason'])) {
+                    $historyPayload['loss_reason'] = $action['reason'];
+                }
+
                 if ($remainingQuantity <= 0) {
+                    $this->orderHistoryService->record(
+                        order: $order,
+                        action: OrderHistoryAction::STEP_MENU_REMOVED,
+                        user: $user,
+                        orderStep: $step,
+                        stepMenu: $stepMenu,
+                        payload: array_merge($historyPayload, [
+                            'quantity_after' => 0,
+                        ]),
+                        reason: $historyReason,
+                    );
+
                     $stepMenu->delete();
                     $stepMenuModel = null;
                 } else {
                     $stepMenu->quantity = $remainingQuantity;
                     $stepMenu->save();
                     $stepMenuModel = $stepMenu->refresh()->load('menu');
+
+                    $this->orderHistoryService->record(
+                        order: $order,
+                        action: OrderHistoryAction::STEP_MENU_UPDATED,
+                        user: $user,
+                        orderStep: $step,
+                        stepMenu: $stepMenu,
+                        payload: array_merge($historyPayload, [
+                            'quantity_after' => $remainingQuantity,
+                        ]),
+                        reason: $historyReason,
+                    );
                 }
 
                 $stepModel = $this->finalizeStepState($step);
+
+                if ($previousStepStatus !== $stepModel->status) {
+                    $this->orderHistoryService->recordStepStatusChange(
+                        order: $order,
+                        step: $stepModel,
+                        from: $previousStepStatus,
+                        to: $stepModel->status,
+                        user: $user,
+                    );
+                }
 
                 return [$stepMenuModel, $stepModel];
             });
@@ -286,10 +422,31 @@ class OrderController extends Controller
             ], 422);
         }
 
+        $previousStatus = $stepMenu->status;
+        $previousStepStatus = $step->status;
+
         $stepMenu->status = StepMenuStatus::READY;
         $stepMenu->save();
 
         $step->refreshStatusFromStepMenus();
+
+        $this->orderHistoryService->recordStepMenuStatusChange(
+            order: $order,
+            stepMenu: $stepMenu,
+            from: $previousStatus,
+            to: StepMenuStatus::READY,
+            user: $user,
+        );
+
+        if ($previousStepStatus !== $step->status) {
+            $this->orderHistoryService->recordStepStatusChange(
+                order: $order,
+                step: $step,
+                from: $previousStepStatus,
+                to: $step->status,
+                user: $user,
+            );
+        }
 
         $stepMenu->refresh()->load('menu');
         $step->refresh()->load('stepMenus.menu');
@@ -332,6 +489,9 @@ class OrderController extends Controller
             ], 422);
         }
 
+        $previousStatus = $stepMenu->status;
+        $previousStepStatus = $step->status;
+
         $stepMenu->status = StepMenuStatus::SERVED;
         $stepMenu->served_at = now();
         $stepMenu->save();
@@ -344,6 +504,24 @@ class OrderController extends Controller
             $step->served_at = now();
             $step->save();
             $step->refresh();
+        }
+
+        $this->orderHistoryService->recordStepMenuStatusChange(
+            order: $order,
+            stepMenu: $stepMenu,
+            from: $previousStatus,
+            to: StepMenuStatus::SERVED,
+            user: $user,
+        );
+
+        if ($previousStepStatus !== $step->status) {
+            $this->orderHistoryService->recordStepStatusChange(
+                order: $order,
+                step: $step,
+                from: $previousStepStatus,
+                to: $step->status,
+                user: $user,
+            );
         }
 
         $stepMenu->refresh()->load('menu');
@@ -373,6 +551,8 @@ class OrderController extends Controller
 
         $unopenedReturns = collect($validated['unopened_returns'] ?? []);
 
+        $previousStatus = $order->status;
+
         if ($unopenedReturns->isNotEmpty()) {
             $validStepMenuIds = $order->steps
                 ->flatMap(static fn (OrderStep $step) => $step->stepMenus->pluck('id'))
@@ -390,11 +570,13 @@ class OrderController extends Controller
         $order->load(['steps.stepMenus.menu.items.entity', 'steps.stepMenus.menu.items.location']);
 
         try {
-            [$lossStepMenuIds, $returnAcceptedIds] = DB::transaction(function () use ($order, $unopenedReturns) {
+            [$lossStepMenuIds, $returnAcceptedIds] = DB::transaction(function () use ($order, $unopenedReturns, $user, $previousStatus) {
                 $lossIds = [];
                 $returnIds = [];
 
                 foreach ($order->steps as $step) {
+                    $previousStepStatus = $step->status;
+
                     foreach ($step->stepMenus as $stepMenu) {
                         /** @var Menu|null $menu */
                         $menu = $stepMenu->menu;
@@ -405,6 +587,30 @@ class OrderController extends Controller
                         $unopenedReturn = $unopenedReturns->contains($stepMenu->id);
                         $action = $this->determineCancellationAction($stepMenu, $menu, $unopenedReturn);
 
+                        $historyReason = null;
+                        if ($action['type'] === 'loss') {
+                            $historyReason = $action['reason'] ?? null;
+                        } elseif ($action['type'] === 'return') {
+                            $historyReason = 'RETURN_ACCEPTED';
+                        }
+
+                        $historyPayload = [
+                            'menu_id' => $stepMenu->menu_id,
+                            'step_menu_id' => $stepMenu->id,
+                            'quantity_before' => $stepMenu->quantity,
+                            'canceled_quantity' => $stepMenu->quantity,
+                            'quantity_after' => 0,
+                            'type' => $action['type'],
+                        ];
+
+                        if ($action['type'] === 'return') {
+                            $historyPayload['return_accepted'] = true;
+                        }
+
+                        if ($action['type'] === 'loss' && isset($action['reason'])) {
+                            $historyPayload['loss_reason'] = $action['reason'];
+                        }
+
                         if ($action['type'] === 'loss') {
                             $this->recordMenuLosses($menu, $stepMenu->quantity, $action['reason']);
                             $lossIds[] = $stepMenu->id;
@@ -412,10 +618,30 @@ class OrderController extends Controller
                             $returnIds[] = $stepMenu->id;
                         }
 
+                        $this->orderHistoryService->record(
+                            order: $order,
+                            action: OrderHistoryAction::STEP_MENU_REMOVED,
+                            user: $user,
+                            orderStep: $step,
+                            stepMenu: $stepMenu,
+                            payload: $historyPayload,
+                            reason: $historyReason,
+                        );
+
                         $stepMenu->delete();
                     }
 
-                    $this->finalizeStepState($step);
+                    $stepModel = $this->finalizeStepState($step);
+
+                    if ($previousStepStatus !== $stepModel->status) {
+                        $this->orderHistoryService->recordStepStatusChange(
+                            order: $order,
+                            step: $stepModel,
+                            from: $previousStepStatus,
+                            to: $stepModel->status,
+                            user: $user,
+                        );
+                    }
                 }
 
                 $order->status = OrderStatus::CANCELED;
@@ -423,6 +649,20 @@ class OrderController extends Controller
                 $order->served_at = null;
                 $order->payed_at = null;
                 $order->save();
+
+                if ($previousStatus !== $order->status) {
+                    $this->orderHistoryService->recordOrderStatusChange(
+                        order: $order,
+                        from: $previousStatus,
+                        to: $order->status,
+                        user: $user,
+                        additionalPayload: [
+                            'loss_step_menu_ids' => $lossIds,
+                            'return_step_menu_ids' => $returnIds,
+                        ],
+                        reason: 'ORDER_CANCELED',
+                    );
+                }
 
                 return [$lossIds, $returnIds];
             });
@@ -472,6 +712,8 @@ class OrderController extends Controller
             ], 422);
         }
 
+        $previousStatus = $order->status;
+
         $order->status = OrderStatus::PAYED;
 
         if ($order->payed_at === null) {
@@ -479,6 +721,19 @@ class OrderController extends Controller
         }
 
         $order->save();
+
+        if ($previousStatus !== $order->status) {
+            $this->orderHistoryService->recordOrderStatusChange(
+                order: $order,
+                from: $previousStatus,
+                to: $order->status,
+                user: $user,
+                additionalPayload: [
+                    'force' => $force,
+                ],
+                reason: $force ? 'PAYMENT_FORCED' : null,
+            );
+        }
 
         $order->load('steps.stepMenus.menu');
 

@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             OrderSeeder::class,
             OrderStepSeeder::class,
             StepMenuSeeder::class,
+            OrderHistorySeeder::class,
         ]);
     }
 }

@@ -35,6 +35,9 @@ type Order {
     "Étapes associées à la commande."
     steps: [OrderStep!]! @hasMany
 
+    "Historique des actions liées à la commande (ordre chronologique)."
+    histories: [OrderHistory!]! @hasMany
+
     "Date de création de la commande."
     created_at: DateTime!
 
