@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\MeasurementUnit;
+use App\Enums\MenuServiceType;
 use App\Enums\OrderStatus;
 use App\Enums\OrderStepStatus;
 use App\Enums\StepMenuStatus;
@@ -92,6 +93,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Notre pâté en croûte, pickles de légumes",
                 "prix": 28,
+                "description": "Terrine artisanale aux viandes sélectionnées servie avec des pickles croquants préparés le matin même.",
+                "service_type": "PREP",
+                "is_returnable": false,
                 "preparations": {
                     "Pâté en croûte": [
                         "Pâte brisée (farine, beurre, eau, sel)",
@@ -110,6 +114,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Foie gras de canard, brioche parisienne",
                 "prix": 32,
+                "description": "Foie gras mi-cuit assaisonné maison accompagné d'une brioche parisienne dorée au beurre.",
+                "service_type": "PREP",
+                "is_returnable": false,
                 "ingredients": [
                     "Foie gras de canard cru"
                 ],
@@ -128,6 +135,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Homard bleu rafraîchi, haricots verts et amandes fraîches",
                 "prix": 38,
+                "description": "Chair de homard bleu juste pochée, assaisonnée à l'huile d'olive et servie avec des légumes croquants.",
+                "service_type": "PREP",
+                "is_returnable": false,
                 "ingredients": [
                     "Homard bleu",
                     "Haricots verts frais",
@@ -141,6 +151,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Tomate de plein champs fondante, anchois et basilic",
                 "prix": 30,
+                "description": "Tomate mûrie au soleil confite doucement, relevée d'anchois de Méditerranée et de basilic frais.",
+                "service_type": "DIRECT",
+                "is_returnable": false,
                 "ingredients": [
                     "Tomate de plein champ",
                     "Filets d’anchois",
@@ -153,6 +166,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Dos de bar doré, courgette trompette et jus d’une marinière",
                 "prix": 38,
+                "description": "Bar de ligne snacké côté peau, servi avec des courgettes trompettes glacées et un jus de marinière réduit.",
+                "service_type": "PREP",
+                "is_returnable": false,
                 "ingredients": [
                     "Dos de bar",
                     "Courgette trompette"
@@ -171,6 +187,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Sole à la meunière, cassolette d’artichauts (pour deux)",
                 "prix": 160,
+                "description": "Sole entière meunière à partager, accompagnée d'une cassolette d'artichauts tournés au jus.",
+                "service_type": "PREP",
+                "is_returnable": true,
                 "preparations": {
                     "Sole à la meunière": [
                         "Sole",
@@ -194,6 +213,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Fromages de France",
                 "prix": 16,
+                "description": "Plateau de fromages affinés sélectionnés auprès de producteurs français artisanaux.",
+                "service_type": "DIRECT",
+                "is_returnable": true,
                 "ingredients": [
                     "Sélection de fromages de vache, chèvre, brebis"
                 ]
@@ -203,6 +225,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Millefeuille classique à la vanille",
                 "prix": 14,
+                "description": "Feuilles croustillantes et crème pâtissière infusée à la vanille Bourbon montées à la minute.",
+                "service_type": "PREP",
+                "is_returnable": false,
                 "preparations": {
                     "Millefeuille": [
                         "Pâte feuilletée (farine, beurre, eau, sel)",
@@ -214,6 +239,9 @@ class DemoSeeder extends Seeder
             {
                 "nom": "Pêche Melba",
                 "prix": 14,
+                "description": "Pêches pochées, glace vanille et coulis de framboise pour un dessert frais et léger.",
+                "service_type": "PREP",
+                "is_returnable": false,
                 "preparations": {
                     "Pêches pochées": [
                         "Pêches",
@@ -1571,7 +1599,15 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * @return array<string, array<int, array{name: string, price: float, ingredients: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>, preparations: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>>>>
+     * @return array<string, array<int, array{
+     *     name: string,
+     *     price: float,
+     *     description: ?string,
+     *     service_type: string,
+     *     is_returnable: bool,
+     *     ingredients: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>,
+     *     preparations: array<int, array{name: string, quantity: float, unit: MeasurementUnit}>,
+     * }>>
      */
     private function menuSections(): array
     {
@@ -1605,6 +1641,26 @@ class DemoSeeder extends Seeder
 
                 $price = isset($entry['prix']) ? (float) $entry['prix'] : 0.0;
 
+                $description = null;
+                if (array_key_exists('description', $entry) && is_string($entry['description'])) {
+                    $description = trim($entry['description']);
+                    $description = $description === '' ? null : $description;
+                }
+
+                $serviceType = $entry['service_type'] ?? MenuServiceType::PREP->value;
+                if ($serviceType instanceof MenuServiceType) {
+                    $serviceType = $serviceType->value;
+                } elseif (is_string($serviceType)) {
+                    $candidate = strtoupper($serviceType);
+                    $serviceType = in_array($candidate, MenuServiceType::values(), true)
+                        ? $candidate
+                        : MenuServiceType::PREP->value;
+                } else {
+                    $serviceType = MenuServiceType::PREP->value;
+                }
+
+                $isReturnable = isset($entry['is_returnable']) ? (bool) $entry['is_returnable'] : false;
+
                 $ingredients = $this->normalizeMenuComponents($entry['ingredients'] ?? [], false);
                 $preparations = $this->normalizeMenuComponents(
                     $this->extractPreparationNames($entry['preparations'] ?? []),
@@ -1614,6 +1670,9 @@ class DemoSeeder extends Seeder
                 $sections[$sectionKey][] = [
                     'name' => $name,
                     'price' => $price,
+                    'description' => $description,
+                    'service_type' => $serviceType,
+                    'is_returnable' => $isReturnable,
                     'ingredients' => $ingredients,
                     'preparations' => $preparations,
                 ];
@@ -2106,6 +2165,25 @@ class DemoSeeder extends Seeder
         return null;
     }
 
+    private function resolveMenuServiceType(mixed $serviceType): MenuServiceType
+    {
+        if ($serviceType instanceof MenuServiceType) {
+            return $serviceType;
+        }
+
+        if (is_string($serviceType) && $serviceType !== '') {
+            $candidate = strtoupper($serviceType);
+
+            try {
+                return MenuServiceType::from($candidate);
+            } catch (\ValueError) {
+                // Ignore invalid value and fall back to default
+            }
+        }
+
+        return MenuServiceType::PREP;
+    }
+
     /**
      * @param  array<string, Ingredient>  $ingredients
      * @return array<string, Preparation>
@@ -2268,6 +2346,9 @@ class DemoSeeder extends Seeder
      * @param  array<string, array<int, array{
      *     name: string,
      *     price: float,
+     *     description: ?string,
+     *     service_type: string,
+     *     is_returnable: bool,
      *     ingredients: array<int, array{name: string, quantity?: float, unit?: MeasurementUnit|string}>,
      *     preparations: array<int, array{name: string, quantity?: float, unit?: MeasurementUnit|string}>,
      * }>>  $dataset
@@ -2299,11 +2380,13 @@ class DemoSeeder extends Seeder
                         'name' => $entry['name'],
                     ],
                     [
-                        'description' => null,
+                        'description' => $entry['description'] ?? null,
                         'is_a_la_carte' => true,
                         'menu_type_id' => $menuTypeId,
                         'public_priority' => $priority,
                         'price' => $entry['price'],
+                        'service_type' => $this->resolveMenuServiceType($entry['service_type'] ?? null)->value,
+                        'is_returnable' => (bool) ($entry['is_returnable'] ?? false),
                     ]
                 );
 
