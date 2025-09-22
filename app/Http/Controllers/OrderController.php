@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\OrderStep;
 use App\Models\Preparation;
 use App\Models\StepMenu;
+use App\Models\User;
 use App\Services\OrderHistoryService;
 use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
@@ -163,6 +164,8 @@ class OrderController extends Controller
                 $step->save();
             }
 
+            $this->updateOrderStatusFromSteps($order, $user);
+
             return $step->refresh()->load('stepMenus.menu');
         });
 
@@ -235,6 +238,8 @@ class OrderController extends Controller
                     user: $user,
                 );
             }
+
+            $this->updateOrderStatusFromSteps($order, $user);
 
             return [
                 $stepMenu->load('menu'),
@@ -372,6 +377,8 @@ class OrderController extends Controller
                     );
                 }
 
+                $this->updateOrderStatusFromSteps($order, $user);
+
                 return [$stepMenuModel, $stepModel];
             });
         } catch (RuntimeException $exception) {
@@ -448,6 +455,8 @@ class OrderController extends Controller
             );
         }
 
+        $this->updateOrderStatusFromSteps($order, $user);
+
         $stepMenu->refresh()->load('menu');
         $step->refresh()->load('stepMenus.menu');
 
@@ -523,6 +532,8 @@ class OrderController extends Controller
                 user: $user,
             );
         }
+
+        $this->updateOrderStatusFromSteps($order, $user);
 
         $stepMenu->refresh()->load('menu');
         $step->load('stepMenus.menu');
@@ -796,6 +807,22 @@ class OrderController extends Controller
         $validated['quantity'] = (int) $validated['quantity'];
 
         return [$validated, $menu];
+    }
+
+    private function updateOrderStatusFromSteps(Order $order, ?User $user = null): void
+    {
+        $previousStatus = $order->status;
+
+        if (! $order->refreshStatusFromSteps()) {
+            return;
+        }
+
+        $this->orderHistoryService->recordOrderStatusChange(
+            order: $order,
+            from: $previousStatus,
+            to: $order->status,
+            user: $user,
+        );
     }
 
     /**
