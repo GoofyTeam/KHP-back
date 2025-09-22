@@ -442,16 +442,4 @@ class MenuSeeder extends Seeder
 
         return null;
     }
-
-    private function resolveMenuTypeId(Company $company, string $typeName): ?int
-    {
-        $menuType = MenuType::firstOrCreate(
-            [
-                'company_id' => $company->id,
-                'name' => $typeName,
-            ]
-        );
-
-        return $menuType->id;
-    }
 }
