@@ -31,7 +31,7 @@ on:
       timeout:
         type: string
         required: false
-        default: "180"
+        default: "300"
     secrets:
       ARGOCD_SERVER:
         required: true
@@ -53,7 +53,7 @@ jobs:
 
       # Laisse GHCR propager le digest
       - name: Cooldown
-        run: sleep 60
+        run: sleep 240
 
       - name: Restart deployments
         env:
