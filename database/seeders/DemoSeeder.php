@@ -29,6 +29,44 @@ class DemoSeeder extends Seeder
     private const COMPANY_PROFILE = [
         'name' => 'Maison Gustave',
         'open_food_facts_language' => 'fr',
+        'contact' => [
+            'contact_name' => 'Gustave Lenoir',
+            'contact_email' => 'contact@maison-gustave.fr',
+            'contact_phone' => '+33 1 42 68 10 10',
+            'address_line' => '8 Rue de la Gastronomie',
+            'postal_code' => '75002',
+            'city' => 'Paris',
+            'country' => 'France',
+        ],
+        'business_hours' => [
+            'monday' => [
+                ['opens_at' => '11:30', 'closes_at' => '14:30'],
+                ['opens_at' => '18:30', 'closes_at' => '22:30'],
+            ],
+            'tuesday' => [
+                ['opens_at' => '11:30', 'closes_at' => '14:30'],
+                ['opens_at' => '18:30', 'closes_at' => '22:30'],
+            ],
+            'wednesday' => [
+                ['opens_at' => '11:30', 'closes_at' => '14:30'],
+                ['opens_at' => '18:30', 'closes_at' => '22:30'],
+            ],
+            'thursday' => [
+                ['opens_at' => '11:30', 'closes_at' => '14:30'],
+                ['opens_at' => '18:30', 'closes_at' => '22:30'],
+            ],
+            'friday' => [
+                ['opens_at' => '11:30', 'closes_at' => '14:30'],
+                ['opens_at' => '18:30', 'closes_at' => '23:30'],
+            ],
+            'saturday' => [
+                ['opens_at' => '11:30', 'closes_at' => '15:00'],
+                ['opens_at' => '18:30', 'closes_at' => '02:00', 'is_overnight' => true],
+            ],
+            'sunday' => [
+                ['opens_at' => '11:30', 'closes_at' => '15:00'],
+            ],
+        ],
         'users' => [
             ['name' => 'Adrien', 'email' => 'adrien@example.com'],
             ['name' => 'Thomas', 'email' => 'thomas@example.com'],
@@ -1162,6 +1200,22 @@ class DemoSeeder extends Seeder
             ['open_food_facts_language' => self::COMPANY_PROFILE['open_food_facts_language']]
         );
 
+        $contact = self::COMPANY_PROFILE['contact'] ?? [];
+        if (is_array($contact) && $contact !== []) {
+            $company->fill($contact);
+        }
+
+        if (! $company->logo_path) {
+            $company->logo_path = $this->placeholderPath();
+        }
+
+        $company->save();
+
+        $businessHours = self::COMPANY_PROFILE['business_hours'] ?? [];
+        if (is_array($businessHours) && $businessHours !== []) {
+            $this->seedCompanyBusinessHours($company, $businessHours);
+        }
+
         $authUser = $this->seedUsers($company);
         if ($authUser instanceof User) {
             Auth::setUser($authUser);
@@ -1201,6 +1255,143 @@ class DemoSeeder extends Seeder
         );
 
         $this->report();
+    }
+
+    /**
+     * @param  array<int|string, array<int, array<string, mixed>>>  $schedule
+     */
+    private function seedCompanyBusinessHours(Company $company, array $schedule): void
+    {
+        $company->businessHours()->delete();
+
+        $records = [];
+
+        foreach ($schedule as $day => $entries) {
+            $dayOfWeek = $this->normalizeDayOfWeek($day);
+
+            if ($dayOfWeek === null || ! is_array($entries) || $entries === []) {
+                continue;
+            }
+
+            $sequence = 1;
+
+            foreach ($entries as $entry) {
+                if (! is_array($entry)) {
+                    continue;
+                }
+
+                $opensAt = $this->normalizeTimeString($entry['opens_at'] ?? null);
+                $closesAt = $this->normalizeTimeString($entry['closes_at'] ?? null);
+
+                if (! $opensAt || ! $closesAt) {
+                    continue;
+                }
+
+                $isOvernight = $this->determineOvernight(
+                    $opensAt,
+                    $closesAt,
+                    (bool) ($entry['is_overnight'] ?? false)
+                );
+
+                $records[] = [
+                    'day_of_week' => $dayOfWeek,
+                    'opens_at' => $opensAt,
+                    'closes_at' => $closesAt,
+                    'is_overnight' => $isOvernight,
+                    'sequence' => $sequence++,
+                ];
+            }
+        }
+
+        if ($records === []) {
+            return;
+        }
+
+        $company->businessHours()->createMany($records);
+    }
+
+    private function normalizeDayOfWeek(mixed $value): ?int
+    {
+        if (is_int($value) || ctype_digit((string) $value)) {
+            $intValue = (int) $value;
+
+            return $intValue >= 1 && $intValue <= 7 ? $intValue : null;
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = str_replace(['-', ' '], ['_', '_'], mb_strtolower(trim($value)));
+
+        $map = [
+            'monday' => 1,
+            'mon' => 1,
+            'lundi' => 1,
+            'tuesday' => 2,
+            'tue' => 2,
+            'tues' => 2,
+            'mardi' => 2,
+            'wednesday' => 3,
+            'wed' => 3,
+            'mercredi' => 3,
+            'thursday' => 4,
+            'thu' => 4,
+            'thur' => 4,
+            'thurs' => 4,
+            'jeudi' => 4,
+            'friday' => 5,
+            'fri' => 5,
+            'vendredi' => 5,
+            'saturday' => 6,
+            'sat' => 6,
+            'samedi' => 6,
+            'sunday' => 7,
+            'sun' => 7,
+            'dimanche' => 7,
+        ];
+
+        return $map[$normalized] ?? null;
+    }
+
+    private function normalizeTimeString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $string = trim((string) $value);
+
+        if ($string === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $string, $matches)) {
+            $hour = max(0, min(23, (int) $matches[1]));
+            $minute = max(0, min(59, (int) $matches[2]));
+            $second = isset($matches[3]) ? max(0, min(59, (int) $matches[3])) : 0;
+
+            return sprintf('%02d:%02d:%02d', $hour, $minute, $second);
+        }
+
+        return null;
+    }
+
+    private function determineOvernight(string $opensAt, string $closesAt, bool $flag): bool
+    {
+        $openMinutes = $this->timeToMinutes($opensAt);
+        $closeMinutes = $this->timeToMinutes($closesAt);
+
+        return $flag || $closeMinutes <= $openMinutes;
+    }
+
+    private function timeToMinutes(string $time): int
+    {
+        $parts = explode(':', substr($time, 0, 5));
+        $hour = (int) ($parts[0] ?? 0);
+        $minute = (int) ($parts[1] ?? 0);
+
+        return ($hour * 60) + $minute;
     }
 
     /**

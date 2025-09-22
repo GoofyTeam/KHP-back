@@ -21,10 +21,48 @@ type Company {
     "Paramètres visibles publiquement pour la carte des menus."
     public_menu_settings: PublicMenuSettings!
 
+    "Logo ou image de présentation de l'entreprise."
+    logo_path: String
+
+    "Nom de la personne à contacter."
+    contact_name: String
+
+    "Adresse e-mail de contact."
+    contact_email: String
+
+    "Numéro de téléphone principal."
+    contact_phone: String
+
+    "Ligne d'adresse principale."
+    address_line: String
+
+    "Code postal."
+    postal_code: String
+
+    "Ville."
+    city: String
+
+    "Pays."
+    country: String
+
+    "Horaires d'ouverture de la semaine."
+    businessHours: [CompanyBusinessHour!]! @hasMany
+
     "When the company was created."
     created_at: DateTime!
 
     "When the company was last updated."
+    updated_at: DateTime!
+}
+
+type CompanyBusinessHour {
+    id: ID!
+    day_of_week: Int!
+    opens_at: String!
+    closes_at: String!
+    is_overnight: Boolean!
+    sequence: Int!
+    created_at: DateTime!
     updated_at: DateTime!
 }
 
