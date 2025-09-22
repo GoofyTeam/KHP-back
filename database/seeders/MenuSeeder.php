@@ -3,16 +3,13 @@
 namespace Database\Seeders;
 
 use App\Enums\MeasurementUnit;
-use App\Enums\MenuServiceType;
 use App\Models\Company;
 use App\Models\Ingredient;
-use App\Models\Location;
 use App\Models\Menu;
-use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\MenuType;
+use App\Models\Preparation;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -27,8 +24,9 @@ class MenuSeeder extends Seeder
             $ingredients = Ingredient::where('company_id', $company->id)
                 ->whereHas('locations')
                 ->get();
-            $locations = Location::where('company_id', $company->id)->get();
-            $categories = MenuCategory::where('company_id', $company->id)->get();
+            $preparations = Preparation::where('company_id', $company->id)
+                ->whereHas('locations')
+                ->get();
             $menuTypeIds = MenuType::where('company_id', $company->id)->pluck('id')->all();
 
             if (empty($menuTypeIds)) {
@@ -60,8 +58,6 @@ class MenuSeeder extends Seeder
                 continue;
             }
 
-            $priorityPerType = array_fill_keys($menuTypeIds, 0);
-
             if ($company->name === 'Charlie Kirk') {
                 $this->createBoBunHayMeanMenu($company, $ingredients);
             }
@@ -70,43 +66,162 @@ class MenuSeeder extends Seeder
                 $this->createTastyCroustyMenu($company, $ingredients);
             }
 
-            for ($i = 0; $i < 5; $i++) {
-                $menuTypeId = Arr::random($menuTypeIds);
-                $priority = $priorityPerType[$menuTypeId] ?? 0;
-                $priorityPerType[$menuTypeId] = $priority + 1;
+            if ($company->name === 'GoofyTeam') {
+                $this->createGoofyTeamMenus($company, $ingredients, $preparations);
+            }
+        }
+    }
 
-                $menu = Menu::factory()->create([
-                    'company_id' => $company->id,
-                    'service_type' => fake()->randomElement(MenuServiceType::values()),
-                    'is_returnable' => fake()->boolean(),
-                    'menu_type_id' => $menuTypeId,
-                    'public_priority' => $priority,
-                    'price' => fake()->randomFloat(2, 5, 50),
-                ]);
+    private function createGoofyTeamMenus(Company $company, Collection $ingredients, Collection $preparations): void
+    {
+        if ($ingredients->isEmpty() && $preparations->isEmpty()) {
+            return;
+        }
 
-                if ($categories->count() > 0) {
-                    $menu->categories()->sync(
-                        $categories->random(rand(0, min(3, $categories->count())))->pluck('id')->toArray()
-                    );
-                }
+        $menus = [
+            [
+                'name' => 'Menu Goofy Terroir',
+                'description' => 'Poulet rôti au citron, purée maison au beurre doux et salade fraîche.',
+                'price' => 17.5,
+                'items' => [
+                    ['name' => 'Poulet citron ail', 'entity_type' => Preparation::class, 'quantity' => 0.35],
+                    ['name' => 'Purée de pommes de terre', 'entity_type' => Preparation::class, 'quantity' => 0.3],
+                    ['name' => 'Salades', 'entity_type' => Ingredient::class, 'quantity' => 0.12],
+                ],
+            ],
+            [
+                'name' => 'Menu Goofy Marin',
+                'description' => 'Saumon grillé, salade de tomates au basilic et touche de citron frais.',
+                'price' => 19.2,
+                'items' => [
+                    ['name' => 'Saumon grillé au citron', 'entity_type' => Preparation::class, 'quantity' => 0.32],
+                    ['name' => 'Salade de tomates au basilic', 'entity_type' => Preparation::class, 'quantity' => 1],
+                    ['name' => 'Citron', 'entity_type' => Ingredient::class, 'quantity' => 0.05],
+                ],
+            ],
+            [
+                'name' => 'Menu Goofy Veggie',
+                'description' => 'Ratatouille express, lentilles au curry et basilic frais.',
+                'price' => 15.9,
+                'items' => [
+                    ['name' => 'Ratatouille express', 'entity_type' => Preparation::class, 'quantity' => 0.35],
+                    ['name' => 'Lentilles au curry', 'entity_type' => Preparation::class, 'quantity' => 0.3],
+                    ['name' => 'Basilic frais', 'entity_type' => Ingredient::class, 'quantity' => 0.01],
+                ],
+            ],
+            [
+                'name' => 'Menu Goofy Brunch',
+                'description' => 'Œufs brouillés, bananes caramélisées et fruits frais.',
+                'price' => 14.4,
+                'items' => [
+                    ['name' => 'Œufs brouillés', 'entity_type' => Preparation::class, 'quantity' => 1],
+                    ['name' => 'Bananes caramélisées', 'entity_type' => Preparation::class, 'quantity' => 1],
+                    ['name' => 'Pommes', 'entity_type' => Ingredient::class, 'quantity' => 0.2],
+                ],
+            ],
+            [
+                'name' => 'Menu Goofy Pasta',
+                'description' => 'Spaghetti tomate-basilic, salade fraîche et fromage râpé.',
+                'price' => 16.3,
+                'items' => [
+                    ['name' => 'Spaghetti tomate-basilic', 'entity_type' => Preparation::class, 'quantity' => 0.4],
+                    ['name' => 'Salade de tomates au basilic', 'entity_type' => Preparation::class, 'quantity' => 1],
+                    ['name' => 'Fromage râpé (emmental, parmesan)', 'entity_type' => Ingredient::class, 'quantity' => 0.05],
+                ],
+            ],
+        ];
 
-                if ($ingredients->count() === 0 || $locations->count() === 0) {
+        foreach ($menus as $data) {
+            $menu = Menu::firstOrNew([
+                'company_id' => $company->id,
+                'name' => $data['name'],
+            ]);
+
+            $menu->description = $data['description'];
+            $menu->is_a_la_carte = true;
+            $menu->menu_type_id = $this->resolveMenuTypeId($company, 'Plats');
+            $menu->price = $data['price'];
+
+            if ($image = $this->resolveMenuImageFromSlug(Str::slug($data['name']))) {
+                $menu->image_url = $image;
+            }
+
+            $menu->save();
+            $menu->items()->delete();
+
+            foreach ($data['items'] as $item) {
+                $entityType = $item['entity_type'];
+
+                if ($entityType === Ingredient::class) {
+                    $entity = $ingredients->firstWhere('name', $item['name'])
+                        ?? Ingredient::where('company_id', $company->id)
+                            ->where('name', $item['name'])
+                            ->first();
+
+                    if (! $entity) {
+                        continue;
+                    }
+
+                    $location = $entity->locations()
+                        ->wherePivot('quantity', '>', 0)
+                        ->inRandomOrder()
+                        ->first()
+                        ?? $entity->locations()->inRandomOrder()->first();
+
+                    if (! $location) {
+                        continue;
+                    }
+
+                    $unit = $entity->unit instanceof MeasurementUnit ? $entity->unit->value : $entity->unit;
+
+                    MenuItem::create([
+                        'menu_id' => $menu->id,
+                        'entity_id' => $entity->id,
+                        'entity_type' => Ingredient::class,
+                        'quantity' => $item['quantity'],
+                        'unit' => $unit,
+                        'location_id' => $location->id,
+                    ]);
+
                     continue;
                 }
 
-                $selected = $ingredients->random(min(2, $ingredients->count()));
-                foreach ($selected as $ingredient) {
-                    $location = $ingredient->locations()->inRandomOrder()->first();
+                if ($entityType === Preparation::class) {
+                    $preparation = $preparations->firstWhere('name', $item['name'])
+                        ?? Preparation::where('company_id', $company->id)
+                            ->where('name', $item['name'])
+                            ->with('locations')
+                            ->first();
+
+                    if (! $preparation) {
+                        continue;
+                    }
+
+                    $preparation->loadMissing('locations');
+
+                    $location = $preparation->locations
+                        ->filter(fn ($loc) => ($loc->pivot->quantity ?? 0) > 0)
+                        ->sortByDesc(fn ($loc) => $loc->pivot->quantity ?? 0)
+                        ->first()
+                        ?? $preparation->locations->first();
+
+                    if (! $location) {
+                        continue;
+                    }
+
+                    $unit = $preparation->unit instanceof MeasurementUnit
+                        ? $preparation->unit->value
+                        : $preparation->unit;
+
                     MenuItem::create([
                         'menu_id' => $menu->id,
-                        'entity_id' => $ingredient->id,
-                        'entity_type' => Ingredient::class,
-                        'quantity' => 1,
-                        'unit' => $ingredient->unit instanceof MeasurementUnit ? $ingredient->unit->value : $ingredient->unit,
+                        'entity_id' => $preparation->id,
+                        'entity_type' => Preparation::class,
+                        'quantity' => $item['quantity'],
+                        'unit' => $unit,
                         'location_id' => $location->id,
                     ]);
                 }
-
             }
         }
     }
@@ -262,6 +377,27 @@ class MenuSeeder extends Seeder
                 ]);
             }
         }
+    }
+
+    private function resolveMenuTypeId(Company $company, string $name): ?int
+    {
+        $menuType = MenuType::firstOrCreate([
+            'company_id' => $company->id,
+            'name' => $name,
+        ]);
+
+        $position = optional($menuType->publicOrder)->position;
+
+        if ($position === null) {
+            $position = MenuType::where('company_id', $company->id)->count() - 1;
+        }
+
+        $menuType->publicOrder()->updateOrCreate(
+            ['company_id' => $company->id],
+            ['position' => max($position, 0)]
+        );
+
+        return $menuType->id;
     }
 
     private function resolveMenuImageFromSlug(string $slug): ?string
