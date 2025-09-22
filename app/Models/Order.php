@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Enums\OrderStepStatus;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -143,5 +144,57 @@ class Order extends Model
         $moment = $date instanceof CarbonInterface ? $date : Carbon::parse((string) $date);
 
         return $query->where('created_at', '<=', $moment);
+    }
+
+    public function refreshStatusFromSteps(): bool
+    {
+        if (in_array($this->status, [OrderStatus::PAYED, OrderStatus::CANCELED], true)) {
+            return false;
+        }
+
+        $this->loadMissing('steps');
+
+        /** @var EloquentCollection<int, OrderStep> $steps */
+        $steps = $this->steps;
+
+        $targetStatus = OrderStatus::PENDING;
+
+        if ($steps->isNotEmpty() && $steps->every(
+            static fn (OrderStep $step): bool => $step->status === OrderStepStatus::SERVED,
+        )) {
+            $targetStatus = OrderStatus::SERVED;
+        }
+
+        if ($targetStatus === $this->status) {
+            $dirty = false;
+
+            if ($targetStatus === OrderStatus::SERVED) {
+                if ($this->served_at === null) {
+                    $this->served_at = now();
+                    $dirty = true;
+                }
+            } elseif ($this->served_at !== null) {
+                $this->served_at = null;
+                $dirty = true;
+            }
+
+            if ($dirty) {
+                $this->save();
+            }
+
+            return false;
+        }
+
+        $this->status = $targetStatus;
+
+        if ($targetStatus === OrderStatus::SERVED) {
+            $this->served_at = now();
+        } else {
+            $this->served_at = null;
+        }
+
+        $this->save();
+
+        return true;
     }
 }

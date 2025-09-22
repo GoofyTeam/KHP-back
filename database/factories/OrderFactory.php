@@ -49,6 +49,7 @@ class OrderFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => OrderStatus::PAYED,
+            'served_at' => now(),
             'payed_at' => now(),
         ]);
     }
@@ -57,6 +58,7 @@ class OrderFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => OrderStatus::CANCELED,
+            'served_at' => null,
             'canceled_at' => now(),
         ]);
     }

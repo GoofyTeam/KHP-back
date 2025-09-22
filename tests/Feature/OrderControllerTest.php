@@ -689,6 +689,218 @@ class OrderControllerTest extends TestCase
         ]);
     }
 
+    public function test_order_status_remains_pending_when_all_menus_ready(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::IN_PREP,
+        ]);
+
+        $readyMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        StepMenu::factory()->for($step, 'step')->for($readyMenu)->create([
+            'status' => StepMenuStatus::READY,
+            'quantity' => 1,
+        ]);
+
+        $targetMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        $stepMenu = StepMenu::factory()->for($step, 'step')->for($targetMenu)->create([
+            'status' => StepMenuStatus::IN_PREP,
+            'quantity' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/api/orders/{$order->id}/step-menus/{$stepMenu->id}/ready")
+            ->assertOk();
+
+        $order->refresh();
+
+        self::assertSame(OrderStatus::PENDING, $order->status);
+        self::assertNull($order->served_at);
+    }
+
+    public function test_order_status_becomes_served_when_all_menus_served(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::IN_PREP,
+        ]);
+
+        $servedMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        Carbon::setTestNow(Carbon::parse('2024-01-01 12:00:00'));
+        StepMenu::factory()->served()->for($step, 'step')->for($servedMenu)->create([
+            'quantity' => 1,
+        ]);
+
+        $targetMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        $stepMenu = StepMenu::factory()->for($step, 'step')->for($targetMenu)->create([
+            'status' => StepMenuStatus::IN_PREP,
+            'quantity' => 1,
+        ]);
+
+        $servedMoment = Carbon::parse('2024-01-01 12:10:00');
+        Carbon::setTestNow($servedMoment);
+
+        $this->actingAs($user)
+            ->postJson("/api/orders/{$order->id}/step-menus/{$stepMenu->id}/ready")
+            ->assertOk();
+
+        $order->refresh();
+        self::assertSame(OrderStatus::PENDING, $order->status);
+        self::assertNull($order->served_at);
+
+        $this->actingAs($user)
+            ->postJson("/api/orders/{$order->id}/step-menus/{$stepMenu->id}/served")
+            ->assertOk();
+
+        try {
+            $order->refresh();
+
+            self::assertSame(OrderStatus::SERVED, $order->status);
+            self::assertSame($servedMoment->toISOString(), optional($order->served_at)->toISOString());
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_order_with_multiple_steps_switches_from_pending_to_served_once_all_menus_served(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $firstStep = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::SERVED,
+            'served_at' => now(),
+        ]);
+
+        $firstStepMenuA = Menu::factory()->create(['company_id' => $user->company_id]);
+        $firstStepMenuB = Menu::factory()->create(['company_id' => $user->company_id]);
+
+        StepMenu::factory()->served()->for($firstStep, 'step')->for($firstStepMenuA)->create([
+            'quantity' => 1,
+        ]);
+        StepMenu::factory()->served()->for($firstStep, 'step')->for($firstStepMenuB)->create([
+            'quantity' => 2,
+        ]);
+
+        $secondStep = OrderStep::factory()->for($order)->create([
+            'position' => 2,
+            'status' => OrderStepStatus::IN_PREP,
+        ]);
+
+        $alreadyServedMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        StepMenu::factory()->served()->for($secondStep, 'step')->for($alreadyServedMenu)->create([
+            'quantity' => 1,
+        ]);
+
+        $targetMenu = Menu::factory()->create(['company_id' => $user->company_id]);
+        $stepMenu = StepMenu::factory()->for($secondStep, 'step')->for($targetMenu)->create([
+            'status' => StepMenuStatus::IN_PREP,
+            'quantity' => 1,
+        ]);
+
+        $order->refresh();
+        self::assertSame(OrderStatus::PENDING, $order->status);
+        self::assertNull($order->served_at);
+
+        $this->actingAs($user)
+            ->postJson("/api/orders/{$order->id}/step-menus/{$stepMenu->id}/ready")
+            ->assertOk();
+
+        $secondStep->refresh();
+        self::assertSame(OrderStepStatus::READY, $secondStep->status);
+
+        $order->refresh();
+        self::assertSame(OrderStatus::PENDING, $order->status);
+        self::assertNull($order->served_at);
+
+        $servedMoment = Carbon::parse('2024-03-15 18:45:00');
+        Carbon::setTestNow($servedMoment);
+
+        try {
+            $this->actingAs($user)
+                ->postJson("/api/orders/{$order->id}/step-menus/{$stepMenu->id}/served")
+                ->assertOk();
+
+            $secondStep->refresh();
+            self::assertSame(OrderStepStatus::SERVED, $secondStep->status);
+
+            $order->refresh();
+            self::assertSame(OrderStatus::SERVED, $order->status);
+            self::assertSame($servedMoment->toISOString(), optional($order->served_at)->toISOString());
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_order_status_returns_to_pending_when_new_menu_added(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createOrderForUser($user);
+
+        $step = OrderStep::factory()->for($order)->create([
+            'position' => 1,
+            'status' => OrderStepStatus::IN_PREP,
+        ]);
+
+        $menuA = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+        $menuB = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+        $additionalMenu = Menu::factory()->create([
+            'company_id' => $user->company_id,
+            'service_type' => MenuServiceType::PREP,
+        ]);
+
+        $stepMenuA = StepMenu::factory()->served()->for($step, 'step')->for($menuA)->create([
+            'quantity' => 1,
+        ]);
+        $stepMenuB = StepMenu::factory()->served()->for($step, 'step')->for($menuB)->create([
+            'quantity' => 1,
+        ]);
+
+        $step->forceFill([
+            'status' => OrderStepStatus::SERVED,
+            'served_at' => now(),
+        ])->save();
+        $step->refresh();
+
+        $order->refresh()->load('steps.stepMenus');
+        $order->refreshStatusFromSteps();
+        $order->refresh();
+        self::assertSame(OrderStatus::SERVED, $order->status);
+        self::assertNotNull($order->served_at);
+
+        $revertMoment = Carbon::parse('2024-01-01 12:10:00');
+        Carbon::setTestNow($revertMoment);
+
+        try {
+            $this->actingAs($user)
+                ->postJson("/api/orders/{$order->id}/steps/{$step->id}/menus", [
+                    'menu_id' => $additionalMenu->id,
+                    'quantity' => 1,
+                ])
+                ->assertCreated();
+
+            $order->refresh();
+
+            self::assertSame(OrderStatus::PENDING, $order->status);
+            self::assertNull($order->served_at);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_it_marks_step_menu_ready_without_updating_step_when_others_in_prep(): void
     {
         $user = User::factory()->create();
