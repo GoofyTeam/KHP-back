@@ -37,6 +37,9 @@ Route::prefix('user')->name('user.')->group(function () {
 // Groupe de routes pour l'entreprise
 Route::prefix('company')->name('company.')->group(function () {
     Route::put('/options', [CompanyController::class, 'updateOptions'])->name('options.update');
+    Route::put('/contact', [CompanyController::class, 'updateContact'])->name('contact.update');
+    Route::put('/business-hours', [CompanyController::class, 'updateBusinessHours'])->name('business-hours.update');
+    Route::post('/logo', [CompanyController::class, 'updateLogo'])->name('logo.update');
 });
 
 Route::put('/public-menus', [CompanyController::class, 'updateOptions'])->name('public-menus.update');

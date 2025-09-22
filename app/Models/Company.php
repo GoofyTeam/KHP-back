@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -11,6 +12,15 @@ use Illuminate\Support\Str;
  * @property string $public_menu_card_url
  * @property bool $show_out_of_stock_menus_on_card
  * @property bool $show_menu_images
+ * @property string|null $logo_path
+ * @property string|null $contact_name
+ * @property string|null $contact_email
+ * @property string|null $contact_phone
+ * @property string|null $address_line
+ * @property string|null $postal_code
+ * @property string|null $city
+ * @property string|null $country
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyBusinessHour> $businessHours
  */
 class Company extends Model
 {
@@ -22,6 +32,14 @@ class Company extends Model
         'public_menu_card_url',
         'show_out_of_stock_menus_on_card',
         'show_menu_images',
+        'logo_path',
+        'contact_name',
+        'contact_email',
+        'contact_phone',
+        'address_line',
+        'postal_code',
+        'city',
+        'country',
     ];
 
     protected $casts = [
@@ -29,6 +47,14 @@ class Company extends Model
         'public_menu_card_url' => 'string',
         'show_out_of_stock_menus_on_card' => 'bool',
         'show_menu_images' => 'bool',
+        'logo_path' => 'string',
+        'contact_name' => 'string',
+        'contact_email' => 'string',
+        'contact_phone' => 'string',
+        'address_line' => 'string',
+        'postal_code' => 'string',
+        'city' => 'string',
+        'country' => 'string',
     ];
 
     protected $attributes = [
@@ -112,6 +138,14 @@ class Company extends Model
     public function quickAccesses()
     {
         return $this->hasMany(QuickAccess::class);
+    }
+
+    public function businessHours(): HasMany
+    {
+        return $this->hasMany(CompanyBusinessHour::class)
+            ->orderBy('day_of_week')
+            ->orderBy('sequence')
+            ->orderBy('opens_at');
     }
 
     // Removed: specialQuickAccess relation (merged into QuickAccess index 5)
