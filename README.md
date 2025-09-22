@@ -125,6 +125,6 @@ Le projet utilise plusieurs outils pour maintenir la qualité :
 
 <div align="center">
 
-**Fait avec le ❤️ par l'équipe GoofyTeam**
+**Fait avec ❤️ par l'équipe GoofyTeam**
 
 </div>
