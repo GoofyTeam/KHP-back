@@ -60,6 +60,7 @@ Route::prefix('preparations')->name('preparations.')->group(function () {
 // Groupe de routes pour les ingrédients
 Route::prefix('ingredients')->name('ingredients.')->group(function () {
     Route::post('/bulk', [IngredientController::class, 'bulkStore'])->name('bulk-store');
+    Route::put('/bulk/quantities', [IngredientController::class, 'bulkUpdateQuantities'])->name('bulk-update-quantities');
     Route::post('/', [IngredientController::class, 'store'])->name('store');
     Route::put('/{ingredient}', [IngredientController::class, 'update'])->name('update');
     Route::put('/{ingredient}/threshold', [IngredientController::class, 'updateThreshold'])->name('update-threshold');

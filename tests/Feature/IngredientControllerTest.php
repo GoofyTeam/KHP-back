@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Location;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -828,6 +829,126 @@ class IngredientControllerTest extends TestCase
 
         $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $loc1->id, 'quantity' => 5]);
         $this->assertDatabaseHas('ingredient_location', ['ingredient_id' => $ing->id, 'location_id' => $loc2->id, 'quantity' => 3]);
+    }
+
+    public function test_bulk_quantities_update_adjusts_multiple_ingredients(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $loc1 = Location::factory()->create(['company_id' => $company->id]);
+        $loc2 = Location::factory()->create(['company_id' => $company->id]);
+
+        $ingredientOne = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
+        $ingredientTwo = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
+
+        $ingredientOne->locations()->attach($loc1->id, ['quantity' => 3]);
+        $ingredientTwo->locations()->attach($loc2->id, ['quantity' => 4]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'id' => $ingredientOne->id,
+                    'quantities' => [
+                        ['location_id' => $loc1->id, 'quantity' => 6],
+                        ['location_id' => $loc2->id, 'quantity' => 1],
+                    ],
+                ],
+                [
+                    'id' => $ingredientTwo->id,
+                    'quantities' => [
+                        ['location_id' => $loc2->id, 'quantity' => 2],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson('/api/ingredients/bulk/quantities', $payload)
+            ->assertStatus(200)
+            ->assertJsonPath('message', 'Ingredient quantities updated successfully')
+            ->assertJsonCount(2, 'ingredient_ids');
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredientOne->id,
+            'location_id' => $loc1->id,
+            'quantity' => 6,
+        ]);
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredientOne->id,
+            'location_id' => $loc2->id,
+            'quantity' => 1,
+        ]);
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredientTwo->id,
+            'location_id' => $loc2->id,
+            'quantity' => 2,
+        ]);
+
+        $firstMovement = StockMovement::where('trackable_id', $ingredientOne->id)
+            ->where('location_id', $loc1->id)
+            ->where('trackable_type', Ingredient::class)
+            ->first();
+        $this->assertNotNull($firstMovement);
+        $this->assertSame('addition', $firstMovement->type);
+        $this->assertSame('Quantity Manually Adjusted', $firstMovement->reason);
+        $this->assertSame(3.0, (float) $firstMovement->quantity_before);
+        $this->assertSame(6.0, (float) $firstMovement->quantity_after);
+
+        $secondMovement = StockMovement::where('trackable_id', $ingredientTwo->id)
+            ->where('location_id', $loc2->id)
+            ->where('trackable_type', Ingredient::class)
+            ->latest()
+            ->first();
+        $this->assertNotNull($secondMovement);
+        $this->assertSame('withdrawal', $secondMovement->type);
+        $this->assertSame('Quantity Manually Adjusted', $secondMovement->reason);
+        $this->assertSame(4.0, (float) $secondMovement->quantity_before);
+        $this->assertSame(2.0, (float) $secondMovement->quantity_after);
+    }
+
+    public function test_bulk_quantities_update_validates_company_restrictions(): void
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $ingredient = Ingredient::factory()->create(['company_id' => $company->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
+        $foreignIngredient = Ingredient::factory()->create(['company_id' => $otherCompany->id, 'base_quantity' => 1, 'base_unit' => 'kg']);
+
+        $validLocation = Location::factory()->create(['company_id' => $company->id]);
+        $invalidLocation = Location::factory()->create(['company_id' => $otherCompany->id]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'id' => $ingredient->id,
+                    'quantities' => [
+                        ['location_id' => $validLocation->id, 'quantity' => 3],
+                    ],
+                ],
+                [
+                    'id' => $foreignIngredient->id,
+                    'quantities' => [
+                        ['location_id' => $validLocation->id, 'quantity' => 2],
+                    ],
+                ],
+                [
+                    'id' => $ingredient->id,
+                    'quantities' => [
+                        ['location_id' => $invalidLocation->id, 'quantity' => 1],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson('/api/ingredients/bulk/quantities', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'ingredients.1.id',
+                'ingredients.2.quantities.0.location_id',
+            ]);
     }
 
     /** Update image via upload (multipart PUT). */

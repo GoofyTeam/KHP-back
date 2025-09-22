@@ -260,6 +260,89 @@ class IngredientController extends Controller
     }
 
     /**
+     * Cas métier : Mise à jour des quantités de plusieurs ingrédients en une seule requête.
+     *
+     * Use cases :
+     * - Ajuster les stocks de plusieurs ingrédients en même temps (ex : inventaire)
+     * - Ajouter ou modifier des emplacements pour plusieurs ingrédients
+     */
+    public function bulkUpdateQuantities(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'ingredients' => 'required|array|min:1',
+            'ingredients.*.id' => [
+                'required',
+                'integer',
+                Rule::exists('ingredients', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'ingredients.*.quantities' => 'required|array|min:1',
+            'ingredients.*.quantities.*.location_id' => [
+                'required',
+                Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
+            ],
+            'ingredients.*.quantities.*.quantity' => 'required|numeric|min:0',
+        ]);
+
+        $updatedIds = DB::transaction(function () use ($validated, $user) {
+            $ids = [];
+
+            foreach ($validated['ingredients'] as $ingredientIndex => $data) {
+                $ingredient = Ingredient::where('id', $data['id'])
+                    ->where('company_id', $user->company_id)
+                    ->first();
+
+                if (! $ingredient) {
+                    throw ValidationException::withMessages([
+                        "ingredients.$ingredientIndex.id" => 'Invalid ingredient.',
+                    ]);
+                }
+
+                foreach ($data['quantities'] as $quantityIndex => $quantityData) {
+                    $location = Location::where('id', $quantityData['location_id'])
+                        ->where('company_id', $user->company_id)
+                        ->first();
+
+                    if (! $location) {
+                        throw ValidationException::withMessages([
+                            "ingredients.$ingredientIndex.quantities.$quantityIndex.location_id" => 'Invalid location.',
+                        ]);
+                    }
+
+                    $existing = $ingredient->locations()->where('locations.id', $location->id)->first();
+
+                    /** @var (\Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float})|null $pivot */
+                    $pivot = $existing?->pivot;
+                    $before = $pivot ? (float) $pivot->quantity : 0.0;
+
+                    $ingredient->locations()->syncWithoutDetaching([
+                        $location->id => [
+                            'quantity' => $quantityData['quantity'],
+                        ],
+                    ]);
+
+                    $ingredient->recordStockMovement(
+                        $location,
+                        $before,
+                        (float) $quantityData['quantity'],
+                        'Quantity Manually Adjusted'
+                    );
+                }
+
+                $ids[] = $ingredient->id;
+            }
+
+            return $ids;
+        });
+
+        return response()->json([
+            'message' => 'Ingredient quantities updated successfully',
+            'ingredient_ids' => $updatedIds,
+        ]);
+    }
+
+    /**
      * Cas métier : Mise à jour d'un ingrédient existant
      *
      * Use cases :
