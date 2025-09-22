@@ -94,6 +94,7 @@ info "Running migrations..."
 #Temporary create fake data for development purposes (remove in production) (change app_env in secrets)
 
 php artisan migrate:fresh --seed
+php artisan db:seed --class=LyonnaiseCompanySeeder --no-interaction --no-ansi
 
 info "Migrations completed."
 
@@ -143,6 +144,7 @@ fi
 
 #Temporary create fake data for development purposes (remove in production) (change app_env in secrets)
 php artisan migrate:fresh --seed
+php artisan db:seed --class=LyonnaiseCompanySeeder --no-interaction --no-ansi
 
 #=== START SUPERVISORD =========================================
 info "Starting supervisord..."

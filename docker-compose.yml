@@ -10,6 +10,8 @@ services:
         volumes:
             - ./:/var/www/html
             - ./vendor/:/var/www/html/vendor
+        environment:
+            AWS_ENDPOINT_INTERNAL: http://khp-minio:9000
         networks:
             - khp-back
         depends_on:

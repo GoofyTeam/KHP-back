@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'image_downloader' => [
+        'user_agent' => env('IMAGE_DOWNLOADER_USER_AGENT'),
+    ],
+
 ];

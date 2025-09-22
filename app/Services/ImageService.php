@@ -36,8 +36,16 @@ class ImageService
     public function storeFromUrl(string $url, string $folder, int $maxBytes = 2_048_000): string
     {
         // 1) Récupérer le contenu distant
+        $userAgent = config('services.image_downloader.user_agent')
+            ?? config('app.name', 'Laravel').' image seeder';
+
         try {
-            $response = Http::timeout(10)->get($url);
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'User-Agent' => $userAgent,
+                    'Accept' => 'image/*,application/octet-stream;q=0.9,*/*;q=0.1',
+                ])
+                ->get($url);
         } catch (\Throwable $e) {
             throw ValidationException::withMessages([
                 'image_url' => 'Impossible de télécharger l’image (réseau/URL invalide).',
@@ -46,7 +54,7 @@ class ImageService
 
         if (! $response->successful()) {
             throw ValidationException::withMessages([
-                'image_url' => 'Téléchargement échoué (statut HTTP invalide).',
+                'image_url' => 'Téléchargement échoué (statut HTTP '.$response->status().').',
             ]);
         }
 

@@ -13,7 +13,7 @@ VENDOR_BIN = $(DC) exec $(APP) vendor/bin
 # Définition des cibles qui ne sont pas des fichiers
 .PHONY: help up down restart build exec shell status logs \
 	        migrate migrate-fresh migrate-status \
-	        seed demo-seed rollback test tests coverage \
+	        seed demo-seed lyonnaise-seed rollback test tests coverage \
 		cs pint larastan analyse \
 		install composer-update npm-update \
 		cache-clear optimize fresh reset-minio \
@@ -42,6 +42,7 @@ help:
 	@echo "  migrate-status: Vérifier le statut des migrations"
 	@echo "  seed          : Peupler la base de données"
 	@echo "  demo-seed     : Réinitialiser puis lancer le DemoSeeder"
+	@echo "  lyonnaise-seed: Ajouter l'entreprise La Table des Canuts et ses données métiers"
 	@echo "  rollback      : Annuler la dernière migration"
 	@echo "--------------------------------"
 	@echo "Tests et Qualité de code :"
@@ -107,6 +108,10 @@ demo-seed:
 	$(ARTISAN) db:seed --class=DemoSeeder
 	@echo "🍽️ Données de démonstration installées sur une base fraîche."
 
+lyonnaise-seed:
+	$(ARTISAN) db:seed --class=LyonnaiseCompanySeeder
+	@echo "🥖 Données Lyonnaises prêtes à l'emploi."
+
 rollback:
 	$(ARTISAN) migrate:rollback
 
@@ -149,6 +154,7 @@ routes:
 # Réinitialisation complète
 fresh: reset-minio
 	$(ARTISAN) migrate:fresh --seed
+#	$(ARTISAN) db:seed --class=LyonnaiseCompanySeeder
 	@echo "🚀 Environnement frais et prêt !"
 
 # Réinitialise le bucket developp dans MinIO
