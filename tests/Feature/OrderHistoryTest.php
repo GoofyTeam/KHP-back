@@ -131,6 +131,12 @@ class OrderHistoryTest extends TestCase
         self::assertNotNull($readyStepHistory);
         self::assertSame(OrderStepStatus::IN_PREP->value, $readyStepHistory->payload['from']);
 
+        $orderStatusHistoriesAfterReady = OrderHistory::where('order_id', $orderId)
+            ->where('action', OrderHistoryAction::ORDER_STATUS_UPDATED->value)
+            ->get();
+
+        self::assertTrue($orderStatusHistoriesAfterReady->isEmpty());
+
         $this->actingAs($user)
             ->postJson("/api/orders/{$orderId}/step-menus/{$stepMenu->id}/served")
             ->assertOk();
@@ -150,6 +156,14 @@ class OrderHistoryTest extends TestCase
 
         self::assertNotNull($servedStepHistory);
         self::assertSame(OrderStepStatus::READY->value, $servedStepHistory->payload['from']);
+
+        $servedOrderHistory = OrderHistory::where('order_id', $orderId)
+            ->where('action', OrderHistoryAction::ORDER_STATUS_UPDATED->value)
+            ->get()
+            ->last(fn (OrderHistory $entry) => ($entry->payload['to'] ?? null) === OrderStatus::SERVED->value);
+
+        self::assertNotNull($servedOrderHistory);
+        self::assertSame(OrderStatus::PENDING->value, $servedOrderHistory->payload['from']);
     }
 
     public function test_it_records_step_menu_cancellations(): void
@@ -260,11 +274,11 @@ class OrderHistoryTest extends TestCase
 
         $orderStatusHistory = OrderHistory::where('order_id', $orderId)
             ->where('action', OrderHistoryAction::ORDER_STATUS_UPDATED->value)
-            ->latest()
-            ->first();
+            ->get()
+            ->last(fn (OrderHistory $entry) => ($entry->payload['to'] ?? null) === OrderStatus::CANCELED->value);
 
         self::assertNotNull($orderStatusHistory);
-        self::assertSame(OrderStatus::PENDING->value, $orderStatusHistory->payload['from']);
+        self::assertSame(OrderStatus::SERVED->value, $orderStatusHistory->payload['from']);
         self::assertSame(OrderStatus::CANCELED->value, $orderStatusHistory->payload['to']);
         self::assertSame('ORDER_CANCELED', $orderStatusHistory->reason);
         self::assertSame([$stepMenu->id], $orderStatusHistory->payload['return_step_menu_ids']);
@@ -307,11 +321,11 @@ class OrderHistoryTest extends TestCase
 
         $history = OrderHistory::where('order_id', $orderId)
             ->where('action', OrderHistoryAction::ORDER_STATUS_UPDATED->value)
-            ->latest()
-            ->first();
+            ->get()
+            ->last(fn (OrderHistory $entry) => ($entry->payload['to'] ?? null) === OrderStatus::PAYED->value);
 
         self::assertNotNull($history);
-        self::assertSame(OrderStatus::PENDING->value, $history->payload['from']);
+        self::assertSame(OrderStatus::SERVED->value, $history->payload['from']);
         self::assertSame(OrderStatus::PAYED->value, $history->payload['to']);
         self::assertFalse($history->payload['force']);
         self::assertNull($history->reason);
