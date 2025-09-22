@@ -10,7 +10,6 @@ use App\Models\MenuItem;
 use App\Models\MenuType;
 use App\Models\Preparation;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
