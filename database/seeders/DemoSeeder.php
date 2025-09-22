@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Enums\MeasurementUnit;
+use App\Enums\OrderStatus;
+use App\Enums\OrderStepStatus;
+use App\Enums\StepMenuStatus;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Ingredient;
@@ -13,11 +16,18 @@ use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\MenuType;
 use App\Models\MenuTypePublicOrder;
+use App\Models\Order;
+use App\Models\OrderStep;
 use App\Models\Preparation;
+use App\Models\Room;
+use App\Models\StepMenu;
+use App\Models\Table;
 use App\Models\User;
 use App\Services\ImageService;
 use App\Services\OpenFoodFactsService;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
@@ -242,6 +252,170 @@ class DemoSeeder extends Seeder
         'Plats' => 1,
         'Desserts' => 2,
         'Accompagnements' => 3,
+    ];
+
+    private const ROOM_BLUEPRINTS = [
+        [
+            'code' => 'MG-HALL',
+            'name' => 'Grand Hall Maison Gustave',
+        ],
+        [
+            'code' => 'MG-TERR',
+            'name' => 'Terrasse Jardin Maison Gustave',
+        ],
+    ];
+
+    private const TABLE_BLUEPRINTS = [
+        [
+            'label' => 'MG-HALL-01',
+            'seats' => 4,
+            'room_code' => 'MG-HALL',
+        ],
+        [
+            'label' => 'MG-HALL-02',
+            'seats' => 2,
+            'room_code' => 'MG-HALL',
+        ],
+        [
+            'label' => 'MG-TERR-01',
+            'seats' => 4,
+            'room_code' => 'MG-TERR',
+        ],
+        [
+            'label' => 'MG-TERR-02',
+            'seats' => 6,
+            'room_code' => 'MG-TERR',
+        ],
+    ];
+
+    private const MENU_IMAGE_DIRECTORIES = [
+        'private/seeders/images',
+        'seeders/images',
+        'images/seeders/images',
+    ];
+
+    private const MENU_IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp', 'gif', 'avif'];
+
+    private const ORDER_BLUEPRINTS = [
+        [
+            'table' => 'MG-HALL-01',
+            'user' => 'adrien@example.com',
+            'status' => OrderStatus::PENDING,
+            'timeline' => [
+                'minutes_ago' => 45,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::IN_PREP,
+                    'menus' => [
+                        [
+                            'name' => 'Notre pâté en croûte, pickles de légumes',
+                            'quantity' => 2,
+                            'status' => StepMenuStatus::IN_PREP,
+                        ],
+                        [
+                            'name' => 'Foie gras de canard, brioche parisienne',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::IN_PREP,
+                            'note' => 'Servir avec brioche tiède',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-HALL-02',
+            'user' => 'thomas@example.com',
+            'status' => OrderStatus::SERVED,
+            'timeline' => [
+                'minutes_ago' => 110,
+                'served_after' => 55,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::READY,
+                    'served_after' => 35,
+                    'menus' => [
+                        [
+                            'name' => 'Homard bleu rafraîchi, haricots verts et amandes fraîches',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::READY,
+                        ],
+                    ],
+                ],
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 55,
+                    'menus' => [
+                        [
+                            'name' => 'Dos de bar doré, courgette trompette et jus d’une marinière',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-01',
+            'user' => 'antoine@example.com',
+            'status' => OrderStatus::PAYED,
+            'timeline' => [
+                'minutes_ago' => 180,
+                'served_after' => 70,
+                'payed_after' => 95,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 60,
+                    'menus' => [
+                        [
+                            'name' => 'Sole à la meunière, cassolette d’artichauts (pour deux)',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                        [
+                            'name' => 'Fromages de France',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 70,
+                    'menus' => [
+                        [
+                            'name' => 'Pêche Melba',
+                            'quantity' => 2,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-02',
+            'user' => 'brandon@example.com',
+            'status' => OrderStatus::CANCELED,
+            'timeline' => [
+                'minutes_ago' => 60,
+                'canceled_after' => 20,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::IN_PREP,
+                    'menus' => [
+                        [
+                            'name' => 'Millefeuille classique à la vanille',
+                            'quantity' => 3,
+                            'status' => StepMenuStatus::IN_PREP,
+                        ],
+                    ],
+                ],
+            ],
+        ],
     ];
 
     private const PREPARATION_COMPONENTS = [
@@ -1254,6 +1428,8 @@ class DemoSeeder extends Seeder
             $defaultLocation
         );
 
+        $this->seedOrders($company);
+
         $this->report();
     }
 
@@ -1889,6 +2065,47 @@ class DemoSeeder extends Seeder
         return $this->menuPlaceholderImagePath = $this->placeholderPath();
     }
 
+    private function resolveMenuImageById(int $menuId): ?string
+    {
+        $localDisk = Storage::disk('local');
+        $cloudDisk = Storage::disk('s3');
+
+        foreach (self::MENU_IMAGE_DIRECTORIES as $directory) {
+            $normalizedDirectory = trim($directory, '/');
+
+            if ($normalizedDirectory === '') {
+                continue;
+            }
+
+            foreach (self::MENU_IMAGE_EXTENSIONS as $extension) {
+                $relativePath = $normalizedDirectory."/{$menuId}.{$extension}";
+
+                if (! $localDisk->exists($relativePath)) {
+                    continue;
+                }
+
+                $targetPath = str_starts_with($relativePath, 'private/')
+                    ? $relativePath
+                    : 'private/'.$relativePath;
+
+                try {
+                    if (! $cloudDisk->exists($targetPath)) {
+                        $contents = $localDisk->get($relativePath);
+                        $cloudDisk->put($targetPath, $contents);
+                    }
+                } catch (Throwable $exception) {
+                    $this->command?->warn('Impossible de publier l\'image du menu #'.$menuId.' : '.$exception->getMessage());
+
+                    return 'storage/app/'.$relativePath;
+                }
+
+                return $targetPath;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @param  array<string, Ingredient>  $ingredients
      * @return array<string, Preparation>
@@ -2090,8 +2307,14 @@ class DemoSeeder extends Seeder
                     ]
                 );
 
-                if (! $menu->image_url) {
-                    $menu->update(['image_url' => $this->menuPlaceholderPath()]);
+                $imagePath = $this->resolveMenuImageById($menu->id) ?? $menu->image_url;
+
+                if (! $imagePath) {
+                    $imagePath = $this->menuPlaceholderPath();
+                }
+
+                if ($imagePath !== $menu->image_url) {
+                    $menu->update(['image_url' => $imagePath]);
                 }
 
                 if ($menuCategory instanceof MenuCategory) {
@@ -2184,6 +2407,301 @@ class DemoSeeder extends Seeder
                 }
             }
         }
+    }
+
+    private function seedOrders(Company $company): void
+    {
+        $rooms = $this->ensureRooms($company);
+        $tables = $this->ensureTables($company, $rooms);
+
+        if ($tables === []) {
+            return;
+        }
+
+        Order::query()->where('company_id', $company->id)->delete();
+
+        $menuMap = Menu::query()
+            ->where('company_id', $company->id)
+            ->get()
+            ->keyBy('name');
+
+        /** @var Collection<string, User> $users */
+        $users = $company->users()->get()->keyBy('email');
+        /** @var User|null $defaultUser */
+        $defaultUser = $users->first();
+
+        foreach (self::ORDER_BLUEPRINTS as $definition) {
+            $tableLabel = $definition['table'] ?? null;
+            if (! is_string($tableLabel) || $tableLabel === '') {
+                continue;
+            }
+
+            $table = $tables[$tableLabel] ?? null;
+            if (! $table instanceof Table) {
+                continue;
+            }
+
+            $status = $definition['status'] ?? OrderStatus::PENDING;
+            if (! $status instanceof OrderStatus) {
+                $status = OrderStatus::from((string) $status);
+            }
+
+            $timeline = $this->buildOrderTimeline($status, $definition['timeline'] ?? []);
+
+            $userEmail = $definition['user'] ?? null;
+            $user = is_string($userEmail) && $userEmail !== ''
+                ? ($users->get($userEmail) ?? null)
+                : null;
+
+            if (! $user instanceof User) {
+                $user = $defaultUser;
+            }
+
+            if (! $user instanceof User) {
+                continue;
+            }
+
+            $order = Order::query()->create([
+                'company_id' => $company->id,
+                'table_id' => $table->id,
+                'user_id' => $user->id,
+                'status' => $status,
+                'pending_at' => $timeline['pending_at'],
+                'served_at' => $timeline['served_at'],
+                'payed_at' => $timeline['payed_at'],
+                'canceled_at' => $timeline['canceled_at'],
+            ]);
+
+            $this->seedOrderSteps($order, $definition['steps'] ?? [], $menuMap, $timeline);
+        }
+    }
+
+    /**
+     * @return array<string, Room>
+     */
+    private function ensureRooms(Company $company): array
+    {
+        $rooms = [];
+
+        foreach (self::ROOM_BLUEPRINTS as $definition) {
+            $code = $definition['code'] ?? null;
+            if (! is_string($code) || $code === '') {
+                continue;
+            }
+
+            $room = Room::query()->updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'code' => $code,
+                ],
+                [
+                    'name' => $definition['name'] ?? $code,
+                ]
+            );
+
+            $rooms[$code] = $room;
+        }
+
+        return $rooms;
+    }
+
+    /**
+     * @param  array<string, Room>  $rooms
+     * @return array<string, Table>
+     */
+    private function ensureTables(Company $company, array $rooms): array
+    {
+        $tables = [];
+
+        foreach (self::TABLE_BLUEPRINTS as $definition) {
+            $label = $definition['label'] ?? null;
+            $roomCode = $definition['room_code'] ?? null;
+
+            if (! is_string($label) || $label === '' || ! is_string($roomCode) || $roomCode === '') {
+                continue;
+            }
+
+            $room = $rooms[$roomCode] ?? null;
+
+            if (! $room instanceof Room) {
+                continue;
+            }
+
+            $table = Table::query()->updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'label' => $label,
+                ],
+                [
+                    'room_id' => $room->id,
+                    'seats' => max(1, (int) ($definition['seats'] ?? 2)),
+                ]
+            );
+
+            $tables[$label] = $table;
+        }
+
+        return $tables;
+    }
+
+    /**
+     * @param  array<string, int>  $timelineDefinition
+     * @return array{
+     *     pending_at: CarbonImmutable,
+     *     served_at: CarbonImmutable|null,
+     *     payed_at: CarbonImmutable|null,
+     *     canceled_at: CarbonImmutable|null,
+     * }
+     */
+    private function buildOrderTimeline(OrderStatus $status, array $timelineDefinition): array
+    {
+        $minutesAgo = max(5, (int) ($timelineDefinition['minutes_ago'] ?? 60));
+        $pendingAt = CarbonImmutable::now()->subMinutes($minutesAgo);
+
+        $servedAt = null;
+        $payedAt = null;
+        $canceledAt = null;
+
+        if (in_array($status, [OrderStatus::SERVED, OrderStatus::PAYED], true)) {
+            $servedDelay = max(1, (int) ($timelineDefinition['served_after'] ?? 30));
+            $servedAt = $pendingAt->addMinutes($servedDelay);
+        }
+
+        if ($status === OrderStatus::PAYED) {
+            $reference = $servedAt ?? $pendingAt;
+            $payedDelay = max(1, (int) ($timelineDefinition['payed_after'] ?? 20));
+            $payedAt = $reference->addMinutes($payedDelay);
+        }
+
+        if ($status === OrderStatus::CANCELED) {
+            $canceledDelay = max(1, (int) ($timelineDefinition['canceled_after'] ?? 15));
+            $canceledAt = $pendingAt->addMinutes($canceledDelay);
+        }
+
+        return [
+            'pending_at' => $pendingAt,
+            'served_at' => $servedAt,
+            'payed_at' => $payedAt,
+            'canceled_at' => $canceledAt,
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $steps
+     * @param  array{
+     *     pending_at: CarbonImmutable,
+     *     served_at: CarbonImmutable|null,
+     *     payed_at: CarbonImmutable|null,
+     *     canceled_at: CarbonImmutable|null,
+     * }  $timeline
+     */
+    private function seedOrderSteps(Order $order, array $steps, Collection $menuMap, array $timeline): void
+    {
+        $order->steps()->delete();
+
+        /** @var CarbonImmutable $pendingAt */
+        $pendingAt = $timeline['pending_at'];
+
+        foreach ($steps as $index => $definition) {
+            $status = $definition['status'] ?? OrderStepStatus::IN_PREP;
+
+            if (! $status instanceof OrderStepStatus) {
+                $status = OrderStepStatus::from((string) $status);
+            }
+
+            $servedAt = null;
+
+            if (array_key_exists('served_after', $definition)) {
+                $servedAt = $pendingAt->addMinutes((int) $definition['served_after']);
+            } elseif ($status === OrderStepStatus::SERVED) {
+                $servedAt = $timeline['served_at'];
+            }
+
+            $step = OrderStep::query()->create([
+                'order_id' => $order->id,
+                'position' => $index + 1,
+                'status' => $status,
+                'served_at' => $servedAt,
+            ]);
+
+            $this->seedStepMenus($step, $definition['menus'] ?? [], $menuMap, $timeline, $status, $servedAt);
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $menus
+     * @param  array{
+     *     pending_at: CarbonImmutable,
+     *     served_at: CarbonImmutable|null,
+     *     payed_at: CarbonImmutable|null,
+     *     canceled_at: CarbonImmutable|null,
+     * }  $timeline
+     */
+    private function seedStepMenus(
+        OrderStep $step,
+        array $menus,
+        Collection $menuMap,
+        array $timeline,
+        OrderStepStatus $stepStatus,
+        ?CarbonImmutable $stepServedAt
+    ): void {
+        $step->stepMenus()->delete();
+
+        /** @var CarbonImmutable $pendingAt */
+        $pendingAt = $timeline['pending_at'];
+
+        foreach ($menus as $menuDefinition) {
+            $menuName = $menuDefinition['name'] ?? null;
+
+            if (! is_string($menuName) || trim($menuName) === '') {
+                continue;
+            }
+
+            $menu = $menuMap->get($menuName);
+
+            if (! $menu instanceof Menu) {
+                $this->missingComponents[] = $menuName.' (commande '.$step->order_id.')';
+
+                continue;
+            }
+
+            $quantity = max(1, (int) ($menuDefinition['quantity'] ?? 1));
+            $statusDefinition = $menuDefinition['status'] ?? null;
+
+            if ($statusDefinition instanceof StepMenuStatus) {
+                $menuStatus = $statusDefinition;
+            } elseif (is_string($statusDefinition) && $statusDefinition !== '') {
+                $menuStatus = StepMenuStatus::from($statusDefinition);
+            } else {
+                $menuStatus = $this->defaultStepMenuStatus($stepStatus);
+            }
+
+            $servedAt = null;
+
+            if (array_key_exists('served_after', $menuDefinition)) {
+                $servedAt = $pendingAt->addMinutes((int) $menuDefinition['served_after']);
+            } elseif ($menuStatus === StepMenuStatus::SERVED) {
+                $servedAt = $stepServedAt ?? $timeline['served_at'];
+            }
+
+            StepMenu::query()->create([
+                'order_step_id' => $step->id,
+                'menu_id' => $menu->id,
+                'quantity' => $quantity,
+                'status' => $menuStatus,
+                'note' => $menuDefinition['note'] ?? null,
+                'served_at' => $servedAt,
+            ]);
+        }
+    }
+
+    private function defaultStepMenuStatus(OrderStepStatus $status): StepMenuStatus
+    {
+        return match ($status) {
+            OrderStepStatus::READY => StepMenuStatus::READY,
+            OrderStepStatus::SERVED => StepMenuStatus::SERVED,
+            default => StepMenuStatus::IN_PREP,
+        };
     }
 
     private function report(): void
