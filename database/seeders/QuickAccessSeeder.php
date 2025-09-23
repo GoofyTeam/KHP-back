@@ -61,8 +61,46 @@ class QuickAccessSeeder extends Seeder
 
     public function run(): void
     {
-        Company::all()->each(function (Company $company) {
-            foreach (self::defaults() as $index => $row) {
+        $defaults = [
+            [
+                'index' => 1,
+                'name' => 'Add to stock',
+                'icon' => 'Plus',
+                'icon_color' => 'primary',
+                'url_key' => 'add_to_stock',
+            ],
+            [
+                'index' => 2,
+                'name' => 'Menu Card',
+                'icon' => 'Notebook',
+                'icon_color' => 'info',
+                'url_key' => 'menu_card',
+            ],
+            [
+                'index' => 3,
+                'name' => 'Stock',
+                'icon' => 'Check',
+                'icon_color' => 'primary',
+                'url_key' => 'stock',
+            ],
+            [
+                'index' => 4,
+                'name' => 'Waiters',
+                'icon' => 'User',
+                'icon_color' => 'info',
+                'url_key' => 'waiters_page',
+            ],
+            [
+                'index' => 5,
+                'name' => 'Chefs',
+                'icon' => 'ChefHat',
+                'icon_color' => 'primary',
+                'url_key' => 'chefs_page',
+            ],
+        ];
+
+        Company::all()->each(function (Company $company) use ($defaults) {
+            foreach ($defaults as $row) {
                 QuickAccess::updateOrCreate(
                     [
                         'company_id' => $company->id,

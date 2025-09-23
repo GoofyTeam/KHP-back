@@ -61,8 +61,8 @@ class QuickAccessController extends Controller
             1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url_key' => 'add_to_stock'],
             2 => ['name' => 'Menu Card', 'icon' => 'Cutlery', 'icon_color' => 'info', 'url_key' => 'menu_card'],
             3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url_key' => 'stock'],
-            4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 'primary', 'url_key' => 'take_order'],
-            5 => ['name' => 'Waiters', 'icon' => 'User', 'icon_color' => 'info', 'url_key' => 'waiters_page'],
+            4 => ['name' => 'Waiters', 'icon' => 'User', 'icon_color' => 'info', 'url_key' => 'waiters_page'],
+            5 => ['name' => 'Chefs', 'icon' => 'ChefHat', 'icon_color' => 'primary', 'url_key' => 'chefs_page'],
         ];
 
         foreach ($defaults as $pos => $payload) {

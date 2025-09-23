@@ -232,11 +232,41 @@ class Company extends Model
 
             // Créer les boutons de quick access par défaut
             $defaults = [
-                1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url_key' => 'add_to_stock'],
-                2 => ['name' => 'Menu Card', 'icon' => 'Cutlery', 'icon_color' => 'info', 'url_key' => 'menu_card'],
-                3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url_key' => 'stock'],
-                4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 'primary', 'url_key' => 'take_order'],
-                5 => ['name' => 'Waiters', 'icon' => 'User', 'icon_color' => 'info', 'url_key' => 'waiters_page'],
+                [
+                    'index' => 1,
+                    'name' => 'Add to stock',
+                    'icon' => 'Plus',
+                    'icon_color' => 'primary',
+                    'url_key' => 'add_to_stock',
+                ],
+                [
+                    'index' => 2,
+                    'name' => 'Menu Card',
+                    'icon' => 'Notebook',
+                    'icon_color' => 'info',
+                    'url_key' => 'menu_card',
+                ],
+                [
+                    'index' => 3,
+                    'name' => 'Stock',
+                    'icon' => 'Check',
+                    'icon_color' => 'primary',
+                    'url_key' => 'stock',
+                ],
+                [
+                    'index' => 4,
+                    'name' => 'Waiters',
+                    'icon' => 'User',
+                    'icon_color' => 'info',
+                    'url_key' => 'waiters_page',
+                ],
+                [
+                    'index' => 5,
+                    'name' => 'Chefs',
+                    'icon' => 'ChefHat',
+                    'icon_color' => 'primary',
+                    'url_key' => 'chefs_page',
+                ],
             ];
 
             foreach ($defaults as $index => $row) {

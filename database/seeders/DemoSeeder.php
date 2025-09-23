@@ -22,6 +22,7 @@ use App\Models\Order;
 use App\Models\OrderStep;
 use App\Models\Preparation;
 use App\Models\Room;
+use App\Models\QuickAccess;
 use App\Models\StepMenu;
 use App\Models\StockMovement;
 use App\Models\Table;
@@ -1738,11 +1739,31 @@ class DemoSeeder extends Seeder
             $defaultLocation
         );
 
+        $this->seedQuickAccesses($company);
+
         $this->seedOrders($company);
 
         $this->seedAdditionalCompany();
 
         $this->report();
+    }
+
+    private function seedQuickAccesses(Company $company): void
+    {
+        $defaults = [
+            1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url_key' => 'add_to_stock'],
+            2 => ['name' => 'Menu Card', 'icon' => 'Notebook', 'icon_color' => 'info', 'url_key' => 'menu_card'],
+            3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url_key' => 'stock'],
+            4 => ['name' => 'Waiters', 'icon' => 'User', 'icon_color' => 'info', 'url_key' => 'waiters_page'],
+            5 => ['name' => 'Chefs', 'icon' => 'ChefHat', 'icon_color' => 'primary', 'url_key' => 'chefs_page'],
+        ];
+
+        foreach ($defaults as $index => $payload) {
+            QuickAccess::updateOrCreate(
+                ['company_id' => $company->id, 'index' => $index],
+                $payload
+            );
+        }
     }
 
     /**
