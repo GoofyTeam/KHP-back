@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Enums\MenuServiceType;
 use App\Enums\OrderStatus;
@@ -41,7 +42,7 @@ class DemoSeeder extends Seeder
         'name' => 'Maison Gustave',
         'open_food_facts_language' => 'fr',
         'contact' => [
-            'contact_name' => 'Gustave Lenoir',
+            'contact_name' => 'Gustave Renoir',
             'contact_email' => 'contact@maison-gustave.fr',
             'contact_phone' => '+33 1 42 68 10 10',
             'address_line' => '8 Rue de la Gastronomie',
@@ -86,6 +87,23 @@ class DemoSeeder extends Seeder
             ['name' => 'Antoine', 'email' => 'antoine@example.com'],
         ],
     ];
+
+    private function seedAdditionalCompany(): void
+    {
+        $company = Company::updateOrCreate(
+            ['name' => 'Bistro Maelle'],
+            ['open_food_facts_language' => 'fr']
+        );
+
+        User::updateOrCreate(
+            ['email' => 'maelle@example.com'],
+            [
+                'name' => 'Maelle',
+                'company_id' => $company->id,
+                'password' => 'password',
+            ]
+        );
+    }
 
     private const MENU_BLUEPRINT_JSON = <<<'JSON'
     {
@@ -439,6 +457,252 @@ class DemoSeeder extends Seeder
                             'name' => 'Millefeuille classique à la vanille',
                             'quantity' => 3,
                             'status' => StepMenuStatus::IN_PREP,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-HALL-01',
+            'user' => 'luca@example.com',
+            'status' => OrderStatus::PENDING,
+            'timeline' => [
+                'minutes_ago' => 25,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::IN_PREP,
+                    'menus' => [
+                        [
+                            'name' => 'Tomate de plein champs fondante, anchois et basilic',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::IN_PREP,
+                        ],
+                        [
+                            'name' => 'Foie gras de canard, brioche parisienne',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::IN_PREP,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-HALL-02',
+            'user' => 'adrien@example.com',
+            'status' => OrderStatus::PENDING,
+            'timeline' => [
+                'minutes_ago' => 15,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::READY,
+                    'menus' => [
+                        [
+                            'name' => 'Millefeuille classique à la vanille',
+                            'quantity' => 2,
+                            'status' => StepMenuStatus::READY,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-02',
+            'user' => 'thomas@example.com',
+            'status' => OrderStatus::SERVED,
+            'timeline' => [
+                'minutes_ago' => 90,
+                'served_after' => 40,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::READY,
+                    'served_after' => 35,
+                    'menus' => [
+                        [
+                            'name' => 'Dos de bar doré, courgette trompette et jus d’une marinière',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::READY,
+                        ],
+                    ],
+                ],
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 40,
+                    'menus' => [
+                        [
+                            'name' => 'Homard bleu rafraîchi, haricots verts et amandes fraîches',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-HALL-01',
+            'user' => 'brandon@example.com',
+            'status' => OrderStatus::SERVED,
+            'timeline' => [
+                'minutes_ago' => 70,
+                'served_after' => 45,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 45,
+                    'menus' => [
+                        [
+                            'name' => 'Notre pâté en croûte, pickles de légumes',
+                            'quantity' => 2,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-01',
+            'user' => 'adrien@example.com',
+            'status' => OrderStatus::PAYED,
+            'timeline' => [
+                'minutes_ago' => 200,
+                'served_after' => 80,
+                'payed_after' => 30,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 75,
+                    'menus' => [
+                        [
+                            'name' => 'Sole à la meunière, cassolette d’artichauts (pour deux)',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                        [
+                            'name' => 'Fromages de France',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-HALL-02',
+            'user' => 'luca@example.com',
+            'status' => OrderStatus::PAYED,
+            'timeline' => [
+                'minutes_ago' => 160,
+                'served_after' => 60,
+                'payed_after' => 35,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 55,
+                    'menus' => [
+                        [
+                            'name' => 'Foie gras de canard, brioche parisienne',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                        [
+                            'name' => 'Tomate de plein champs fondante, anchois et basilic',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-02',
+            'user' => 'antoine@example.com',
+            'status' => OrderStatus::CANCELED,
+            'timeline' => [
+                'minutes_ago' => 50,
+                'canceled_after' => 25,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::IN_PREP,
+                    'menus' => [
+                        [
+                            'name' => 'Pêche Melba',
+                            'quantity' => 3,
+                            'status' => StepMenuStatus::IN_PREP,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-HALL-01',
+            'user' => 'thomas@example.com',
+            'status' => OrderStatus::CANCELED,
+            'timeline' => [
+                'minutes_ago' => 30,
+                'canceled_after' => 10,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::IN_PREP,
+                    'menus' => [
+                        [
+                            'name' => 'Dos de bar doré, courgette trompette et jus d’une marinière',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::IN_PREP,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-01',
+            'user' => 'brandon@example.com',
+            'status' => OrderStatus::PENDING,
+            'timeline' => [
+                'minutes_ago' => 18,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::IN_PREP,
+                    'menus' => [
+                        [
+                            'name' => 'Foie gras de canard, brioche parisienne',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::IN_PREP,
+                            'note' => 'Allergie arachides à vérifier',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'table' => 'MG-TERR-02',
+            'user' => 'adrien@example.com',
+            'status' => OrderStatus::SERVED,
+            'timeline' => [
+                'minutes_ago' => 140,
+                'served_after' => 65,
+            ],
+            'steps' => [
+                [
+                    'status' => OrderStepStatus::SERVED,
+                    'served_after' => 65,
+                    'menus' => [
+                        [
+                            'name' => 'Fromages de France',
+                            'quantity' => 1,
+                            'status' => StepMenuStatus::SERVED,
+                        ],
+                        [
+                            'name' => 'Millefeuille classique à la vanille',
+                            'quantity' => 2,
+                            'status' => StepMenuStatus::SERVED,
                         ],
                     ],
                 ],
@@ -854,6 +1118,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1000,
             'stock' => 6000,
             'barcode' => '4056489565536',
+            'allergens' => [Allergen::GLUTEN->value],
         ],
         'Beurre' => [
             'category' => 'Produits Laitiers',
@@ -862,6 +1127,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 250,
             'stock' => 3000,
             'barcode' => '26064413',
+            'allergens' => [Allergen::MILK->value],
         ],
         'Eau' => [
             'category' => 'Boissons',
@@ -910,6 +1176,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1,
             'stock' => 180,
             'barcode' => '3560070432080',
+            'allergens' => [Allergen::EGGS->value],
         ],
         'Crème' => [
             'category' => 'Produits Laitiers',
@@ -918,6 +1185,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1000,
             'stock' => 24,
             'barcode' => '3258561419299',
+            'allergens' => [Allergen::MILK->value],
         ],
         'Poivre' => [
             'category' => 'Épices',
@@ -998,6 +1266,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1000,
             'stock' => 10,
             'barcode' => '3077311522405',
+            'allergens' => [Allergen::SULPHITES->value],
         ],
         'Sucre' => [
             'category' => 'Épicerie',
@@ -1014,6 +1283,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 200,
             'stock' => 180,
             'barcode' => '7610845400434',
+            'allergens' => [Allergen::MUSTARD->value],
         ],
         'Foie gras de canard cru' => [
             'category' => 'Viandes',
@@ -1030,6 +1300,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1000,
             'stock' => 40,
             'barcode' => '3428272970017',
+            'allergens' => [Allergen::MILK->value],
         ],
         'Levure de boulanger' => [
             'category' => 'Épicerie',
@@ -1046,6 +1317,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 600,
             'stock' => 0,
             'barcode' => '3770000648317',
+            'allergens' => [Allergen::CRUSTACEANS->value],
         ],
         'Haricots verts frais' => [
             'category' => 'Légumes',
@@ -1062,6 +1334,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 500,
             'stock' => 5,
             'barcode' => '3700194630287',
+            'allergens' => [Allergen::TREE_NUTS->value],
         ],
         'Huile d’olive' => [
             'category' => 'Épicerie',
@@ -1094,6 +1367,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 500,
             'stock' => 400,
             'barcode' => '3218370591821',
+            'allergens' => [Allergen::FISH->value],
         ],
         'Basilic frais' => [
             'category' => 'Herbes aromatiques',
@@ -1110,6 +1384,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 280,
             'stock' => 8,
             'barcode' => '3664335055264',
+            'allergens' => [Allergen::FISH->value],
         ],
         'Courgette trompette' => [
             'category' => 'Légumes',
@@ -1126,6 +1401,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 750,
             'stock' => 18,
             'barcode' => '3660989151932',
+            'allergens' => [Allergen::SULPHITES->value],
         ],
         'Échalotes' => [
             'category' => 'Légumes',
@@ -1150,6 +1426,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 350,
             'stock' => 6,
             'barcode' => '0059749982474',
+            'allergens' => [Allergen::FISH->value],
         ],
         'Jus de citron' => [
             'category' => 'Épicerie',
@@ -1198,6 +1475,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1,
             'stock' => 140,
             'barcode' => '3439496001838',
+            'allergens' => [Allergen::EGGS->value],
         ],
         'Fécule' => [
             'category' => 'Farines',
@@ -1246,6 +1524,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1000,
             'stock' => 20,
             'barcode' => '26048154',
+            'allergens' => [Allergen::MILK->value, Allergen::EGGS->value],
         ],
         'Sélection de fromages de vache, chèvre, brebis' => [
             'category' => 'Fromages',
@@ -1254,6 +1533,7 @@ class DemoSeeder extends Seeder
             'base_quantity' => 1500,
             'stock' => 14,
             'barcode' => '0200340018370',
+            'allergens' => [Allergen::MILK->value],
         ],
     ];
 
@@ -1457,6 +1737,8 @@ class DemoSeeder extends Seeder
         );
 
         $this->seedOrders($company);
+
+        $this->seedAdditionalCompany();
 
         $this->report();
     }
@@ -1954,6 +2236,7 @@ class DemoSeeder extends Seeder
                     'base_quantity' => $baseQuantity,
                     'base_unit' => $baseUnit->value,
                     'barcode' => $meta['barcode'] ?? null,
+                    'allergens' => $meta['allergens'] ?? [],
                 ]
             );
 
