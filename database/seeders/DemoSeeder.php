@@ -82,11 +82,12 @@ class DemoSeeder extends Seeder
             ],
         ],
         'users' => [
-            ['name' => 'Adrien', 'email' => 'adrien@example.com'],
-            ['name' => 'Thomas', 'email' => 'thomas@example.com'],
-            ['name' => 'Luca', 'email' => 'luca@example.com'],
-            ['name' => 'Brandon', 'email' => 'brandon@example.com'],
-            ['name' => 'Antoine', 'email' => 'antoine@example.com'],
+            ['name' => 'Adrien', 'email' => 'adrien@demo.com'],
+            ['name' => 'Thomas', 'email' => 'thomas@demo.com'],
+            ['name' => 'Luca', 'email' => 'luca@demo.com'],
+            ['name' => 'Brandon', 'email' => 'brandon@demo.com'],
+            ['name' => 'Antoine', 'email' => 'antoine@demo.com'],
+            ['name' => 'Demo', 'email' => 'demo@demo.com'],
         ],
     ];
 
@@ -1112,6 +1113,25 @@ class DemoSeeder extends Seeder
         ],
     ];
 
+    private const PREPARATION_IMAGE_PATHS = [
+        'Pâte brisée' => 'private/seeders/images/patebrisee.jpg',
+        'Farce de porc maison' => 'private/seeders/images/farcedeporcmaison.jpg',
+        'Gelée' => 'private/seeders/images/gelee.webp',
+        'Pâté en croûte' => 'private/seeders/images/pateencroute.jpg',
+        'Marinade' => 'private/seeders/images/marinade.jpg',
+        'Pickles de légumes' => 'private/seeders/images/piclesdelegume.jpg',
+        'Brioche parisienne' => 'private/seeders/images/briocheparisienne.jpg',
+        'Jus de marinière' => 'private/seeders/images/jusdemariniere.jpg',
+        'Sole à la meunière' => 'private/seeders/images/solmeuniere.jpg',
+        'Cassolette d’artichauts' => 'private/seeders/images/cassouletartichaut.jpg',
+        'Pâte feuilletée' => 'private/seeders/images/patefeuillete.jpg',
+        'Crème pâtissière à la vanille' => 'private/seeders/images/cremepatissierealavanille.webp',
+        'Millefeuille' => 'private/seeders/images/millefeuille.jpg',
+        'Pêches pochées' => 'private/seeders/images/pechepochee.jpg',
+        'Coulis de framboise' => 'private/seeders/images/coulisdeframboises.webp',
+        'Pêche Melba' => 'private/seeders/images/pechemelba.webp',
+    ];
+
     private const INGREDIENTS = [
         'Farine' => [
             'category' => 'Farines',
@@ -1666,6 +1686,11 @@ class DemoSeeder extends Seeder
 
     /** @var array<string, int> */
     private array $preparationLocations = [];
+
+    /** @var array<string, string|null> */
+    private array $preparationImages = [];
+
+    private bool $preparationImageMapChecked = false;
 
     private ?int $defaultLocationId = null;
 
@@ -2606,9 +2631,15 @@ class DemoSeeder extends Seeder
         array $ingredients
     ): array {
         $preparations = [];
-        $imagePath = $this->placeholderPath();
 
         foreach (array_keys(self::PREPARATION_COMPONENTS) as $name) {
+            $imagePath = $this->resolvePreparationImage($name);
+
+            if (! $imagePath) {
+                $this->missingImages[] = $name.' (préparation)';
+                $imagePath = $this->placeholderPath();
+            }
+
             $preparation = Preparation::updateOrCreate(
                 [
                     'company_id' => $company->id,
@@ -2697,6 +2728,66 @@ class DemoSeeder extends Seeder
         }
 
         return $preparations;
+    }
+
+    private function resolvePreparationImage(string $name): ?string
+    {
+        if (! $this->preparationImageMapChecked) {
+            $this->preparationImageMapChecked = true;
+
+            $expected = array_keys(self::PREPARATION_COMPONENTS);
+            $configured = array_keys(self::PREPARATION_IMAGE_PATHS);
+            $missingMappings = array_diff($expected, $configured);
+
+            foreach ($missingMappings as $missingName) {
+                $this->missingImages[] = $missingName.' (image de préparation non configurée)';
+            }
+        }
+
+        if (array_key_exists($name, $this->preparationImages)) {
+            return $this->preparationImages[$name];
+        }
+
+        $relativePath = self::PREPARATION_IMAGE_PATHS[$name] ?? null;
+
+        if (! $relativePath) {
+            return $this->preparationImages[$name] = null;
+        }
+
+        return $this->preparationImages[$name] = $this->publishSeederImage($relativePath);
+    }
+
+    private function publishSeederImage(string $relativePath): ?string
+    {
+        $normalizedPath = ltrim(str_replace('\\', '/', $relativePath), '/');
+
+        if (str_starts_with($normalizedPath, 'storage/app/')) {
+            $normalizedPath = substr($normalizedPath, strlen('storage/app/')) ?: $normalizedPath;
+        }
+
+        $localDisk = Storage::disk('local');
+        $relativeToLocalDisk = $normalizedPath;
+
+        if (str_starts_with($relativeToLocalDisk, 'private/')) {
+            $relativeToLocalDisk = substr($relativeToLocalDisk, strlen('private/')) ?: '';
+        }
+
+        if ($relativeToLocalDisk === '' || ! $localDisk->exists($relativeToLocalDisk)) {
+            return null;
+        }
+
+        $absolutePath = $localDisk->path($relativeToLocalDisk);
+        $targetPath = str_starts_with($normalizedPath, 'private/')
+            ? $normalizedPath
+            : 'private/'.$normalizedPath;
+
+        try {
+            return $this->images->storeLocalImage($absolutePath, $targetPath);
+        } catch (Throwable $exception) {
+            $this->command?->warn('Impossible de publier l\'image de préparation '.$normalizedPath.' : '.$exception->getMessage());
+
+            return 'storage/app/'.$targetPath;
+        }
     }
 
     private function preparationStock(string $name): float
