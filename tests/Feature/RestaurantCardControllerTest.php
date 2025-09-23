@@ -341,6 +341,35 @@ class RestaurantCardControllerTest extends TestCase
         $this->assertSame('image/jpeg', $response->headers->get('Content-Type'));
     }
 
+    public function test_public_image_proxy_serves_company_logo(): void
+    {
+        Storage::fake('s3');
+
+        $company = Company::factory()->create([
+            'logo_path' => 'seeders/company/logo.jpg',
+        ]);
+        $slug = $company->refresh()->public_menu_card_url;
+
+        $path = 'seeders/company/logo.jpg';
+        Storage::disk('s3')->put($path, 'fake-logo');
+        $fullPath = Storage::disk('s3')->path($path);
+
+        $disk = \Mockery::mock(Storage::disk('s3'))->makePartial();
+        $disk->shouldReceive('exists')->with($path)->andReturnTrue();
+        $disk->shouldReceive('temporaryUrl')
+            ->with($path, \Mockery::type('DateTimeInterface'))
+            ->andReturn($fullPath);
+        $disk->shouldReceive('mimeType')->with($path)->andReturn('image/png');
+
+        Storage::shouldReceive('disk')->with('s3')->andReturn($disk);
+
+        $response = $this->get("/api/public/image-proxy/{$slug}/seeders/company/logo.jpg")
+            ->assertStatus(200);
+
+        $this->assertSame('fake-logo', $response->getContent());
+        $this->assertSame('image/png', $response->headers->get('Content-Type'));
+    }
+
     public function test_restaurant_card_not_found(): void
     {
         $this->getJson('/api/restaurant-card/unknown-card')->assertStatus(404);

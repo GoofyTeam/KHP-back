@@ -34,12 +34,14 @@ Route::middleware('web')->group(function () {
             abort(404);
         }
 
+        $isCompanyLogo = $company->logo_path === $fullPath;
+
         $hasMenuImage = Menu::query()
             ->where('company_id', $company->id)
             ->where('image_url', $fullPath)
             ->exists();
 
-        if (! $hasMenuImage) {
+        if (! $isCompanyLogo && ! $hasMenuImage) {
             abort(404);
         }
 
