@@ -82,11 +82,12 @@ class DemoSeeder extends Seeder
             ],
         ],
         'users' => [
-            ['name' => 'Adrien', 'email' => 'adrien@example.com'],
-            ['name' => 'Thomas', 'email' => 'thomas@example.com'],
-            ['name' => 'Luca', 'email' => 'luca@example.com'],
-            ['name' => 'Brandon', 'email' => 'brandon@example.com'],
-            ['name' => 'Antoine', 'email' => 'antoine@example.com'],
+            ['name' => 'Adrien', 'email' => 'adrien@demo.com'],
+            ['name' => 'Thomas', 'email' => 'thomas@demo.com'],
+            ['name' => 'Luca', 'email' => 'luca@demo.com'],
+            ['name' => 'Brandon', 'email' => 'brandon@demo.com'],
+            ['name' => 'Antoine', 'email' => 'antoine@demo.com'],
+            ['name' => 'Demo', 'email' => 'demo@demo.com'],
         ],
     ];
 
