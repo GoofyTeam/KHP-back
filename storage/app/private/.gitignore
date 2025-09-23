@@ -1,7 +1,14 @@
-*
+# Ignorer uniquement les fichiers .Identifier
+storage/app/private/seeders/images/*.Identifier
+storage/app/private/images/*.Identifier
+
+# Exclure tout par défaut
 !.gitignore
-!seeders/
-!seeders/images/
-!seeders/images/*
-!images/
-!images/*
+!storage/
+!storage/app/
+!storage/app/private/
+!storage/app/private/seeders/
+!storage/app/private/seeders/images/
+!storage/app/private/seeders/images/*
+!storage/app/private/images/
+!storage/app/private/images/*
