@@ -21,17 +21,12 @@ class QuickAccessSeeder extends Seeder
         ],
         'menu_card' => [
             'name' => 'Menu Card',
-            'icon' => 'Cutlery',
+            'icon' => 'Notebook',
             'icon_color' => 'info',
         ],
         'stock' => [
             'name' => 'Stock',
             'icon' => 'Check',
-            'icon_color' => 'primary',
-        ],
-        'take_order' => [
-            'name' => 'Take Order',
-            'icon' => 'Notebook',
             'icon_color' => 'primary',
         ],
         'waiters_page' => [
@@ -42,7 +37,7 @@ class QuickAccessSeeder extends Seeder
         'chefs_page' => [
             'name' => 'Chefs',
             'icon' => 'ChefHat',
-            'icon_color' => 'info',
+            'icon_color' => 'primary',
         ],
     ];
 
@@ -55,18 +50,21 @@ class QuickAccessSeeder extends Seeder
         'add_to_stock',
         'menu_card',
         'stock',
-        'take_order',
         'waiters_page',
+        'chefs_page',
     ];
 
     public function run(): void
     {
-        Company::all()->each(function (Company $company) {
-            foreach (self::defaults() as $index => $row) {
+        $defaults = array_values(self::defaults());
+        $allowedIndexes = array_column($defaults, 'index');
+
+        Company::all()->each(function (Company $company) use ($defaults, $allowedIndexes) {
+            foreach ($defaults as $row) {
                 QuickAccess::updateOrCreate(
                     [
                         'company_id' => $company->id,
-                        'index' => $index,
+                        'index' => $row['index'],
                     ],
                     [
                         'name' => $row['name'],
@@ -76,6 +74,10 @@ class QuickAccessSeeder extends Seeder
                     ]
                 );
             }
+
+            QuickAccess::where('company_id', $company->id)
+                ->whereNotIn('index', $allowedIndexes)
+                ->delete();
         });
     }
 
