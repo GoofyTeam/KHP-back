@@ -59,7 +59,7 @@ class QuickAccessControllerTest extends TestCase
             'company_id' => $this->company->id,
             'index' => 2,
             'name' => 'Menu Card',
-            'icon' => 'Notebook',
+            'icon' => 'Cutlery',
             'icon_color' => 'info',
             'url_key' => 'menu_card',
         ]);
@@ -82,10 +82,10 @@ class QuickAccessControllerTest extends TestCase
         $this->assertDatabaseHas('quick_accesses', [
             'company_id' => $this->company->id,
             'index' => 5,
-            'name' => 'Move Quantity',
-            'icon' => 'NoIcon',
+            'name' => 'Waiters',
+            'icon' => 'User',
             'icon_color' => 'info',
-            'url_key' => 'move_quantity',
+            'url_key' => 'waiters_page',
         ]);
     }
 

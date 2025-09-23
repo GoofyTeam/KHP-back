@@ -20,7 +20,7 @@ class QuickAccessController extends Controller
             'quick_accesses' => ['required', 'array', 'min:1'],
             'quick_accesses.*.id' => ['required_with:quick_accesses', 'integer', 'exists:quick_accesses,id'],
             'quick_accesses.*.name' => ['sometimes', 'string', 'max:255'],
-            'quick_accesses.*.icon' => ['sometimes', 'string', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check', 'NoIcon'])],
+            'quick_accesses.*.icon' => ['sometimes', 'string', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check', 'NoIcon', 'User', 'Users', 'ChefHat', 'Cutlery'])],
             'quick_accesses.*.icon_color' => ['sometimes', 'string', Rule::in(['primary', 'warning', 'error', 'info'])],
             'quick_accesses.*.url_key' => ['sometimes', 'string', 'max:255'],
         ]);
@@ -59,16 +59,21 @@ class QuickAccessController extends Controller
 
         $defaults = [
             1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url_key' => 'add_to_stock'],
-            2 => ['name' => 'Menu Card', 'icon' => 'Notebook', 'icon_color' => 'info', 'url_key' => 'menu_card'],
+            2 => ['name' => 'Menu Card', 'icon' => 'Cutlery', 'icon_color' => 'info', 'url_key' => 'menu_card'],
             3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url_key' => 'stock'],
             4 => ['name' => 'Take Order', 'icon' => 'Notebook', 'icon_color' => 'primary', 'url_key' => 'take_order'],
-            5 => ['name' => 'Move Quantity', 'icon' => 'NoIcon', 'icon_color' => 'info', 'url_key' => 'move_quantity'],
+            5 => ['name' => 'Waiters', 'icon' => 'User', 'icon_color' => 'info', 'url_key' => 'waiters_page'],
         ];
 
         foreach ($defaults as $pos => $payload) {
             QuickAccess::updateOrCreate(
                 ['company_id' => $companyId, 'index' => $pos],
-                $payload
+                [
+                    'name' => $payload['name'],
+                    'icon' => $payload['icon'],
+                    'icon_color' => $payload['icon_color'],
+                    'url_key' => $payload['url_key'],
+                ]
             );
         }
         $items = QuickAccess::where('company_id', $companyId)->orderBy('index')->get();
