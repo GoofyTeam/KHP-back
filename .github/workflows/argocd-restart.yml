@@ -53,7 +53,7 @@ jobs:
 
       # Laisse GHCR propager le digest
       - name: Cooldown
-        run: sleep 240
+        run: sleep 20
 
       - name: Restart deployments
         env:
