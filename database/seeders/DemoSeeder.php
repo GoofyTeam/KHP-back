@@ -2763,13 +2763,19 @@ class DemoSeeder extends Seeder
         if (str_starts_with($normalizedPath, 'storage/app/')) {
             $normalizedPath = substr($normalizedPath, strlen('storage/app/')) ?: $normalizedPath;
         }
-        $localDisk = Storage::disk('local');
 
-        if (! $localDisk->exists($normalizedPath)) {
+        $localDisk = Storage::disk('local');
+        $relativeToLocalDisk = $normalizedPath;
+
+        if (str_starts_with($relativeToLocalDisk, 'private/')) {
+            $relativeToLocalDisk = substr($relativeToLocalDisk, strlen('private/')) ?: '';
+        }
+
+        if ($relativeToLocalDisk === '' || ! $localDisk->exists($relativeToLocalDisk)) {
             return null;
         }
 
-        $absolutePath = $localDisk->path($normalizedPath);
+        $absolutePath = $localDisk->path($relativeToLocalDisk);
         $targetPath = str_starts_with($normalizedPath, 'private/')
             ? $normalizedPath
             : 'private/'.$normalizedPath;
@@ -2779,7 +2785,7 @@ class DemoSeeder extends Seeder
         } catch (Throwable $exception) {
             $this->command?->warn('Impossible de publier l\'image de préparation '.$normalizedPath.' : '.$exception->getMessage());
 
-            return 'storage/app/'.$normalizedPath;
+            return 'storage/app/'.$targetPath;
         }
     }
 
