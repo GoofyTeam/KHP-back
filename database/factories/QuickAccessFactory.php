@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Company;
 use App\Models\QuickAccess;
+use Database\Seeders\QuickAccessSeeder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -15,17 +16,16 @@ class QuickAccessFactory extends Factory
 
     public function definition(): array
     {
-        $icons = ['Plus', 'Notebook', 'Minus', 'Calendar', 'Check', 'NoIcon'];
-        $color = ['primary', 'warning', 'error', 'info'];
-        $url = ['add_to_stock', 'menu_card', 'stock', 'take_order', 'move_quantity'];
+        $options = array_values(QuickAccessSeeder::available());
+        $choice = $options[array_rand($options)];
 
         return [
             'company_id' => Company::factory(),
             'index' => $this->faker->numberBetween(1, 5),
-            'name' => $this->faker->words(2, true),
-            'icon' => $this->faker->randomElement($icons),
-            'icon_color' => $this->faker->randomElement($color),
-            'url_key' => $this->faker->randomElement($url),
+            'name' => $choice['name'],
+            'icon' => $choice['icon'],
+            'icon_color' => $choice['icon_color'],
+            'url_key' => $choice['url_key'],
         ];
     }
 }
