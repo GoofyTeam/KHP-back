@@ -23,6 +23,7 @@ use App\Models\OrderStep;
 use App\Models\Preparation;
 use App\Models\Room;
 use App\Models\StepMenu;
+use App\Models\StockMovement;
 use App\Models\Table;
 use App\Models\User;
 use App\Services\ImageService;
@@ -1717,6 +1718,7 @@ class DemoSeeder extends Seeder
 
         $categoryIds = $this->ensureCategories($company, $locationTypes);
         $ingredients = $this->seedIngredients($company, $categoryIds, $locations, $defaultLocation);
+        $this->seedIngredientStockMovements($ingredients);
         $preparationCategoryId = $categoryIds['Préparations Maison'] ?? (int) reset($categoryIds);
         $preparations = $this->seedPreparations(
             $company,
@@ -2263,6 +2265,111 @@ class DemoSeeder extends Seeder
         }
 
         return $ingredients;
+    }
+
+    /**
+     * @param  array<string, Ingredient>  $ingredients
+     */
+    private function seedIngredientStockMovements(array $ingredients): void
+    {
+        foreach ($ingredients as $ingredient) {
+            $ingredient->loadMissing('locations');
+
+            foreach ($ingredient->locations as $location) {
+                $currentQuantity = (float) ($location->pivot->quantity ?? 0.0);
+
+                if ($currentQuantity <= 0.01) {
+                    continue;
+                }
+
+                $alreadyExists = StockMovement::query()
+                    ->where('trackable_id', $ingredient->id)
+                    ->where('trackable_type', Ingredient::class)
+                    ->where('location_id', $location->id)
+                    ->exists();
+
+                if ($alreadyExists) {
+                    continue;
+                }
+
+                $baseDate = CarbonImmutable::now()->subDays(10);
+                $initial = round(max($currentQuantity * 0.4, 0.5), 2);
+                $afterInitial = $initial;
+
+                $this->createIngredientMovement(
+                    $ingredient,
+                    $location->id,
+                    'addition',
+                    0.0,
+                    $afterInitial,
+                    $baseDate,
+                    'Réception fournisseur'
+                );
+
+                $restock = round(max($currentQuantity * 0.35, 0.3), 2);
+                $afterRestock = round($afterInitial + $restock, 2);
+
+                $this->createIngredientMovement(
+                    $ingredient,
+                    $location->id,
+                    'addition',
+                    $afterInitial,
+                    $afterRestock,
+                    $baseDate->addDays(2),
+                    'Réassort cuisine'
+                );
+
+                if (abs($afterRestock - $currentQuantity) <= 0.01) {
+                    continue;
+                }
+
+                $type = $currentQuantity >= $afterRestock ? 'addition' : 'withdrawal';
+
+                $this->createIngredientMovement(
+                    $ingredient,
+                    $location->id,
+                    $type,
+                    $afterRestock,
+                    $currentQuantity,
+                    $baseDate->addDays(5),
+                    $type === 'withdrawal' ? 'Préparations du service' : 'Complément urgent'
+                );
+            }
+        }
+    }
+
+    private function createIngredientMovement(
+        Ingredient $ingredient,
+        int $locationId,
+        string $type,
+        float $before,
+        float $after,
+        CarbonImmutable $timestamp,
+        ?string $reason = null
+    ): void {
+        $quantity = round(abs($after - $before), 2);
+
+        if ($quantity <= 0.0) {
+            return;
+        }
+
+        $movement = StockMovement::query()->create([
+            'trackable_id' => $ingredient->id,
+            'trackable_type' => Ingredient::class,
+            'location_id' => $locationId,
+            'company_id' => $ingredient->company_id,
+            'user_id' => Auth::id(),
+            'type' => $type,
+            'reason' => $reason,
+            'quantity' => $quantity,
+            'quantity_before' => round($before, 2),
+            'quantity_after' => round($after, 2),
+        ]);
+
+        $movement->forceFill([
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ])->saveQuietly();
     }
 
     /**
