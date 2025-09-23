@@ -266,7 +266,7 @@ class IngredientController extends Controller
      * - Ajuster les stocks de plusieurs ingrédients en même temps (ex : inventaire)
      * - Ajouter ou modifier des emplacements pour plusieurs ingrédients
      */
-    public function bulkUpdateQuantities(Request $request): JsonResponse
+    public function bulkUpdateQuantities(Request $request, UnitConversionService $unitConversionService): JsonResponse
     {
         $user = auth()->user();
 
@@ -283,9 +283,10 @@ class IngredientController extends Controller
                 Rule::exists('locations', 'id')->where(fn ($q) => $q->where('company_id', $user->company_id)),
             ],
             'ingredients.*.quantities.*.quantity' => 'required|numeric|min:0',
+            'ingredients.*.quantities.*.unit' => ['sometimes', 'string', 'max:50', Rule::in(MeasurementUnit::values())],
         ]);
 
-        $updatedIds = DB::transaction(function () use ($validated, $user) {
+        $updatedIds = DB::transaction(function () use ($validated, $user, $unitConversionService) {
             $ids = [];
 
             foreach ($validated['ingredients'] as $ingredientIndex => $data) {
@@ -299,6 +300,8 @@ class IngredientController extends Controller
                     ]);
                 }
 
+                $processedLocationIds = [];
+
                 foreach ($data['quantities'] as $quantityIndex => $quantityData) {
                     $location = Location::where('id', $quantityData['location_id'])
                         ->where('company_id', $user->company_id)
@@ -310,22 +313,58 @@ class IngredientController extends Controller
                         ]);
                     }
 
-                    $existing = $ingredient->locations()->where('locations.id', $location->id)->first();
+                    if (array_key_exists($location->id, $processedLocationIds)) {
+                        throw ValidationException::withMessages([
+                            "ingredients.$ingredientIndex.quantities.$quantityIndex.location_id" => 'Duplicate location in payload.',
+                        ]);
+                    }
 
-                    /** @var (\Illuminate\Database\Eloquent\Relations\Pivot&object{quantity: float})|null $pivot */
-                    $pivot = $existing?->pivot;
+                    $processedLocationIds[$location->id] = true;
+
+                    $ingredientUnit = $ingredient->unit instanceof MeasurementUnit
+                        ? $ingredient->unit
+                        : MeasurementUnit::from($ingredient->unit);
+
+                    $quantityToAdd = round((float) $quantityData['quantity'], 4);
+
+                    if (isset($quantityData['unit'])) {
+                        $providedUnit = MeasurementUnit::from($quantityData['unit']);
+
+                        if ($providedUnit->category() !== $ingredientUnit->category()) {
+                            throw ValidationException::withMessages([
+                                "ingredients.$ingredientIndex.quantities.$quantityIndex.unit" => 'Incompatible measurement unit.',
+                            ]);
+                        }
+
+                        if ($providedUnit !== $ingredientUnit) {
+                            $quantityToAdd = $unitConversionService->convert($quantityToAdd, $providedUnit, $ingredientUnit);
+                            $quantityToAdd = round($quantityToAdd, 4);
+                        }
+                    }
+
+                    $pivotQuery = $ingredient->locations()->newPivotStatementForId($location->id);
+                    $pivot = $pivotQuery->lockForUpdate()->first();
                     $before = $pivot ? (float) $pivot->quantity : 0.0;
+                    $after = round($before + $quantityToAdd, 2);
+                    $difference = $after - $before;
 
-                    $ingredient->locations()->syncWithoutDetaching([
-                        $location->id => [
-                            'quantity' => $quantityData['quantity'],
-                        ],
-                    ]);
+                    if ($pivot) {
+                        if (abs($difference) >= 0.01) {
+                            $pivotQuery->update([
+                                'quantity' => $after,
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    } elseif ($difference > 0.0) {
+                        $ingredient->locations()->attach($location->id, [
+                            'quantity' => $after,
+                        ]);
+                    }
 
                     $ingredient->recordStockMovement(
                         $location,
                         $before,
-                        (float) $quantityData['quantity'],
+                        $after,
                         'Quantity Manually Adjusted'
                     );
                 }
