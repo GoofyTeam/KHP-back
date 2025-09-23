@@ -21,8 +21,25 @@ class RestaurantCardControllerTest extends TestCase
 
     public function test_can_fetch_restaurant_card(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->create([
+            'contact_name' => 'Claire Bouchon',
+            'contact_email' => 'contact@example.com',
+            'contact_phone' => '+33 4 72 00 00 00',
+            'address_line' => '12 Rue des Canuts',
+            'postal_code' => '69004',
+            'city' => 'Lyon',
+            'country' => 'France',
+            'logo_path' => 'seeders/company/logo.jpg',
+        ]);
         $slug = $company->refresh()->public_menu_card_url;
+
+        $company->businessHours()->create([
+            'day_of_week' => 1,
+            'opens_at' => '12:00',
+            'closes_at' => '14:30',
+            'sequence' => 1,
+            'is_overnight' => false,
+        ]);
         $locationType = LocationType::factory()->create(['company_id' => $company->id]);
         $location = Location::factory()->create([
             'company_id' => $company->id,
@@ -110,7 +127,24 @@ class RestaurantCardControllerTest extends TestCase
             ->assertJsonPath('company.menus.0.categories.0.name', $category->name)
             ->assertJsonPath('company.menus.0.allergens.0', 'gluten')
             ->assertJsonPath('company.menus.0.has_sufficient_stock', true)
-            ->assertJsonPath('company.menus.0.image_url', url('/api/public/image-proxy/'.$slug.'/menus/menu.jpg'));
+            ->assertJsonPath('company.menus.0.image_url', url('/api/public/image-proxy/'.$slug.'/menus/menu.jpg'))
+            ->assertJsonMissingPath('company.logo_path')
+            ->assertJsonPath('company.logo_url', url('/api/public/image-proxy/'.$slug.'/seeders/company/logo.jpg'))
+            ->assertJsonPath('company.contact.name', 'Claire Bouchon')
+            ->assertJsonPath('company.contact.email', 'contact@example.com')
+            ->assertJsonPath('company.contact.phone', '+33 4 72 00 00 00')
+            ->assertJsonPath('company.address.line', '12 Rue des Canuts')
+            ->assertJsonPath('company.address.postal_code', '69004')
+            ->assertJsonPath('company.address.city', 'Lyon')
+            ->assertJsonPath('company.address.country', 'France')
+            ->assertJsonPath('company.settings.show_out_of_stock_menus_on_card', false)
+            ->assertJsonPath('company.settings.show_menu_images', true)
+            ->assertJsonCount(1, 'company.business_hours')
+            ->assertJsonPath('company.business_hours.0.day_of_week', 1)
+            ->assertJsonPath('company.business_hours.0.opens_at', '12:00')
+            ->assertJsonPath('company.business_hours.0.closes_at', '14:30')
+            ->assertJsonPath('company.business_hours.0.sequence', 1)
+            ->assertJsonPath('company.business_hours.0.is_overnight', false);
     }
 
     public function test_includes_out_of_stock_menus_when_company_option_enabled(): void

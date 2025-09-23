@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Allergen;
 use App\Enums\MeasurementUnit;
 use App\Enums\MenuServiceType;
 use App\Enums\OrderStatus;
@@ -15,6 +16,7 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\MenuType;
+use App\Models\MenuTypePublicOrder;
 use App\Models\Order;
 use App\Models\OrderHistory;
 use App\Models\OrderStep;
@@ -39,6 +41,9 @@ class LyonnaiseCompanySeeder extends Seeder
     private const IMAGE_MAX_BYTES = 6_291_456; // ≈6 MB to accommodate high-resolution seed images
 
     private const IMAGE_MAP = [
+        'company' => [
+            'La Table des Canuts' => 'https://uniiti.com/images/shops/slides/eff49d9e5de18863ee53cc14d675dba6c0eef27c.jpeg',
+        ],
         'ingredient' => [
             // produits secs et frais
             'Farine de blé T45 des Monts du Lyonnais' => 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Wheat_flour.jpg/2560px-Wheat_flour.jpg',
@@ -99,6 +104,50 @@ class LyonnaiseCompanySeeder extends Seeder
         ],
     ];
 
+    private const COMPANY_PROFILE = [
+        'name' => 'La Table des Canuts',
+        'contact' => [
+            'name' => 'Claire Bouchon',
+            'email' => 'contact@latabledescanuts.fr',
+            'phone' => '+33 4 72 00 00 00',
+        ],
+        'address' => [
+            'line' => '12 Rue des Canuts',
+            'postal_code' => '69004',
+            'city' => 'Lyon',
+            'country' => 'France',
+        ],
+        'business_hours' => [
+            1 => [
+                ['opens_at' => '12:00', 'closes_at' => '14:30'],
+                ['opens_at' => '19:00', 'closes_at' => '22:30'],
+            ],
+            2 => [
+                ['opens_at' => '12:00', 'closes_at' => '14:30'],
+                ['opens_at' => '19:00', 'closes_at' => '22:30'],
+            ],
+            3 => [
+                ['opens_at' => '12:00', 'closes_at' => '14:30'],
+                ['opens_at' => '19:00', 'closes_at' => '22:30'],
+            ],
+            4 => [
+                ['opens_at' => '12:00', 'closes_at' => '14:30'],
+                ['opens_at' => '19:00', 'closes_at' => '23:00'],
+            ],
+            5 => [
+                ['opens_at' => '12:00', 'closes_at' => '14:30'],
+                ['opens_at' => '19:00', 'closes_at' => '23:00'],
+            ],
+            6 => [
+                ['opens_at' => '19:00', 'closes_at' => '23:30'],
+            ],
+        ],
+        'logo' => [
+            'name' => 'La Table des Canuts',
+            'type' => 'company',
+        ],
+    ];
+
     private ImageService $imageService;
 
     /**
@@ -125,6 +174,8 @@ class LyonnaiseCompanySeeder extends Seeder
 
             $locations = $this->ensureLocations($company);
             $categories = $this->ensureCategories($company);
+            $this->applyCompanyProfile($company);
+            $this->ensureMenuTypes($company);
             $menuCategories = $this->ensureMenuCategories($company);
             $ingredients = $this->seedIngredients($company, $categories, $locations);
             $preparations = $this->seedPreparations($company, $categories, $locations, $ingredients);
@@ -230,6 +281,146 @@ class LyonnaiseCompanySeeder extends Seeder
         return $locations;
     }
 
+    private function applyCompanyProfile(Company $company): void
+    {
+        $profile = self::COMPANY_PROFILE;
+
+        $payload = [];
+
+        $contact = $profile['contact'] ?? [];
+        if (! empty($contact['name'])) {
+            $payload['contact_name'] = $contact['name'];
+        }
+        if (! empty($contact['email'])) {
+            $payload['contact_email'] = $contact['email'];
+        }
+        if (! empty($contact['phone'])) {
+            $payload['contact_phone'] = $contact['phone'];
+        }
+
+        $address = $profile['address'] ?? [];
+        if (! empty($address['line'])) {
+            $payload['address_line'] = $address['line'];
+        }
+        if (! empty($address['postal_code'])) {
+            $payload['postal_code'] = $address['postal_code'];
+        }
+        if (! empty($address['city'])) {
+            $payload['city'] = $address['city'];
+        }
+        if (! empty($address['country'])) {
+            $payload['country'] = $address['country'];
+        }
+
+        $logo = $profile['logo'] ?? [];
+        if (! empty($logo['type']) && ! empty($logo['name'])) {
+            $payload['logo_path'] = $this->ensureImagePath($logo['type'], $logo['name']);
+        }
+
+        if ($payload !== []) {
+            $company->forceFill($payload)->saveQuietly();
+        }
+
+        $businessHours = $profile['business_hours'] ?? [];
+        if (is_array($businessHours) && $businessHours !== []) {
+            $this->seedCompanyBusinessHours($company, $businessHours);
+        }
+    }
+
+    /**
+     * @param  array<int|string, array<int, array<string, mixed>>>  $schedule
+     */
+    private function seedCompanyBusinessHours(Company $company, array $schedule): void
+    {
+        $company->businessHours()->delete();
+
+        $records = [];
+
+        foreach ($schedule as $day => $entries) {
+            if (! is_numeric($day)) {
+                continue;
+            }
+
+            $dayOfWeek = (int) $day;
+
+            if ($dayOfWeek < 1 || $dayOfWeek > 7) {
+                continue;
+            }
+
+            if (! is_array($entries) || $entries === []) {
+                continue;
+            }
+
+            $sequence = 1;
+
+            foreach ($entries as $entry) {
+                if (! is_array($entry)) {
+                    continue;
+                }
+
+                $opensAt = $entry['opens_at'] ?? null;
+                $closesAt = $entry['closes_at'] ?? null;
+
+                if (! is_string($opensAt) || $opensAt === '' || ! is_string($closesAt) || $closesAt === '') {
+                    continue;
+                }
+
+                $records[] = [
+                    'day_of_week' => $dayOfWeek,
+                    'opens_at' => $opensAt,
+                    'closes_at' => $closesAt,
+                    'is_overnight' => (bool) ($entry['is_overnight'] ?? false),
+                    'sequence' => $sequence++,
+                ];
+            }
+        }
+
+        if ($records === []) {
+            return;
+        }
+
+        $company->businessHours()->createMany($records);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function ensureMenuTypes(Company $company): array
+    {
+        $definitions = [
+            ['name' => 'Entrées', 'position' => 0],
+            ['name' => 'Plats', 'position' => 1],
+            ['name' => 'Boissons', 'position' => 2],
+            ['name' => 'Desserts', 'position' => 3],
+            ['name' => 'Accompagnements', 'position' => 4],
+        ];
+
+        $map = [];
+
+        foreach ($definitions as $definition) {
+            $menuType = MenuType::firstOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'name' => $definition['name'],
+                ]
+            );
+
+            MenuTypePublicOrder::updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'menu_type_id' => $menuType->id,
+                ],
+                [
+                    'position' => $definition['position'],
+                ]
+            );
+
+            $map[$definition['name']] = $menuType->id;
+        }
+
+        return $map;
+    }
+
     /**
      * @return array<string, int>
      */
@@ -311,6 +502,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 20,
                 'threshold' => 5,
+                'allergens' => [Allergen::GLUTEN->value],
                 'stocks' => [
                     ['location' => 'Réserve sèche', 'quantity' => 18.0],
                 ],
@@ -321,6 +513,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::UNIT,
                 'base_quantity' => 180,
                 'threshold' => 24,
+                'allergens' => [Allergen::EGGS->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 96],
                     ['location' => 'Réfrigérateur', 'quantity' => 36],
@@ -342,6 +535,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::LITRE,
                 'base_quantity' => 8,
                 'threshold' => 2,
+                'allergens' => [Allergen::MILK->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 5.0],
                     ['location' => 'Pâtisserie froide', 'quantity' => 1.2],
@@ -353,6 +547,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 5,
                 'threshold' => 1.5,
+                'allergens' => [Allergen::MILK->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 2.1],
                     ['location' => 'Pâtisserie froide', 'quantity' => 0.7],
@@ -383,6 +578,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 2,
                 'threshold' => 1.0,
+                'allergens' => [Allergen::TREE_NUTS->value],
                 'stocks' => [
                     ['location' => 'Pâtisserie froide', 'quantity' => 0.3],
                     ['location' => 'Réserve sèche', 'quantity' => 0.15],
@@ -394,6 +590,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::LITRE,
                 'base_quantity' => 5,
                 'threshold' => 0.8,
+                'allergens' => [Allergen::MILK->value],
                 'stocks' => [
                     ['location' => 'Pâtisserie froide', 'quantity' => 1.5],
                     ['location' => 'Réfrigérateur de service', 'quantity' => 0.6],
@@ -434,6 +631,12 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::UNIT,
                 'base_quantity' => 30,
                 'threshold' => 10,
+                'allergens' => [
+                    Allergen::FISH->value,
+                    Allergen::GLUTEN->value,
+                    Allergen::EGGS->value,
+                    Allergen::MILK->value,
+                ],
                 'stocks' => [
                     ['location' => 'Congélateur', 'quantity' => 12],
                     ['location' => 'Cuisine chaude', 'quantity' => 6],
@@ -445,6 +648,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'unit' => MeasurementUnit::LITRE,
                 'base_quantity' => 3,
                 'threshold' => 0.6,
+                'allergens' => [Allergen::CRUSTACEANS->value, Allergen::MILK->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 0.25],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.15],
@@ -455,6 +659,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Produits Laitiers',
                 'unit' => MeasurementUnit::LITRE,
                 'base_quantity' => 4,
+                'allergens' => [Allergen::MILK->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 0.9],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.4],
@@ -465,6 +670,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Charcuterie',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 8,
+                'allergens' => [Allergen::SULPHITES->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 1.8],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.8],
@@ -475,6 +681,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Charcuterie',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 5,
+                'allergens' => [Allergen::SULPHITES->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 1.1],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.7],
@@ -485,6 +692,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Charcuterie',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 3,
+                'allergens' => [Allergen::SULPHITES->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 0.9],
                 ],
@@ -515,6 +723,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Œufs',
                 'unit' => MeasurementUnit::UNIT,
                 'base_quantity' => 60,
+                'allergens' => [Allergen::EGGS->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 18],
                     ['location' => 'Réfrigérateur', 'quantity' => 6],
@@ -525,6 +734,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Charcuterie',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 3,
+                'allergens' => [Allergen::SULPHITES->value],
                 'stocks' => [
                     ['location' => 'Réfrigérateur de service', 'quantity' => 0.6],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.3],
@@ -535,6 +745,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Pains et Viennoiseries',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 5,
+                'allergens' => [Allergen::GLUTEN->value],
                 'stocks' => [
                     ['location' => 'Réserve sèche', 'quantity' => 1.6],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.8],
@@ -545,6 +756,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Condiments et Sauces',
                 'unit' => MeasurementUnit::LITRE,
                 'base_quantity' => 3,
+                'allergens' => [Allergen::SULPHITES->value],
                 'stocks' => [
                     ['location' => 'Réserve sèche', 'quantity' => 1.1],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.2],
@@ -555,6 +767,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Condiments et Sauces',
                 'unit' => MeasurementUnit::LITRE,
                 'base_quantity' => 2,
+                'allergens' => [Allergen::TREE_NUTS->value],
                 'stocks' => [
                     ['location' => 'Réserve sèche', 'quantity' => 0.6],
                     ['location' => 'Cuisine chaude', 'quantity' => 0.18],
@@ -575,6 +788,7 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Condiments et Sauces',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 2,
+                'allergens' => [Allergen::MUSTARD->value],
                 'stocks' => [
                     ['location' => 'Réserve sèche', 'quantity' => 0.4],
                 ],
@@ -593,6 +807,11 @@ class LyonnaiseCompanySeeder extends Seeder
                 'category' => 'Desserts et Pâtisseries',
                 'unit' => MeasurementUnit::KILOGRAM,
                 'base_quantity' => 3,
+                'allergens' => [
+                    Allergen::GLUTEN->value,
+                    Allergen::MILK->value,
+                    Allergen::EGGS->value,
+                ],
                 'stocks' => [
                     ['location' => 'Pâtisserie froide', 'quantity' => 0.5],
                     ['location' => 'Congélateur', 'quantity' => 0.3],
@@ -645,6 +864,7 @@ class LyonnaiseCompanySeeder extends Seeder
                     'base_unit' => ($definition['base_unit'] ?? $definition['unit'])->value,
                     'base_quantity' => $definition['base_quantity'],
                     'threshold' => $definition['threshold'] ?? null,
+                    'allergens' => $definition['allergens'] ?? [],
                     'image_url' => $this->ensureImagePath('ingredient', $definition['name']),
                 ]
             );
@@ -1351,6 +1571,7 @@ class LyonnaiseCompanySeeder extends Seeder
             'ingredient' => 'seeders/ingredients',
             'preparation' => 'seeders/preparations',
             'menu' => 'seeders/menus',
+            'company' => 'seeders/company',
             default => 'seeders/others',
         };
 

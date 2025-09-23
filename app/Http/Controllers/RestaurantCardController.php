@@ -17,7 +17,11 @@ class RestaurantCardController extends Controller
         $slug = $request->validated()['public_menu_card_url'];
 
         /** @var Company $company */
-        $company = Company::where('public_menu_card_url', $slug)->firstOrFail();
+        $company = Company::where('public_menu_card_url', $slug)
+            ->with(['businessHours' => fn ($query) => $query
+                ->orderBy('day_of_week')
+                ->orderBy('sequence')])
+            ->firstOrFail();
 
         $menus = Menu::query()
             ->select('menus.*')
@@ -86,12 +90,65 @@ class RestaurantCardController extends Controller
             })
             ->values();
 
+        $logoPath = $company->logo_path;
+        $logoUrl = $this->resolveImageUrl($logoPath, $company->public_menu_card_url);
+
         return response()->json([
             'company' => [
                 'name' => $company->name,
                 'public_menu_card_url' => $company->public_menu_card_url,
+                'logo_url' => $logoUrl,
+                'contact' => [
+                    'name' => $company->contact_name,
+                    'email' => $company->contact_email,
+                    'phone' => $company->contact_phone,
+                ],
+                'address' => [
+                    'line' => $company->address_line,
+                    'postal_code' => $company->postal_code,
+                    'city' => $company->city,
+                    'country' => $company->country,
+                ],
+                'business_hours' => $company->businessHours
+                    ->map(fn ($hour) => [
+                        'day_of_week' => $hour->day_of_week,
+                        'opens_at' => $hour->opens_at,
+                        'closes_at' => $hour->closes_at,
+                        'is_overnight' => (bool) $hour->is_overnight,
+                        'sequence' => $hour->sequence,
+                    ])
+                    ->values()
+                    ->all(),
+                'settings' => [
+                    'show_out_of_stock_menus_on_card' => (bool) $company->show_out_of_stock_menus_on_card,
+                    'show_menu_images' => (bool) $company->show_menu_images,
+                ],
                 'menus' => MenuCardMenuResource::collection($menus),
             ],
         ]);
+    }
+
+    private function resolveImageUrl(?string $path, string $slug): ?string
+    {
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        $segments = explode('/', $path, 2);
+        if (count($segments) !== 2) {
+            return null;
+        }
+
+        [$bucket, $subPath] = $segments;
+
+        if ($bucket === '' || $subPath === '') {
+            return null;
+        }
+
+        return url(sprintf('/api/public/image-proxy/%s/%s/%s', $slug, $bucket, $subPath));
     }
 }
