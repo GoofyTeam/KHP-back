@@ -21,7 +21,7 @@ class QuickAccessController extends Controller
             'quick_accesses' => ['required', 'array', 'min:1'],
             'quick_accesses.*.id' => ['required_with:quick_accesses', 'integer', 'exists:quick_accesses,id'],
             'quick_accesses.*.name' => ['sometimes', 'string', 'max:255'],
-            'quick_accesses.*.icon' => ['sometimes', 'string', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check', 'NoIcon', 'User', 'Users', 'ChefHat', 'Cutlery'])],
+            'quick_accesses.*.icon' => ['sometimes', 'string', Rule::in(['Plus', 'Notebook', 'Minus', 'Calendar', 'Check', 'NoIcon', 'User', 'Users', 'ChefHat', 'Utensils'])],
             'quick_accesses.*.icon_color' => ['sometimes', 'string', Rule::in(['primary', 'warning', 'error', 'info'])],
             'quick_accesses.*.url_key' => ['sometimes', 'string', 'max:255'],
         ]);

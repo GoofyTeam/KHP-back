@@ -74,18 +74,18 @@ class QuickAccessControllerTest extends TestCase
         $this->assertDatabaseHas('quick_accesses', [
             'company_id' => $this->company->id,
             'index' => 4,
-            'name' => 'Waiters',
-            'icon' => 'User',
-            'icon_color' => 'info',
-            'url_key' => 'waiters_page',
+            'name' => 'Orders',
+            'icon' => 'Utensils',
+            'icon_color' => 'primary',
+            'url_key' => 'order',
         ]);
         $this->assertDatabaseHas('quick_accesses', [
             'company_id' => $this->company->id,
             'index' => 5,
-            'name' => 'Chefs',
-            'icon' => 'ChefHat',
-            'icon_color' => 'primary',
-            'url_key' => 'chefs_page',
+            'name' => 'Waiters',
+            'icon' => 'User',
+            'icon_color' => 'info',
+            'url_key' => 'waiters_page',
         ]);
     }
 

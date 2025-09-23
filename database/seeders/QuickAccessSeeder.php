@@ -29,6 +29,11 @@ class QuickAccessSeeder extends Seeder
             'icon' => 'Check',
             'icon_color' => 'primary',
         ],
+        'order' => [
+            'name' => 'Orders',
+            'icon' => 'Utensils',
+            'icon_color' => 'primary',
+        ],
         'waiters_page' => [
             'name' => 'Waiters',
             'icon' => 'User',
@@ -50,8 +55,8 @@ class QuickAccessSeeder extends Seeder
         'add_to_stock',
         'menu_card',
         'stock',
+        'order',
         'waiters_page',
-        'chefs_page',
     ];
 
     public function run(): void
