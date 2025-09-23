@@ -21,17 +21,12 @@ class QuickAccessSeeder extends Seeder
         ],
         'menu_card' => [
             'name' => 'Menu Card',
-            'icon' => 'Cutlery',
+            'icon' => 'Notebook',
             'icon_color' => 'info',
         ],
         'stock' => [
             'name' => 'Stock',
             'icon' => 'Check',
-            'icon_color' => 'primary',
-        ],
-        'take_order' => [
-            'name' => 'Take Order',
-            'icon' => 'Notebook',
             'icon_color' => 'primary',
         ],
         'waiters_page' => [
@@ -42,7 +37,7 @@ class QuickAccessSeeder extends Seeder
         'chefs_page' => [
             'name' => 'Chefs',
             'icon' => 'ChefHat',
-            'icon_color' => 'info',
+            'icon_color' => 'primary',
         ],
     ];
 
@@ -55,56 +50,21 @@ class QuickAccessSeeder extends Seeder
         'add_to_stock',
         'menu_card',
         'stock',
-        'take_order',
         'waiters_page',
+        'chefs_page',
     ];
 
     public function run(): void
     {
-        $defaults = [
-            [
-                'index' => 1,
-                'name' => 'Add to stock',
-                'icon' => 'Plus',
-                'icon_color' => 'primary',
-                'url_key' => 'add_to_stock',
-            ],
-            [
-                'index' => 2,
-                'name' => 'Menu Card',
-                'icon' => 'Notebook',
-                'icon_color' => 'info',
-                'url_key' => 'menu_card',
-            ],
-            [
-                'index' => 3,
-                'name' => 'Stock',
-                'icon' => 'Check',
-                'icon_color' => 'primary',
-                'url_key' => 'stock',
-            ],
-            [
-                'index' => 4,
-                'name' => 'Waiters',
-                'icon' => 'User',
-                'icon_color' => 'info',
-                'url_key' => 'waiters_page',
-            ],
-            [
-                'index' => 5,
-                'name' => 'Chefs',
-                'icon' => 'ChefHat',
-                'icon_color' => 'primary',
-                'url_key' => 'chefs_page',
-            ],
-        ];
+        $defaults = array_values(self::defaults());
+        $allowedIndexes = array_column($defaults, 'index');
 
-        Company::all()->each(function (Company $company) use ($defaults) {
+        Company::all()->each(function (Company $company) use ($defaults, $allowedIndexes) {
             foreach ($defaults as $row) {
                 QuickAccess::updateOrCreate(
                     [
                         'company_id' => $company->id,
-                        'index' => $index,
+                        'index' => $row['index'],
                     ],
                     [
                         'name' => $row['name'],
@@ -114,6 +74,10 @@ class QuickAccessSeeder extends Seeder
                     ]
                 );
             }
+
+            QuickAccess::where('company_id', $company->id)
+                ->whereNotIn('index', $allowedIndexes)
+                ->delete();
         });
     }
 

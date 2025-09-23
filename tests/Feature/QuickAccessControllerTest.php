@@ -59,7 +59,7 @@ class QuickAccessControllerTest extends TestCase
             'company_id' => $this->company->id,
             'index' => 2,
             'name' => 'Menu Card',
-            'icon' => 'Cutlery',
+            'icon' => 'Notebook',
             'icon_color' => 'info',
             'url_key' => 'menu_card',
         ]);

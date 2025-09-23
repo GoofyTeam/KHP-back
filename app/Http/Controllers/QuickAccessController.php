@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\QuickAccess;
+use Database\Seeders\QuickAccessSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -57,23 +58,13 @@ class QuickAccessController extends Controller
         $user = $request->user();
         $companyId = $user->company_id;
 
-        $defaults = [
-            1 => ['name' => 'Add to stock', 'icon' => 'Plus', 'icon_color' => 'primary', 'url_key' => 'add_to_stock'],
-            2 => ['name' => 'Menu Card', 'icon' => 'Cutlery', 'icon_color' => 'info', 'url_key' => 'menu_card'],
-            3 => ['name' => 'Stock', 'icon' => 'Check', 'icon_color' => 'primary', 'url_key' => 'stock'],
-            4 => ['name' => 'Waiters', 'icon' => 'User', 'icon_color' => 'info', 'url_key' => 'waiters_page'],
-            5 => ['name' => 'Chefs', 'icon' => 'ChefHat', 'icon_color' => 'primary', 'url_key' => 'chefs_page'],
-        ];
+        $defaults = QuickAccessSeeder::defaults();
 
-        foreach ($defaults as $pos => $payload) {
-            QuickAccess::updateOrCreate(
-                ['company_id' => $companyId, 'index' => $pos],
-                [
-                    'name' => $payload['name'],
-                    'icon' => $payload['icon'],
-                    'icon_color' => $payload['icon_color'],
-                    'url_key' => $payload['url_key'],
-                ]
+        QuickAccess::where('company_id', $companyId)->delete();
+
+        foreach ($defaults as $payload) {
+            QuickAccess::create(
+                ['company_id' => $companyId] + $payload
             );
         }
         $items = QuickAccess::where('company_id', $companyId)->orderBy('index')->get();
