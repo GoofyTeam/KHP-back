@@ -88,7 +88,7 @@ class CompanyQueryTest extends TestCase
         $response->assertJsonPath('data.company.public_menu_settings.public_menu_card_url', 'share-card-demo');
         $response->assertJsonPath('data.company.public_menu_settings.show_out_of_stock_menus_on_card', true);
         $response->assertJsonPath('data.company.public_menu_settings.show_menu_images', false);
-        $response->assertJsonPath('data.company.logo_path', 'companies/demo.png');
+        $response->assertJsonPath('data.company.logo_path', url('/api/image-proxy/'.$company->logo_path));
         $response->assertJsonPath('data.company.contact_name', 'Chef Demo');
         $response->assertJsonPath('data.company.contact_email', 'contact@demo.test');
         $response->assertJsonPath('data.company.contact_phone', '+33 1 23 45 67 89');

@@ -23,6 +23,7 @@ type Company {
 
     "Logo ou image de présentation de l'entreprise."
     logo_path: String
+        @field(resolver: "App\\GraphQL\\Resolvers\\CompanyResolver@logoPath")
 
     "Nom de la personne à contacter."
     contact_name: String
