@@ -872,7 +872,7 @@ class IngredientControllerTest extends TestCase
         $this->assertDatabaseHas('ingredient_location', [
             'ingredient_id' => $ingredientOne->id,
             'location_id' => $loc1->id,
-            'quantity' => 6,
+            'quantity' => 9,
         ]);
         $this->assertDatabaseHas('ingredient_location', [
             'ingredient_id' => $ingredientOne->id,
@@ -882,7 +882,7 @@ class IngredientControllerTest extends TestCase
         $this->assertDatabaseHas('ingredient_location', [
             'ingredient_id' => $ingredientTwo->id,
             'location_id' => $loc2->id,
-            'quantity' => 2,
+            'quantity' => 6,
         ]);
 
         $firstMovement = StockMovement::where('trackable_id', $ingredientOne->id)
@@ -893,7 +893,7 @@ class IngredientControllerTest extends TestCase
         $this->assertSame('addition', $firstMovement->type);
         $this->assertSame('Quantity Manually Adjusted', $firstMovement->reason);
         $this->assertSame(3.0, (float) $firstMovement->quantity_before);
-        $this->assertSame(6.0, (float) $firstMovement->quantity_after);
+        $this->assertSame(9.0, (float) $firstMovement->quantity_after);
 
         $secondMovement = StockMovement::where('trackable_id', $ingredientTwo->id)
             ->where('location_id', $loc2->id)
@@ -901,10 +901,61 @@ class IngredientControllerTest extends TestCase
             ->latest()
             ->first();
         $this->assertNotNull($secondMovement);
-        $this->assertSame('withdrawal', $secondMovement->type);
+        $this->assertSame('addition', $secondMovement->type);
         $this->assertSame('Quantity Manually Adjusted', $secondMovement->reason);
         $this->assertSame(4.0, (float) $secondMovement->quantity_before);
-        $this->assertSame(2.0, (float) $secondMovement->quantity_after);
+        $this->assertSame(6.0, (float) $secondMovement->quantity_after);
+    }
+
+    public function test_bulk_quantities_update_keeps_existing_locations_when_not_specified(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        $loc1 = Location::factory()->create(['company_id' => $company->id]);
+        $loc2 = Location::factory()->create(['company_id' => $company->id]);
+
+        $ingredient = Ingredient::factory()->create([
+            'company_id' => $company->id,
+            'base_quantity' => 1,
+            'base_unit' => 'kg',
+        ]);
+
+        $ingredient->locations()->attach($loc1->id, ['quantity' => 5]);
+        $ingredient->locations()->attach($loc2->id, ['quantity' => 3]);
+
+        $payload = [
+            'ingredients' => [
+                [
+                    'id' => $ingredient->id,
+                    'quantities' => [
+                        ['location_id' => $loc2->id, 'quantity' => 2],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->putJson('/api/ingredients/bulk/quantities', $payload)
+            ->assertStatus(200)
+            ->assertJsonPath('ingredient_ids.0', $ingredient->id);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $loc2->id,
+            'quantity' => 5,
+        ]);
+
+        $this->assertDatabaseHas('ingredient_location', [
+            'ingredient_id' => $ingredient->id,
+            'location_id' => $loc1->id,
+            'quantity' => 5,
+        ]);
+
+        $this->assertSame(0, StockMovement::where('trackable_id', $ingredient->id)
+            ->where('trackable_type', Ingredient::class)
+            ->where('location_id', $loc1->id)
+            ->count());
     }
 
     public function test_bulk_quantities_update_validates_company_restrictions(): void
