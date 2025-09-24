@@ -107,6 +107,10 @@ class PerishableService
             return Carbon::create(9999, 12, 31, 23, 59, 59);
         }
 
+        if ($perishable->deleted_at) {
+            return $perishable->deleted_at;
+        }
+
         return $perishable->created_at->copy()->addHours($shelfLife);
     }
 }
