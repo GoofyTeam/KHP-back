@@ -91,6 +91,8 @@ class DemoSeeder extends Seeder
         ],
     ];
 
+    private const COMPANY_LOGO_PATH = 'private/seeders/images/gustave.png';
+
     private function seedAdditionalCompany(): void
     {
         $company = Company::updateOrCreate(
@@ -1714,7 +1716,11 @@ class DemoSeeder extends Seeder
             $company->fill($contact);
         }
 
-        if (! $company->logo_path) {
+        $logoPath = $this->publishSeederImage(self::COMPANY_LOGO_PATH);
+
+        if ($logoPath) {
+            $company->logo_path = $logoPath;
+        } elseif (! $company->logo_path) {
             $company->logo_path = $this->placeholderPath();
         }
 
