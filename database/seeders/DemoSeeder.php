@@ -2,41 +2,41 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Allergen;
-use App\Enums\MeasurementUnit;
-use App\Enums\MenuServiceType;
-use App\Enums\OrderStatus;
-use App\Enums\OrderStepStatus;
-use App\Enums\StepMenuStatus;
-use App\Models\Category;
-use App\Models\Company;
-use App\Models\Ingredient;
-use App\Models\Location;
-use App\Models\LocationType;
+use Throwable;
+use JsonException;
 use App\Models\Menu;
-use App\Models\MenuCategory;
+use App\Models\Room;
+use App\Models\User;
+use App\Models\Order;
+use App\Models\Table;
+use RuntimeException;
+use App\Enums\Allergen;
+use App\Models\Company;
+use App\Models\Category;
+use App\Models\Location;
 use App\Models\MenuItem;
 use App\Models\MenuType;
-use App\Models\MenuTypePublicOrder;
-use App\Models\Order;
+use App\Models\StepMenu;
 use App\Models\OrderStep;
+use App\Enums\OrderStatus;
+use App\Models\Ingredient;
 use App\Models\Preparation;
 use App\Models\QuickAccess;
-use App\Models\Room;
-use App\Models\StepMenu;
-use App\Models\StockMovement;
-use App\Models\Table;
-use App\Models\User;
-use App\Services\ImageService;
-use App\Services\OpenFoodFactsService;
 use Carbon\CarbonImmutable;
+use App\Models\LocationType;
+use App\Models\MenuCategory;
+use App\Enums\StepMenuStatus;
+use App\Models\StockMovement;
+use App\Enums\MeasurementUnit;
+use App\Enums\MenuServiceType;
+use App\Enums\OrderStepStatus;
+use App\Services\ImageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
+use App\Models\MenuTypePublicOrder;
 use Illuminate\Support\Facades\Auth;
+use App\Services\OpenFoodFactsService;
 use Illuminate\Support\Facades\Storage;
-use JsonException;
-use RuntimeException;
-use Throwable;
 
 class DemoSeeder extends Seeder
 {
@@ -87,7 +87,7 @@ class DemoSeeder extends Seeder
             ['name' => 'Luca', 'email' => 'luca@demo.com'],
             ['name' => 'Brandon', 'email' => 'brandon@demo.com'],
             ['name' => 'Antoine', 'email' => 'antoine@demo.com'],
-            ['name' => 'Demo', 'email' => 'demo@demo.com'],
+            ['name' => 'Demo', 'email' => 'user@demo.com'],
         ],
     ];
 
@@ -1950,7 +1950,7 @@ class DemoSeeder extends Seeder
         try {
             $decoded = json_decode(self::MENU_BLUEPRINT_JSON, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
-            throw new RuntimeException('Impossible de décoder le jeu de données du menu de démonstration : '.$exception->getMessage(), 0, $exception);
+            throw new RuntimeException('Impossible de décoder le jeu de données du menu de démonstration : ' . $exception->getMessage(), 0, $exception);
         }
 
         if (! is_array($decoded)) {
@@ -2129,7 +2129,7 @@ class DemoSeeder extends Seeder
     private function ensureLocationTypes(Company $company): array
     {
         $names = array_unique(array_map(
-            static fn (array $definition) => $definition['type'] ?? 'Autre',
+            static fn(array $definition) => $definition['type'] ?? 'Autre',
             self::LOCATION_BLUEPRINTS
         ));
 
@@ -2198,7 +2198,7 @@ class DemoSeeder extends Seeder
     private function ensureCategories(Company $company, array $locationTypes): array
     {
         $names = array_map(
-            fn (array $meta) => $meta['category'] ?? 'Ingrédients Divers',
+            fn(array $meta) => $meta['category'] ?? 'Ingrédients Divers',
             self::INGREDIENTS
         );
         $names[] = 'Préparations Maison';
@@ -2452,13 +2452,13 @@ class DemoSeeder extends Seeder
         try {
             $data = $this->openFoodFacts->searchByBarcode($barcode);
         } catch (Throwable $exception) {
-            $this->missingImages[] = $ingredientName.' (erreur API)';
+            $this->missingImages[] = $ingredientName . ' (erreur API)';
 
             return $this->productImages[$barcode] = null;
         }
 
         if (! is_array($data)) {
-            $this->missingImages[] = $ingredientName.' (produit introuvable)';
+            $this->missingImages[] = $ingredientName . ' (produit introuvable)';
 
             return $this->productImages[$barcode] = null;
         }
@@ -2473,7 +2473,7 @@ class DemoSeeder extends Seeder
         }
 
         if (! is_string($imageUrl) || ! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-            $this->missingImages[] = $ingredientName.' (image manquante)';
+            $this->missingImages[] = $ingredientName . ' (image manquante)';
 
             return $this->productImages[$barcode] = null;
         }
@@ -2481,7 +2481,7 @@ class DemoSeeder extends Seeder
         try {
             $stored = $this->images->storeFromUrl($imageUrl, self::TEMP_IMAGE_FOLDER);
         } catch (Throwable $exception) {
-            $this->missingImages[] = $ingredientName.' (téléchargement)';
+            $this->missingImages[] = $ingredientName . ' (téléchargement)';
 
             return $this->productImages[$barcode] = null;
         }
@@ -2499,7 +2499,7 @@ class DemoSeeder extends Seeder
             return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_DESTINATION;
         }
 
-        $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
+        $localPlaceholder = storage_path('app/' . self::DEFAULT_PLACEHOLDER_SOURCE);
         $localAvailable = is_file($localPlaceholder) && is_readable($localPlaceholder);
 
         if ($localAvailable) {
@@ -2515,7 +2515,7 @@ class DemoSeeder extends Seeder
 
                     $this->command?->warn('Impossible de stocker le placeholder de démonstration sur S3.');
                 } catch (Throwable $exception) {
-                    $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
+                    $this->command?->warn('Impossible de publier le placeholder de démonstration : ' . $exception->getMessage());
                 }
             }
         } else {
@@ -2525,7 +2525,7 @@ class DemoSeeder extends Seeder
         try {
             return $this->placeholderImagePath = $this->images->storePlaceholder(self::DEFAULT_PLACEHOLDER_SOURCE);
         } catch (Throwable $exception) {
-            $this->command?->warn('Impossible de stocker le placeholder par défaut : '.$exception->getMessage());
+            $this->command?->warn('Impossible de stocker le placeholder par défaut : ' . $exception->getMessage());
 
             return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_SOURCE;
         }
@@ -2542,7 +2542,7 @@ class DemoSeeder extends Seeder
         }
 
         foreach (self::MENU_PLACEHOLDER_SOURCES as $candidate) {
-            $localPath = storage_path('app/'.$candidate);
+            $localPath = storage_path('app/' . $candidate);
 
             if (! is_file($localPath) || ! is_readable($localPath)) {
                 continue;
@@ -2559,7 +2559,7 @@ class DemoSeeder extends Seeder
                     return $this->menuPlaceholderImagePath = self::MENU_PLACEHOLDER_DESTINATION;
                 }
             } catch (Throwable $exception) {
-                $this->command?->warn('Impossible de stocker le placeholder menu à partir de '.$candidate.' : '.$exception->getMessage());
+                $this->command?->warn('Impossible de stocker le placeholder menu à partir de ' . $candidate . ' : ' . $exception->getMessage());
             }
         }
 
@@ -2579,7 +2579,7 @@ class DemoSeeder extends Seeder
             }
 
             foreach (self::MENU_IMAGE_EXTENSIONS as $extension) {
-                $relativePath = $normalizedDirectory."/{$menuId}.{$extension}";
+                $relativePath = $normalizedDirectory . "/{$menuId}.{$extension}";
 
                 if (! $localDisk->exists($relativePath)) {
                     continue;
@@ -2587,7 +2587,7 @@ class DemoSeeder extends Seeder
 
                 $targetPath = str_starts_with($relativePath, 'private/')
                     ? $relativePath
-                    : 'private/'.$relativePath;
+                    : 'private/' . $relativePath;
 
                 try {
                     if (! $cloudDisk->exists($targetPath)) {
@@ -2595,9 +2595,9 @@ class DemoSeeder extends Seeder
                         $cloudDisk->put($targetPath, $contents);
                     }
                 } catch (Throwable $exception) {
-                    $this->command?->warn('Impossible de publier l\'image du menu #'.$menuId.' : '.$exception->getMessage());
+                    $this->command?->warn('Impossible de publier l\'image du menu #' . $menuId . ' : ' . $exception->getMessage());
 
-                    return 'storage/app/'.$relativePath;
+                    return 'storage/app/' . $relativePath;
                 }
 
                 return $targetPath;
@@ -2642,7 +2642,7 @@ class DemoSeeder extends Seeder
             $imagePath = $this->resolvePreparationImage($name);
 
             if (! $imagePath) {
-                $this->missingImages[] = $name.' (préparation)';
+                $this->missingImages[] = $name . ' (préparation)';
                 $imagePath = $this->placeholderPath();
             }
 
@@ -2684,7 +2684,7 @@ class DemoSeeder extends Seeder
                     $ingredient = $ingredients[$ingredientName] ?? null;
 
                     if (! $ingredient) {
-                        $this->missingIngredients[] = $ingredientName.' (préparation '.$name.')';
+                        $this->missingIngredients[] = $ingredientName . ' (préparation ' . $name . ')';
 
                         continue;
                     }
@@ -2711,7 +2711,7 @@ class DemoSeeder extends Seeder
                     $child = $preparations[$childName] ?? null;
 
                     if (! $child instanceof Preparation) {
-                        $this->missingComponents[] = $childName.' (préparation '.$name.')';
+                        $this->missingComponents[] = $childName . ' (préparation ' . $name . ')';
 
                         continue;
                     }
@@ -2746,7 +2746,7 @@ class DemoSeeder extends Seeder
             $missingMappings = array_diff($expected, $configured);
 
             foreach ($missingMappings as $missingName) {
-                $this->missingImages[] = $missingName.' (image de préparation non configurée)';
+                $this->missingImages[] = $missingName . ' (image de préparation non configurée)';
             }
         }
 
@@ -2785,14 +2785,14 @@ class DemoSeeder extends Seeder
         $absolutePath = $localDisk->path($relativeToLocalDisk);
         $targetPath = str_starts_with($normalizedPath, 'private/')
             ? $normalizedPath
-            : 'private/'.$normalizedPath;
+            : 'private/' . $normalizedPath;
 
         try {
             return $this->images->storeLocalImage($absolutePath, $targetPath);
         } catch (Throwable $exception) {
-            $this->command?->warn('Impossible de publier l\'image de préparation '.$normalizedPath.' : '.$exception->getMessage());
+            $this->command?->warn('Impossible de publier l\'image de préparation ' . $normalizedPath . ' : ' . $exception->getMessage());
 
-            return 'storage/app/'.$targetPath;
+            return 'storage/app/' . $targetPath;
         }
     }
 
@@ -2922,7 +2922,7 @@ class DemoSeeder extends Seeder
 
                     $ingredient = $ingredients[$ingredientName] ?? null;
                     if (! $ingredient) {
-                        $this->missingComponents[] = $ingredientName.' (menu '.$entry['name'].')';
+                        $this->missingComponents[] = $ingredientName . ' (menu ' . $entry['name'] . ')';
 
                         continue;
                     }
@@ -2964,7 +2964,7 @@ class DemoSeeder extends Seeder
 
                     $preparation = $preparations[$preparationName] ?? null;
                     if (! $preparation) {
-                        $this->missingComponents[] = $preparationName.' (menu '.$entry['name'].')';
+                        $this->missingComponents[] = $preparationName . ' (menu ' . $entry['name'] . ')';
 
                         continue;
                     }
@@ -3251,7 +3251,7 @@ class DemoSeeder extends Seeder
             $menu = $menuMap->get($menuName);
 
             if (! $menu instanceof Menu) {
-                $this->missingComponents[] = $menuName.' (commande '.$step->order_id.')';
+                $this->missingComponents[] = $menuName . ' (commande ' . $step->order_id . ')';
 
                 continue;
             }
@@ -3298,15 +3298,15 @@ class DemoSeeder extends Seeder
     private function report(): void
     {
         if (! empty($this->missingIngredients)) {
-            $this->command?->warn('Ingrédients manquants : '.implode(', ', array_unique($this->missingIngredients)));
+            $this->command?->warn('Ingrédients manquants : ' . implode(', ', array_unique($this->missingIngredients)));
         }
 
         if (! empty($this->missingComponents)) {
-            $this->command?->warn('Références indisponibles : '.implode(', ', array_unique($this->missingComponents)));
+            $this->command?->warn('Références indisponibles : ' . implode(', ', array_unique($this->missingComponents)));
         }
 
         if (! empty($this->missingImages)) {
-            $this->command?->warn('Images non récupérées : '.implode(', ', array_unique($this->missingImages)));
+            $this->command?->warn('Images non récupérées : ' . implode(', ', array_unique($this->missingImages)));
         }
     }
 }
