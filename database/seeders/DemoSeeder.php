@@ -1746,9 +1746,14 @@ class DemoSeeder extends Seeder
     private ?array $businessIntervalsCache = null;
 
     /**
-     * @var array<int, array{start: CarbonImmutable, end: CarbonImmutable, cursor: CarbonImmutable}>
+     * @var array<int, array{start: CarbonImmutable, end: CarbonImmutable, cursor: CarbonImmutable, span: int}>
      */
-    private array $orderIntervalSlots = [];
+    private array $historicalOrderWindows = [];
+
+    /**
+     * @var array{start: CarbonImmutable, end: CarbonImmutable, cursor: CarbonImmutable, span: int}|null
+     */
+    private ?array $activeOrderWindow = null;
 
     public function __construct(
         ImageService $images,
@@ -2056,9 +2061,10 @@ class DemoSeeder extends Seeder
         return $this->businessIntervalsCache = $intervals;
     }
 
-    private function resetOrderIntervalSlots(): void
+    private function prepareOrderWindows(): void
     {
-        $this->orderIntervalSlots = [];
+        $this->historicalOrderWindows = [];
+        $this->activeOrderWindow = null;
 
         $intervals = $this->businessIntervals();
 
@@ -2067,8 +2073,10 @@ class DemoSeeder extends Seeder
         }
 
         $now = CarbonImmutable::now();
+        $historical = [];
+        $active = null;
 
-        foreach (array_reverse($intervals) as $interval) {
+        foreach ($intervals as $interval) {
             $start = $interval['start'];
             $end = $interval['end'];
 
@@ -2076,176 +2084,135 @@ class DemoSeeder extends Seeder
                 continue;
             }
 
-            $anchor = $end->greaterThan($now) ? $now : $end;
+            $cursor = $end->greaterThan($now) ? $now : $end;
 
-            if ($anchor->lessThanOrEqualTo($start)) {
+            if ($cursor->lessThanOrEqualTo($start)) {
                 continue;
             }
 
-            $this->orderIntervalSlots[] = [
+            $span = max(1, $start->diffInMinutes($end));
+
+            $window = [
                 'start' => $start,
                 'end' => $end,
-                'cursor' => $anchor,
+                'cursor' => $cursor,
+                'span' => $span,
             ];
+
+            if ($active === null && $now->betweenIncluded($start, $end)) {
+                $active = $window;
+
+                continue;
+            }
+
+            $historical[] = $window;
         }
+
+        usort($historical, function (array $a, array $b): int {
+            if ($a['cursor']->equalTo($b['cursor'])) {
+                return 0;
+            }
+
+            return $a['cursor']->lessThan($b['cursor']) ? 1 : -1;
+        });
+
+        if ($active === null && $historical !== []) {
+            $active = array_shift($historical);
+        }
+
+        $this->activeOrderWindow = $active;
+        $this->historicalOrderWindows = $historical;
     }
 
     /**
-     * @return array{reference_at: CarbonImmutable, pending_at: CarbonImmutable, available: int}|null
+     * @return array{start: CarbonImmutable, end: CarbonImmutable, cursor: CarbonImmutable, span: int, type: string}|null
      */
-    private function allocateOrderTimelineWindow(int $desiredMinutesAgo, OrderStatus $status): ?array
+    private function claimOrderWindow(OrderStatus $status): ?array
     {
-        if ($this->orderIntervalSlots === []) {
-            $this->resetOrderIntervalSlots();
+        if ($this->activeOrderWindow === null && $this->historicalOrderWindows === []) {
+            $this->prepareOrderWindows();
         }
 
-        foreach ($this->orderIntervalSlots as $index => &$slot) {
-            $start = $slot['start'];
-            $cursor = $slot['cursor'];
-
-            $available = (int) $start->diffInMinutes($cursor, false);
-
-            if ($available <= 0) {
-                unset($this->orderIntervalSlots[$index]);
-
-                continue;
+        if ($status === OrderStatus::PENDING) {
+            if ($this->activeOrderWindow === null) {
+                $this->prepareOrderWindows();
             }
 
-            $minutesAgo = max(1, min($desiredMinutesAgo, $available));
-
-            if ($status !== OrderStatus::PENDING && $available > 5 && $minutesAgo >= $available) {
-                $buffer = max(5, min(45, (int) floor($available * 0.2)));
-
-                if ($available > $buffer) {
-                    $minutesAgo = max(5, $available - $buffer);
-                } else {
-                    $minutesAgo = max(1, $available - 1);
-                }
+            if ($this->activeOrderWindow === null) {
+                return null;
             }
 
-            $pendingAt = $cursor->subMinutes($minutesAgo);
-
-            if ($pendingAt->lessThanOrEqualTo($start)) {
-                $padding = max(1, min($available - 1, (int) floor($available * 0.3)));
-                $pendingAt = $start->addMinutes($padding);
-                $minutesAgo = max(1, $cursor->diffInMinutes($pendingAt));
-            }
-
-            $referenceAt = $cursor;
-            $gap = $this->orderTimelineGap($available, $minutesAgo);
-            $maxGap = max(1, $start->diffInMinutes($pendingAt, false));
-
-            if ($gap > $maxGap) {
-                $gap = $maxGap;
-            }
-
-            $newCursor = $pendingAt->subMinutes($gap);
-
-            if ($newCursor->lessThanOrEqualTo($start)) {
-                unset($this->orderIntervalSlots[$index]);
-            } else {
-                $slot['cursor'] = $newCursor;
-            }
-
-            $this->orderIntervalSlots = array_values($this->orderIntervalSlots);
-
-            return [
-                'reference_at' => $referenceAt,
-                'pending_at' => $pendingAt,
-                'available' => $available,
-            ];
+            return $this->activeOrderWindow + ['type' => 'active'];
         }
 
-        $this->orderIntervalSlots = array_values($this->orderIntervalSlots);
+        if ($this->historicalOrderWindows === []) {
+            if ($this->activeOrderWindow !== null) {
+                return $this->activeOrderWindow + ['type' => 'active'];
+            }
 
-        return null;
+            return null;
+        }
+
+        $window = array_shift($this->historicalOrderWindows);
+        $window['type'] = 'historical';
+
+        return $window;
     }
 
-    private function orderTimelineGap(int $available, int $minutesAgo): int
+    private function releaseOrderWindow(array $window): void
     {
-        $minutesAgo = max(1, $minutesAgo);
-        $available = max($minutesAgo, $available);
+        $type = $window['type'] ?? 'historical';
+        unset($window['type']);
 
-        $minGap = max(1, min($minutesAgo, (int) ceil($minutesAgo * 0.25)));
-        $maxGapCandidate = max($minGap, min($minutesAgo, (int) floor($available * 0.25)));
+        if ($type === 'active') {
+            $this->activeOrderWindow = $window;
+
+            return;
+        }
+
+        $remaining = $window['start']->diffInMinutes($window['cursor'], false);
+        $threshold = max(10, (int) floor($window['span'] * 0.25));
+
+        if ($remaining > $threshold) {
+            $this->historicalOrderWindows[] = $window;
+
+            usort($this->historicalOrderWindows, function (array $a, array $b): int {
+                if ($a['cursor']->equalTo($b['cursor'])) {
+                    return 0;
+                }
+
+                return $a['cursor']->lessThan($b['cursor']) ? 1 : -1;
+            });
+        }
+    }
+
+    private function orderTimelineGap(int $available, int $elapsed, string $orderKey): int
+    {
+        $elapsed = max(1, $elapsed);
+        $available = max($elapsed, $available);
+
+        $minGap = max(4, min($elapsed, (int) ceil($elapsed * 0.3)));
+        $maxGapCandidate = max($minGap + 1, min($available, (int) floor($available * 0.35)));
 
         if ($maxGapCandidate <= $minGap) {
             return $minGap;
         }
 
-        return random_int($minGap, $maxGapCandidate);
+        $ratio = $this->orderRandomFloat($orderKey.'|gap');
+
+        return $minGap + (int) round(($maxGapCandidate - $minGap) * $ratio);
     }
 
-    /**
-     * @return array{start: CarbonImmutable, end: CarbonImmutable, anchor: CarbonImmutable, available: int}|null
-     */
-    private function resolveOrderInterval(int $desiredMinutes): ?array
+    private function orderRandomFloat(string $seed): float
     {
-        $intervals = $this->businessIntervals();
+        $hash = crc32($seed);
+        $unsigned = (int) sprintf('%u', $hash);
 
-        if ($intervals === []) {
-            return null;
+        if ($unsigned <= 0) {
+            return 0.5;
         }
 
-        $now = CarbonImmutable::now();
-        $candidates = [];
-
-        foreach ($intervals as $interval) {
-            if ($interval['start']->greaterThan($now)) {
-                continue;
-            }
-
-            $anchor = $interval['end'];
-
-            if ($now->betweenIncluded($interval['start'], $interval['end'])) {
-                $anchor = $now;
-            } elseif ($interval['end']->greaterThan($now)) {
-                $anchor = $now;
-            }
-
-            if ($anchor->lessThanOrEqualTo($interval['start'])) {
-                continue;
-            }
-
-            $available = $interval['start']->diffInMinutes($anchor);
-
-            if ($available <= 0) {
-                continue;
-            }
-
-            $candidates[] = [
-                'start' => $interval['start'],
-                'end' => $interval['end'],
-                'anchor' => $anchor,
-                'available' => $available,
-            ];
-        }
-
-        if ($candidates === []) {
-            return null;
-        }
-
-        usort($candidates, function (array $a, array $b): int {
-            if ($a['anchor']->equalTo($b['anchor'])) {
-                return 0;
-            }
-
-            return $a['anchor']->lessThan($b['anchor']) ? 1 : -1;
-        });
-
-        $bestByAvailability = $candidates[0];
-
-        foreach ($candidates as $candidate) {
-            if ($candidate['available'] > $bestByAvailability['available']) {
-                $bestByAvailability = $candidate;
-            }
-
-            if ($candidate['available'] >= $desiredMinutes) {
-                return $candidate;
-            }
-        }
-
-        return $bestByAvailability;
+        return min(0.999999, $unsigned / self::CRC32_MAX);
     }
 
     /**
@@ -2777,9 +2744,15 @@ class DemoSeeder extends Seeder
                 $targetExpiration = $now->addHours($hoursUntil);
                 break;
             case 'EXPIRED':
-                $ratio = 0.18 + (0.32 * $this->perishableRandomFloat($perishable, 'expired-window'));
-                $hoursPast = max(1, (int) round($shelfLife * $ratio));
-                $hoursPast = min($hoursPast, max(24, (int) ceil($shelfLife * 0.8)));
+                $minExpiredHours = max(12, (int) round($shelfLife * 0.5));
+                $maxExpiredHours = max($minExpiredHours + 12, (int) round($shelfLife * 1.25), 72);
+                $spread = max(0, $maxExpiredHours - $minExpiredHours);
+                $hoursPast = $minExpiredHours;
+
+                if ($spread > 0) {
+                    $hoursPast += (int) round($spread * $this->perishableRandomFloat($perishable, 'expired-window'));
+                }
+
                 $targetExpiration = $now->subHours($hoursPast);
                 break;
             default:
@@ -3491,7 +3464,7 @@ class DemoSeeder extends Seeder
 
         Order::query()->where('company_id', $company->id)->delete();
 
-        $this->resetOrderIntervalSlots();
+        $this->prepareOrderWindows();
 
         $menuMap = Menu::query()
             ->where('company_id', $company->id)
@@ -3503,7 +3476,7 @@ class DemoSeeder extends Seeder
         /** @var User|null $defaultUser */
         $defaultUser = $users->first();
 
-        foreach (self::ORDER_BLUEPRINTS as $definition) {
+        foreach (self::ORDER_BLUEPRINTS as $index => $definition) {
             $tableLabel = $definition['table'] ?? null;
             if (! is_string($tableLabel) || $tableLabel === '') {
                 continue;
@@ -3519,7 +3492,8 @@ class DemoSeeder extends Seeder
                 $status = OrderStatus::from((string) $status);
             }
 
-            $timeline = $this->buildOrderTimeline($status, $definition['timeline'] ?? []);
+            $orderKey = sprintf('%s|%s|%d', $tableLabel, $status->value, (int) $index);
+            $timeline = $this->buildOrderTimeline($status, $definition['timeline'] ?? [], $orderKey);
 
             $userEmail = $definition['user'] ?? null;
             $user = is_string($userEmail) && $userEmail !== ''
@@ -3627,83 +3601,71 @@ class DemoSeeder extends Seeder
      *     reference_at: CarbonImmutable,
      * }
      */
-    private function buildOrderTimeline(OrderStatus $status, array $timelineDefinition): array
+    private function buildOrderTimeline(OrderStatus $status, array $timelineDefinition, string $orderKey): array
     {
         $desiredMinutesAgo = max(5, (int) ($timelineDefinition['minutes_ago'] ?? 60));
-        $allocation = $this->allocateOrderTimelineWindow($desiredMinutesAgo, $status);
+        $window = $this->claimOrderWindow($status);
 
-        if ($allocation !== null) {
-            $referenceAt = $allocation['reference_at'];
-            $pendingAt = $allocation['pending_at'];
-            $minutesAgo = max(1, $referenceAt->diffInMinutes($pendingAt));
-        } else {
-            $interval = $this->resolveOrderInterval($desiredMinutesAgo);
+        if ($window === null) {
+            return $this->buildFallbackTimeline($status, $timelineDefinition, $orderKey, $desiredMinutesAgo);
+        }
 
-            if ($interval !== null) {
-                $available = max(1, (int) $interval['available']);
-                $minutesAgo = $available >= 5
-                    ? max(5, min($desiredMinutesAgo, $available))
-                    : min($desiredMinutesAgo, $available);
-                $minutesAgo = max(1, $minutesAgo);
+        $start = $window['start'];
+        $referenceAt = $window['cursor'];
+        $available = max(1, $start->diffInMinutes($referenceAt));
 
-                if ($status !== OrderStatus::PENDING && $available > 5 && $minutesAgo >= $available) {
-                    $buffer = max(5, min(45, (int) floor($available * 0.2)));
+        if ($available <= 5) {
+            $this->releaseOrderWindow($window);
 
-                    if ($available > $buffer) {
-                        $minutesAgo = max(5, $available - $buffer);
-                    } else {
-                        $minutesAgo = max(1, $available - 1);
-                    }
-                }
+            return $this->buildFallbackTimeline($status, $timelineDefinition, $orderKey, $desiredMinutesAgo);
+        }
 
-                $referenceAt = $interval['anchor'];
-            } else {
-                $minutesAgo = $desiredMinutesAgo;
-                $referenceAt = CarbonImmutable::now();
+        $buffer = max(5, min(30, (int) floor($available * 0.15)));
+        $elapsed = min($desiredMinutesAgo, max(5, $available - $buffer));
+
+        if ($elapsed >= $available) {
+            $elapsed = max(5, $available - $buffer);
+        }
+
+        if ($elapsed <= 0) {
+            $elapsed = max(5, min($desiredMinutesAgo, $available - 1));
+        }
+
+        $pendingAt = $referenceAt->subMinutes($elapsed);
+        $startPadding = max(5, min(45, (int) floor($available * 0.25)));
+
+        if ($pendingAt->lessThanOrEqualTo($start->addMinutes(2))) {
+            $pendingAt = $start->addMinutes($startPadding);
+
+            if ($pendingAt->greaterThanOrEqualTo($referenceAt)) {
+                $pendingAt = $start->addMinutes(max(5, min($startPadding, $available - 5)));
+                $referenceAt = $pendingAt->addMinutes(max(5, $buffer));
             }
 
-            $pendingAt = $referenceAt->subMinutes($minutesAgo);
+            $elapsed = max(1, $referenceAt->diffInMinutes($pendingAt));
         }
 
-        $servedAt = null;
-        $payedAt = null;
-        $canceledAt = null;
-
-        if (in_array($status, [OrderStatus::SERVED, OrderStatus::PAYED], true)) {
-            $servedDelay = max(1, (int) ($timelineDefinition['served_after'] ?? 30));
-            $servedDelay = min($servedDelay, max(1, $minutesAgo));
-            $servedAt = $pendingAt->addMinutes($servedDelay);
+        if ($referenceAt->lessThanOrEqualTo($pendingAt)) {
+            $referenceAt = $pendingAt->addMinutes(max(5, min($available, $buffer)));
         }
 
-        if ($status === OrderStatus::PAYED) {
-            $reference = $servedAt ?? $pendingAt;
-            $availableAfterReference = $reference->lessThan($referenceAt)
-                ? $reference->diffInMinutes($referenceAt)
-                : 0;
+        $available = max(1, $start->diffInMinutes($referenceAt));
+        $elapsed = max(1, $referenceAt->diffInMinutes($pendingAt));
+        $window['cursor'] = $pendingAt->subMinutes($this->orderTimelineGap($available, $elapsed, $orderKey));
 
-            $payedDelay = max(1, (int) ($timelineDefinition['payed_after'] ?? 20));
-
-            if ($availableAfterReference <= 0) {
-                $payedDelay = 0;
-            } elseif ($payedDelay > $availableAfterReference) {
-                $payedDelay = max(1, $availableAfterReference);
-            }
-
-            $payedAt = $payedDelay > 0 ? $reference->addMinutes($payedDelay) : $reference;
+        if ($window['cursor']->lessThanOrEqualTo($start->addMinutes(5))) {
+            $window['cursor'] = $start->addMinutes(5);
         }
 
-        if ($status === OrderStatus::CANCELED) {
-            $availableAfterPending = $minutesAgo;
-            $canceledDelay = max(1, (int) ($timelineDefinition['canceled_after'] ?? 15));
+        $this->releaseOrderWindow($window);
 
-            if ($availableAfterPending <= 0) {
-                $canceledDelay = 0;
-            } elseif ($canceledDelay > $availableAfterPending) {
-                $canceledDelay = max(1, $availableAfterPending);
-            }
-
-            $canceledAt = $canceledDelay > 0 ? $pendingAt->addMinutes($canceledDelay) : $pendingAt;
-        }
+        [$servedAt, $payedAt, $canceledAt] = $this->computeOrderMilestones(
+            $status,
+            $timelineDefinition,
+            $pendingAt,
+            $referenceAt,
+            $orderKey
+        );
 
         return [
             'pending_at' => $pendingAt,
@@ -3712,6 +3674,158 @@ class DemoSeeder extends Seeder
             'canceled_at' => $canceledAt,
             'reference_at' => $referenceAt,
         ];
+    }
+
+    private function buildFallbackTimeline(
+        OrderStatus $status,
+        array $timelineDefinition,
+        string $orderKey,
+        int $desiredMinutesAgo
+    ): array {
+        $offset = (int) round($this->orderRandomFloat($orderKey.'|fallback-anchor') * 60);
+        $referenceAt = CarbonImmutable::now()->subMinutes($offset);
+        $pendingAt = $referenceAt->subMinutes($desiredMinutesAgo);
+
+        if ($pendingAt->greaterThanOrEqualTo($referenceAt)) {
+            $pendingAt = $referenceAt->subMinutes(max(5, $desiredMinutesAgo));
+        }
+
+        if ($pendingAt->greaterThanOrEqualTo($referenceAt)) {
+            $referenceAt = $pendingAt->addMinutes(max(5, $desiredMinutesAgo));
+        }
+
+        if ($pendingAt->greaterThanOrEqualTo($referenceAt)) {
+            $referenceAt = CarbonImmutable::now();
+            $pendingAt = $referenceAt->subMinutes(max(5, $desiredMinutesAgo));
+        }
+
+        [$servedAt, $payedAt, $canceledAt] = $this->computeOrderMilestones(
+            $status,
+            $timelineDefinition,
+            $pendingAt,
+            $referenceAt,
+            $orderKey
+        );
+
+        return [
+            'pending_at' => $pendingAt,
+            'served_at' => $servedAt,
+            'payed_at' => $payedAt,
+            'canceled_at' => $canceledAt,
+            'reference_at' => $referenceAt,
+        ];
+    }
+
+    /**
+     * @return array{CarbonImmutable|null, CarbonImmutable|null, CarbonImmutable|null}
+     */
+    private function computeOrderMilestones(
+        OrderStatus $status,
+        array $timelineDefinition,
+        CarbonImmutable $pendingAt,
+        CarbonImmutable $referenceAt,
+        string $orderKey
+    ): array {
+        $windowMinutes = max(1, $referenceAt->diffInMinutes($pendingAt));
+        $buffer = max(2, min(20, (int) floor($windowMinutes * 0.18)));
+
+        $servedAt = null;
+        $payedAt = null;
+        $canceledAt = null;
+
+        if (in_array($status, [OrderStatus::SERVED, OrderStatus::PAYED], true)) {
+            $servedDelay = $timelineDefinition['served_after'] ?? null;
+
+            if ($servedDelay === null) {
+                $servedDelay = (int) round(max(
+                    5,
+                    min(
+                        $windowMinutes - 2,
+                        $windowMinutes * (0.5 + (0.3 * $this->orderRandomFloat($orderKey.'|served')))
+                    )
+                ));
+            }
+
+            $servedDelay = max(3, min((int) $servedDelay, max(1, $windowMinutes - 1)));
+            $servedAt = $pendingAt->addMinutes($servedDelay);
+
+            $latestServed = $referenceAt->subMinutes(max(2, min($buffer, 12)));
+
+            if ($latestServed->lessThanOrEqualTo($pendingAt)) {
+                $latestServed = $pendingAt->addMinutes(max(2, min($windowMinutes - 1, 5)));
+            }
+
+            if ($servedAt->greaterThan($latestServed)) {
+                $servedAt = $latestServed;
+            }
+
+            if ($servedAt->lessThanOrEqualTo($pendingAt)) {
+                $servedAt = $pendingAt->addMinutes(max(2, min($windowMinutes - 1, 5)));
+            }
+        }
+
+        if ($status === OrderStatus::PAYED) {
+            $base = $servedAt ?? $pendingAt;
+            $afterBase = max(1, $referenceAt->diffInMinutes($base));
+            $payedDelay = $timelineDefinition['payed_after'] ?? null;
+
+            if ($payedDelay === null) {
+                $payedDelay = (int) round(max(
+                    3,
+                    min(
+                        $afterBase - 1,
+                        $afterBase * (0.45 + (0.35 * $this->orderRandomFloat($orderKey.'|payed')))
+                    )
+                ));
+            }
+
+            $payedDelay = max(2, min((int) $payedDelay, max(1, $afterBase - 1)));
+            $payedAt = $base->addMinutes($payedDelay);
+
+            $latestPayed = $referenceAt->subMinutes(max(1, min($buffer, 6)));
+
+            if ($latestPayed->lessThanOrEqualTo($base)) {
+                $latestPayed = $base->addMinutes(max(2, min($afterBase - 1, 5)));
+            }
+
+            if ($payedAt->greaterThan($latestPayed)) {
+                $payedAt = $latestPayed;
+            }
+
+            if ($payedAt->lessThanOrEqualTo($base)) {
+                $payedAt = $base->addMinutes(max(2, min($afterBase - 1, 4)));
+            }
+        }
+
+        if ($status === OrderStatus::CANCELED) {
+            $availableWindow = max(1, $referenceAt->diffInMinutes($pendingAt));
+            $canceledDelay = $timelineDefinition['canceled_after'] ?? null;
+
+            if ($canceledDelay === null) {
+                $canceledDelay = (int) round(max(
+                    2,
+                    min(
+                        $availableWindow - 1,
+                        $availableWindow * (0.35 + (0.3 * $this->orderRandomFloat($orderKey.'|canceled')))
+                    )
+                ));
+            }
+
+            $canceledDelay = max(2, min((int) $canceledDelay, max(1, $availableWindow - 1)));
+            $canceledAt = $pendingAt->addMinutes($canceledDelay);
+
+            $latestCancel = $referenceAt->subMinutes(1);
+
+            if ($canceledAt->greaterThan($latestCancel)) {
+                $canceledAt = $latestCancel;
+            }
+
+            if ($canceledAt->lessThanOrEqualTo($pendingAt)) {
+                $canceledAt = $pendingAt->addMinutes(max(1, min($availableWindow - 1, 3)));
+            }
+        }
+
+        return [$servedAt, $payedAt, $canceledAt];
     }
 
     /**
@@ -3857,7 +3971,7 @@ class DemoSeeder extends Seeder
 
         if ($placeholderPattern === null) {
             $escaped = array_map(static fn (string $keyword): string => preg_quote($keyword, '/'), self::PLACEHOLDER_NOTE_KEYWORDS);
-            $placeholderPattern = '/\\b('.implode('|', $escaped).')\\b/u';
+            $placeholderPattern = '/('.implode('|', $escaped).')/u';
         }
 
         if ($placeholderPattern !== null && preg_match($placeholderPattern, $normalized) === 1) {
