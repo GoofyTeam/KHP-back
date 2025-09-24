@@ -116,7 +116,7 @@ class TableQueryTest extends TestCase
         $response->assertJsonPath('data.table.orders', null);
     }
 
-    public function test_orders_field_returns_pending_orders_for_table(): void
+    public function test_orders_field_returns_active_orders_for_table(): void
     {
         $user = User::factory()->create();
         $room = Room::factory()->for($user->company)->create();
@@ -128,7 +128,7 @@ class TableQueryTest extends TestCase
             ->for($user, 'user')
             ->create();
 
-        Order::factory()
+        $servedOrder = Order::factory()
             ->for($table, 'table')
             ->for($user->company, 'company')
             ->for($user, 'user')
@@ -143,12 +143,18 @@ class TableQueryTest extends TestCase
 
         $response = $this->actingAs($user)->graphQL($query, ['id' => $table->id]);
 
-        $response->assertJsonCount(1, 'data.table.orders');
-        $response->assertJsonPath('data.table.orders.0.id', (string) $pendingOrder->id);
-        $response->assertJsonPath('data.table.orders.0.status', $pendingOrder->status->value);
+        $response->assertJsonCount(2, 'data.table.orders');
+        $response->assertJsonFragment([
+            'id' => (string) $pendingOrder->id,
+            'status' => $pendingOrder->status->value,
+        ]);
+        $response->assertJsonFragment([
+            'id' => (string) $servedOrder->id,
+            'status' => $servedOrder->status->value,
+        ]);
     }
 
-    public function test_orders_field_returns_null_when_no_pending_order(): void
+    public function test_orders_field_returns_null_when_only_finalized_orders(): void
     {
         $user = User::factory()->create();
         $room = Room::factory()->for($user->company)->create();
@@ -158,7 +164,14 @@ class TableQueryTest extends TestCase
             ->for($table, 'table')
             ->for($user->company, 'company')
             ->for($user, 'user')
-            ->served()
+            ->payed()
+            ->create();
+
+        Order::factory()
+            ->for($table, 'table')
+            ->for($user->company, 'company')
+            ->for($user, 'user')
+            ->canceled()
             ->create();
 
         $query = /** @lang GraphQL */ 'query ($id: ID!) {
