@@ -8,17 +8,20 @@ use App\Models\Order;
 use App\Models\Room;
 use App\Models\Table;
 use Carbon\Carbon;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 
 class OrderSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        $companies = Company::query()->with('users')->get();
+        $companies = $this->seedableCompanyQuery()->with('users')->get();
 
         foreach ($companies as $company) {
             if ($company->users->isEmpty()) {

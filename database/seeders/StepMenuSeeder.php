@@ -7,11 +7,14 @@ use App\Enums\StepMenuStatus;
 use App\Models\Menu;
 use App\Models\OrderStep;
 use App\Models\StepMenu;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 
 class StepMenuSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     private const SAMPLE_NOTES = [
         'Allergie : retirer les noisettes.',
         'Cuisson demandée : saignant.',
@@ -25,9 +28,13 @@ class StepMenuSeeder extends Seeder
      */
     public function run(): void
     {
-        $menusByCompany = Menu::query()->get()->groupBy('company_id');
+        $menusByCompany = Menu::query()
+            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
+            ->get()
+            ->groupBy('company_id');
 
         $steps = OrderStep::query()
+            ->whereHas('order.company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->with('order')
             ->withCount('stepMenus')
             ->get();

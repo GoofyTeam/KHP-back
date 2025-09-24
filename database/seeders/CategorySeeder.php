@@ -4,11 +4,14 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Company;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 
 class CategorySeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     /**
      * Run the database seeds.
      */
@@ -68,12 +71,15 @@ class CategorySeeder extends Seeder
 
         $company = Company::where('name', 'GoofyTeam')->first();
 
-        if ($company !== null) {
+        if ($company !== null && ! $this->isExcludedCompanyId($company->id)) {
             $this->seedCategoriesForCompany($company, $categories);
         }
 
         // Create categories for other companies
-        $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
+        $otherCompanies = Company::query()
+            ->where('name', '!=', 'GoofyTeam')
+            ->whereNotIn('name', $this->excludedCompanyNames())
+            ->get();
         foreach ($otherCompanies as $company) {
             $this->seedCategoriesForCompany($company, $categories);
         }

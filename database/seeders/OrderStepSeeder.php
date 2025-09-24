@@ -6,16 +6,22 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderStepStatus;
 use App\Models\Order;
 use App\Models\OrderStep;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class OrderStepSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        $orders = Order::query()->withCount('steps')->get();
+        $orders = Order::query()
+            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
+            ->withCount('steps')
+            ->get();
 
         foreach ($orders as $order) {
             if ($order->steps_count > 0) {

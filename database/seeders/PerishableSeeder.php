@@ -5,11 +5,14 @@ namespace Database\Seeders;
 use App\Models\Ingredient;
 use App\Models\Loss;
 use App\Services\PerishableService;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class PerishableSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     public function run(PerishableService $service): void
     {
         $rows = DB::table('ingredient_location')->where('quantity', '>', 0)->get();
@@ -23,6 +26,10 @@ class PerishableSeeder extends Seeder
                 continue;
             }
             $companyId = $ingredient->company_id;
+
+            if ($this->isExcludedCompanyId($companyId)) {
+                continue;
+            }
 
             $perishable = $service->add($row->ingredient_id, $row->location_id, $companyId, $row->quantity);
             if (! $perishable) {

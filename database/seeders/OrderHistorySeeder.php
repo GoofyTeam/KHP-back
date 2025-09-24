@@ -11,16 +11,20 @@ use App\Models\OrderStep;
 use App\Models\StepMenu;
 use App\Models\User;
 use App\Services\OrderHistoryService;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class OrderHistorySeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     public function run(): void
     {
         /** @var OrderHistoryService $historyService */
         $historyService = app(OrderHistoryService::class);
 
         $orders = Order::query()
+            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->with(['user', 'steps.stepMenus'])
             ->get();
 
