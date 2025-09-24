@@ -20,6 +20,7 @@ use App\Models\MenuType;
 use App\Models\MenuTypePublicOrder;
 use App\Models\Order;
 use App\Models\OrderStep;
+use App\Models\Perishable;
 use App\Models\Preparation;
 use App\Models\QuickAccess;
 use App\Models\Room;
@@ -29,6 +30,7 @@ use App\Models\Table;
 use App\Models\User;
 use App\Services\ImageService;
 use App\Services\OpenFoodFactsService;
+use App\Services\PerishableService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
@@ -1663,9 +1665,13 @@ class DemoSeeder extends Seeder
         'Coulis de framboise' => 6,
     ];
 
+    private const PERISHABLE_STATUS_SEQUENCE = ['FRESH', 'FRESH', 'SOON', 'EXPIRED'];
+
     private ImageService $images;
 
     private OpenFoodFactsService $openFoodFacts;
+
+    private PerishableService $perishableService;
 
     /** @var array<int, string> */
     private array $missingIngredients = [];
@@ -1698,10 +1704,24 @@ class DemoSeeder extends Seeder
 
     private ?int $preparationLocationId = null;
 
-    public function __construct(ImageService $images, OpenFoodFactsService $openFoodFacts)
-    {
+    /**
+     * @var array<int, array<int, array{opens_at: string, closes_at: string, is_overnight: bool}>>
+     */
+    private array $businessHoursSchedule = [];
+
+    /**
+     * @var array<int, array{start: CarbonImmutable, end: CarbonImmutable}>|null
+     */
+    private ?array $businessIntervalsCache = null;
+
+    public function __construct(
+        ImageService $images,
+        OpenFoodFactsService $openFoodFacts,
+        PerishableService $perishableService
+    ) {
         $this->images = $images;
         $this->openFoodFacts = $openFoodFacts;
+        $this->perishableService = $perishableService;
     }
 
     public function run(): void
@@ -1751,6 +1771,7 @@ class DemoSeeder extends Seeder
         $categoryIds = $this->ensureCategories($company, $locationTypes);
         $ingredients = $this->seedIngredients($company, $categoryIds, $locations, $defaultLocation);
         $this->seedIngredientStockMovements($ingredients);
+        $this->seedPerishables($company, $ingredients);
         $preparationCategoryId = $categoryIds['Préparations Maison'] ?? (int) reset($categoryIds);
         $preparations = $this->seedPreparations(
             $company,
@@ -1804,6 +1825,9 @@ class DemoSeeder extends Seeder
     {
         $company->businessHours()->delete();
 
+        $this->businessHoursSchedule = [];
+        $this->businessIntervalsCache = null;
+
         $records = [];
 
         foreach ($schedule as $day => $entries) {
@@ -1832,6 +1856,12 @@ class DemoSeeder extends Seeder
                     $closesAt,
                     (bool) ($entry['is_overnight'] ?? false)
                 );
+
+                $this->businessHoursSchedule[$dayOfWeek][] = [
+                    'opens_at' => $opensAt,
+                    'closes_at' => $closesAt,
+                    'is_overnight' => $isOvernight,
+                ];
 
                 $records[] = [
                     'day_of_week' => $dayOfWeek,
@@ -1932,6 +1962,133 @@ class DemoSeeder extends Seeder
         $minute = (int) ($parts[1] ?? 0);
 
         return ($hour * 60) + $minute;
+    }
+
+    private function combineDateAndTime(CarbonImmutable $date, string $time): CarbonImmutable
+    {
+        $segments = array_pad(explode(':', $time), 3, '0');
+        $hour = (int) $segments[0];
+        $minute = (int) $segments[1];
+        $second = (int) $segments[2];
+
+        return $date->setTime($hour, $minute, $second);
+    }
+
+    /**
+     * @return array<int, array{start: CarbonImmutable, end: CarbonImmutable}>
+     */
+    private function businessIntervals(): array
+    {
+        if ($this->businessIntervalsCache !== null) {
+            return $this->businessIntervalsCache;
+        }
+
+        if ($this->businessHoursSchedule === []) {
+            return $this->businessIntervalsCache = [];
+        }
+
+        $now = CarbonImmutable::now();
+        $baseDate = $now->startOfDay();
+        $intervals = [];
+
+        for ($offset = -14; $offset <= 0; $offset++) {
+            $currentDate = $baseDate->addDays($offset);
+            $dayOfWeek = (int) $currentDate->isoWeekday();
+            $entries = $this->businessHoursSchedule[$dayOfWeek] ?? [];
+
+            foreach ($entries as $entry) {
+                $start = $this->combineDateAndTime($currentDate, $entry['opens_at']);
+                $end = $this->combineDateAndTime($currentDate, $entry['closes_at']);
+
+                if ($entry['is_overnight'] || $end->lessThanOrEqualTo($start)) {
+                    $end = $end->addDay();
+                }
+
+                $intervals[] = ['start' => $start, 'end' => $end];
+            }
+        }
+
+        usort($intervals, function (array $a, array $b): int {
+            if ($a['end']->equalTo($b['end'])) {
+                return 0;
+            }
+
+            return $a['end']->lessThan($b['end']) ? -1 : 1;
+        });
+
+        return $this->businessIntervalsCache = $intervals;
+    }
+
+    /**
+     * @return array{start: CarbonImmutable, end: CarbonImmutable, anchor: CarbonImmutable, available: int}|null
+     */
+    private function resolveOrderInterval(int $desiredMinutes): ?array
+    {
+        $intervals = $this->businessIntervals();
+
+        if ($intervals === []) {
+            return null;
+        }
+
+        $now = CarbonImmutable::now();
+        $candidates = [];
+
+        foreach ($intervals as $interval) {
+            if ($interval['start']->greaterThan($now)) {
+                continue;
+            }
+
+            $anchor = $interval['end'];
+
+            if ($now->betweenIncluded($interval['start'], $interval['end'])) {
+                $anchor = $now;
+            } elseif ($interval['end']->greaterThan($now)) {
+                $anchor = $now;
+            }
+
+            if ($anchor->lessThanOrEqualTo($interval['start'])) {
+                continue;
+            }
+
+            $available = $interval['start']->diffInMinutes($anchor);
+
+            if ($available <= 0) {
+                continue;
+            }
+
+            $candidates[] = [
+                'start' => $interval['start'],
+                'end' => $interval['end'],
+                'anchor' => $anchor,
+                'available' => $available,
+            ];
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        usort($candidates, function (array $a, array $b): int {
+            if ($a['anchor']->equalTo($b['anchor'])) {
+                return 0;
+            }
+
+            return $a['anchor']->lessThan($b['anchor']) ? 1 : -1;
+        });
+
+        $bestByAvailability = $candidates[0];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate['available'] > $bestByAvailability['available']) {
+                $bestByAvailability = $candidate;
+            }
+
+            if ($candidate['available'] >= $desiredMinutes) {
+                return $candidate;
+            }
+        }
+
+        return $bestByAvailability;
     }
 
     /**
@@ -2388,6 +2545,93 @@ class DemoSeeder extends Seeder
                 );
             }
         }
+    }
+
+    /**
+     * @param  array<string, Ingredient>  $ingredients
+     */
+    private function seedPerishables(Company $company, array $ingredients): void
+    {
+        Perishable::withTrashed()
+            ->where('company_id', $company->id)
+            ->forceDelete();
+
+        if ($ingredients === []) {
+            return;
+        }
+
+        $sequence = self::PERISHABLE_STATUS_SEQUENCE;
+        $count = count($sequence);
+
+        if ($count === 0) {
+            return;
+        }
+
+        $index = 0;
+
+        foreach ($ingredients as $ingredient) {
+            $ingredient->loadMissing('locations');
+
+            foreach ($ingredient->locations as $location) {
+                $quantity = (float) ($location->pivot->quantity ?? 0.0);
+
+                if ($quantity <= 0.0) {
+                    continue;
+                }
+
+                $perishable = $this->perishableService->add(
+                    $ingredient->id,
+                    $location->id,
+                    $company->id,
+                    $quantity
+                );
+
+                if (! $perishable instanceof Perishable) {
+                    continue;
+                }
+
+                $status = $sequence[$index % $count];
+                $index++;
+
+                $markAsRead = $status === 'FRESH' && ($index % 3 === 0);
+
+                $this->configurePerishableStatus($perishable, $status, $markAsRead);
+            }
+        }
+    }
+
+    private function configurePerishableStatus(Perishable $perishable, string $status, bool $markAsRead = false): void
+    {
+        $now = CarbonImmutable::now();
+        $expiration = $this->perishableService->expiration($perishable);
+        $shelfLife = max(1, (int) round($expiration->diffInHours($perishable->created_at)));
+
+        $createdAt = $now;
+        $deletedAt = null;
+
+        switch ($status) {
+            case 'SOON':
+                $remaining = max(1, min(12, $shelfLife - 1));
+                $age = max(1, $shelfLife - $remaining);
+                $createdAt = $now->subHours($age);
+                break;
+            case 'EXPIRED':
+                $overdue = max(1, min(24, (int) ceil($shelfLife * 0.15)));
+                $createdAt = $now->subHours($shelfLife + $overdue);
+                $deletedAt = $now->subHours(max(1, min($overdue, 6)));
+                break;
+            default:
+                $age = max(1, min($shelfLife - 1, (int) ceil($shelfLife * 0.3)));
+                $createdAt = $now->subHours($age);
+                break;
+        }
+
+        $perishable->forceFill([
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+            'deleted_at' => $deletedAt,
+            'is_read' => $markAsRead,
+        ])->saveQuietly();
     }
 
     private function createIngredientMovement(
@@ -3129,12 +3373,27 @@ class DemoSeeder extends Seeder
      *     served_at: CarbonImmutable|null,
      *     payed_at: CarbonImmutable|null,
      *     canceled_at: CarbonImmutable|null,
+     *     reference_at: CarbonImmutable,
      * }
      */
     private function buildOrderTimeline(OrderStatus $status, array $timelineDefinition): array
     {
-        $minutesAgo = max(5, (int) ($timelineDefinition['minutes_ago'] ?? 60));
-        $pendingAt = CarbonImmutable::now()->subMinutes($minutesAgo);
+        $desiredMinutesAgo = max(5, (int) ($timelineDefinition['minutes_ago'] ?? 60));
+        $interval = $this->resolveOrderInterval($desiredMinutesAgo);
+
+        if ($interval !== null) {
+            $available = max(1, (int) $interval['available']);
+            $minutesAgo = $available >= 5
+                ? max(5, min($desiredMinutesAgo, $available))
+                : min($desiredMinutesAgo, $available);
+            $minutesAgo = max(1, $minutesAgo);
+            $referenceAt = $interval['anchor'];
+        } else {
+            $minutesAgo = $desiredMinutesAgo;
+            $referenceAt = CarbonImmutable::now();
+        }
+
+        $pendingAt = $referenceAt->subMinutes($minutesAgo);
 
         $servedAt = null;
         $payedAt = null;
@@ -3142,18 +3401,38 @@ class DemoSeeder extends Seeder
 
         if (in_array($status, [OrderStatus::SERVED, OrderStatus::PAYED], true)) {
             $servedDelay = max(1, (int) ($timelineDefinition['served_after'] ?? 30));
+            $servedDelay = min($servedDelay, max(1, $minutesAgo));
             $servedAt = $pendingAt->addMinutes($servedDelay);
         }
 
         if ($status === OrderStatus::PAYED) {
             $reference = $servedAt ?? $pendingAt;
+            $availableAfterReference = $reference->lessThan($referenceAt)
+                ? $reference->diffInMinutes($referenceAt)
+                : 0;
+
             $payedDelay = max(1, (int) ($timelineDefinition['payed_after'] ?? 20));
-            $payedAt = $reference->addMinutes($payedDelay);
+
+            if ($availableAfterReference <= 0) {
+                $payedDelay = 0;
+            } elseif ($payedDelay > $availableAfterReference) {
+                $payedDelay = max(1, $availableAfterReference);
+            }
+
+            $payedAt = $payedDelay > 0 ? $reference->addMinutes($payedDelay) : $reference;
         }
 
         if ($status === OrderStatus::CANCELED) {
+            $availableAfterPending = $minutesAgo;
             $canceledDelay = max(1, (int) ($timelineDefinition['canceled_after'] ?? 15));
-            $canceledAt = $pendingAt->addMinutes($canceledDelay);
+
+            if ($availableAfterPending <= 0) {
+                $canceledDelay = 0;
+            } elseif ($canceledDelay > $availableAfterPending) {
+                $canceledDelay = max(1, $availableAfterPending);
+            }
+
+            $canceledAt = $canceledDelay > 0 ? $pendingAt->addMinutes($canceledDelay) : $pendingAt;
         }
 
         return [
@@ -3161,6 +3440,7 @@ class DemoSeeder extends Seeder
             'served_at' => $servedAt,
             'payed_at' => $payedAt,
             'canceled_at' => $canceledAt,
+            'reference_at' => $referenceAt,
         ];
     }
 
@@ -3171,6 +3451,7 @@ class DemoSeeder extends Seeder
      *     served_at: CarbonImmutable|null,
      *     payed_at: CarbonImmutable|null,
      *     canceled_at: CarbonImmutable|null,
+     *     reference_at: CarbonImmutable,
      * }  $timeline
      */
     private function seedOrderSteps(Order $order, array $steps, Collection $menuMap, array $timeline): void
@@ -3179,6 +3460,8 @@ class DemoSeeder extends Seeder
 
         /** @var CarbonImmutable $pendingAt */
         $pendingAt = $timeline['pending_at'];
+        /** @var CarbonImmutable $latestAt */
+        $latestAt = $timeline['reference_at'] ?? $pendingAt;
 
         foreach ($steps as $index => $definition) {
             $status = $definition['status'] ?? OrderStepStatus::IN_PREP;
@@ -3190,7 +3473,12 @@ class DemoSeeder extends Seeder
             $servedAt = null;
 
             if (array_key_exists('served_after', $definition)) {
-                $servedAt = $pendingAt->addMinutes((int) $definition['served_after']);
+                $delay = max(0, (int) $definition['served_after']);
+                $candidate = $pendingAt->addMinutes($delay);
+                if ($candidate->greaterThan($latestAt)) {
+                    $candidate = $latestAt;
+                }
+                $servedAt = $candidate;
             } elseif ($status === OrderStepStatus::SERVED) {
                 $servedAt = $timeline['served_at'];
             }
@@ -3213,6 +3501,7 @@ class DemoSeeder extends Seeder
      *     served_at: CarbonImmutable|null,
      *     payed_at: CarbonImmutable|null,
      *     canceled_at: CarbonImmutable|null,
+     *     reference_at: CarbonImmutable,
      * }  $timeline
      */
     private function seedStepMenus(
@@ -3227,6 +3516,8 @@ class DemoSeeder extends Seeder
 
         /** @var CarbonImmutable $pendingAt */
         $pendingAt = $timeline['pending_at'];
+        /** @var CarbonImmutable $latestAt */
+        $latestAt = $timeline['reference_at'] ?? $pendingAt;
 
         foreach ($menus as $menuDefinition) {
             $menuName = $menuDefinition['name'] ?? null;
@@ -3257,7 +3548,12 @@ class DemoSeeder extends Seeder
             $servedAt = null;
 
             if (array_key_exists('served_after', $menuDefinition)) {
-                $servedAt = $pendingAt->addMinutes((int) $menuDefinition['served_after']);
+                $delay = max(0, (int) $menuDefinition['served_after']);
+                $candidate = $pendingAt->addMinutes($delay);
+                if ($candidate->greaterThan($latestAt)) {
+                    $candidate = $latestAt;
+                }
+                $servedAt = $candidate;
             } elseif ($menuStatus === StepMenuStatus::SERVED) {
                 $servedAt = $stepServedAt ?? $timeline['served_at'];
             }
@@ -3267,10 +3563,31 @@ class DemoSeeder extends Seeder
                 'menu_id' => $menu->id,
                 'quantity' => $quantity,
                 'status' => $menuStatus,
-                'note' => $menuDefinition['note'] ?? null,
+                'note' => $this->sanitizeNote($menuDefinition['note'] ?? null),
                 'served_at' => $servedAt,
             ]);
         }
+    }
+
+    private function sanitizeNote(mixed $note): ?string
+    {
+        if (! is_string($note)) {
+            return null;
+        }
+
+        $trimmed = trim($note);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $normalized = mb_strtolower($trimmed);
+
+        if (str_contains($normalized, 'lorem')) {
+            return null;
+        }
+
+        return $trimmed;
     }
 
     private function defaultStepMenuStatus(OrderStepStatus $status): StepMenuStatus
