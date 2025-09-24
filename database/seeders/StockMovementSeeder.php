@@ -5,13 +5,10 @@ namespace Database\Seeders;
 use App\Models\Ingredient;
 use App\Models\Preparation;
 use Carbon\Carbon;
-use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class StockMovementSeeder extends Seeder
 {
-    use FiltersSeedableCompanies;
-
     public function run(): void
     {
         $this->seedIngredientMovements();
@@ -21,7 +18,6 @@ class StockMovementSeeder extends Seeder
     private function seedIngredientMovements(): void
     {
         Ingredient::query()
-            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->whereHas('locations', fn ($q) => $q->where('quantity', '>', 0))
             ->get()
             ->each(function ($ingredient) {
@@ -121,7 +117,6 @@ class StockMovementSeeder extends Seeder
     private function seedPreparationMovements(): void
     {
         Preparation::query()
-            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->whereHas('locations', fn ($q) => $q->where('quantity', '>', 0))
             ->get()
             ->each(function ($prep) {
