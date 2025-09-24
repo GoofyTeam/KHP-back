@@ -3,14 +3,18 @@
 namespace Database\Seeders;
 
 use App\Models\Ingredient;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Faker\Generator as FakerGenerator;
 use Illuminate\Database\Seeder;
 
 class IngredientThresholdSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     public function run(): void
     {
         $ingredients = Ingredient::query()
+            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->whereNull('threshold')
             ->inRandomOrder()
             ->get();

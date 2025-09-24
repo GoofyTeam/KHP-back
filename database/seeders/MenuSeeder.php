@@ -9,6 +9,7 @@ use App\Models\Menu;
 use App\Models\MenuItem;
 use App\Models\MenuType;
 use App\Models\Preparation;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -16,9 +17,11 @@ use Illuminate\Support\Str;
 
 class MenuSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     public function run(): void
     {
-        $companies = Company::all();
+        $companies = $this->seedableCompanies();
 
         foreach ($companies as $company) {
             $ingredients = Ingredient::where('company_id', $company->id)

@@ -4,10 +4,13 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\QuickAccess;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class QuickAccessSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     /**
      * Available quick access shortcuts keyed by their url_key.
      *
@@ -64,7 +67,7 @@ class QuickAccessSeeder extends Seeder
         $defaults = array_values(self::defaults());
         $allowedIndexes = array_column($defaults, 'index');
 
-        Company::all()->each(function (Company $company) use ($defaults, $allowedIndexes) {
+        $this->seedableCompanies()->each(function (Company $company) use ($defaults, $allowedIndexes) {
             foreach ($defaults as $row) {
                 QuickAccess::updateOrCreate(
                     [
