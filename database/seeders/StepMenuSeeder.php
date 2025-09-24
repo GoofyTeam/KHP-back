@@ -12,6 +12,14 @@ use Illuminate\Support\Arr;
 
 class StepMenuSeeder extends Seeder
 {
+    private const SAMPLE_NOTES = [
+        'Allergie : retirer les noisettes.',
+        'Cuisson demandée : saignant.',
+        'Servir la sauce à part.',
+        'Sans lactose : utiliser du lait végétal.',
+        'Ajouter une assiette bien chaude.',
+    ];
+
     /**
      * Run the database seeds.
      */
@@ -50,7 +58,7 @@ class StepMenuSeeder extends Seeder
                         'menu_id' => $menu->id,
                         'quantity' => random_int(1, 4),
                         'status' => $status,
-                        'note' => fake()->optional(0.3)->sentence(),
+                        'note' => $this->randomNote(),
                         'served_at' => $servedAt,
                     ]);
                 });
@@ -66,5 +74,14 @@ class StepMenuSeeder extends Seeder
         };
 
         return Arr::random($allowed);
+    }
+
+    private function randomNote(): ?string
+    {
+        if (random_int(1, 10) > 3) {
+            return null;
+        }
+
+        return Arr::random(self::SAMPLE_NOTES);
     }
 }
