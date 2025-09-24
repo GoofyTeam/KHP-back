@@ -16,7 +16,10 @@ class TableResolver
     {
         /** @var Collection<int, Order> $orders */
         $orders = $table->orders()
-            ->where('status', OrderStatus::PENDING)
+            ->whereIn('status', [
+                OrderStatus::PENDING->value,
+                OrderStatus::SERVED->value,
+            ])
             ->latest('created_at')
             ->get();
 
