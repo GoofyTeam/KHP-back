@@ -1667,6 +1667,8 @@ class DemoSeeder extends Seeder
 
     private const PERISHABLE_STATUS_SEQUENCE = ['FRESH', 'FRESH', 'SOON', 'EXPIRED'];
 
+    private const CRC32_MAX = 4294967295;
+
     private const PLACEHOLDER_NOTE_KEYWORDS = [
         'lorem',
         'ipsum',
@@ -1742,6 +1744,11 @@ class DemoSeeder extends Seeder
      * @var array<int, array{start: CarbonImmutable, end: CarbonImmutable}>|null
      */
     private ?array $businessIntervalsCache = null;
+
+    /**
+     * @var array<int, array{start: CarbonImmutable, end: CarbonImmutable, cursor: CarbonImmutable}>
+     */
+    private array $orderIntervalSlots = [];
 
     public function __construct(
         ImageService $images,
@@ -1856,6 +1863,7 @@ class DemoSeeder extends Seeder
 
         $this->businessHoursSchedule = [];
         $this->businessIntervalsCache = null;
+        $this->orderIntervalSlots = [];
 
         $records = [];
 
@@ -2046,6 +2054,126 @@ class DemoSeeder extends Seeder
         });
 
         return $this->businessIntervalsCache = $intervals;
+    }
+
+    private function resetOrderIntervalSlots(): void
+    {
+        $this->orderIntervalSlots = [];
+
+        $intervals = $this->businessIntervals();
+
+        if ($intervals === []) {
+            return;
+        }
+
+        $now = CarbonImmutable::now();
+
+        foreach (array_reverse($intervals) as $interval) {
+            $start = $interval['start'];
+            $end = $interval['end'];
+
+            if ($start->greaterThan($now)) {
+                continue;
+            }
+
+            $anchor = $end->greaterThan($now) ? $now : $end;
+
+            if ($anchor->lessThanOrEqualTo($start)) {
+                continue;
+            }
+
+            $this->orderIntervalSlots[] = [
+                'start' => $start,
+                'end' => $end,
+                'cursor' => $anchor,
+            ];
+        }
+    }
+
+    /**
+     * @return array{reference_at: CarbonImmutable, pending_at: CarbonImmutable, available: int}|null
+     */
+    private function allocateOrderTimelineWindow(int $desiredMinutesAgo, OrderStatus $status): ?array
+    {
+        if ($this->orderIntervalSlots === []) {
+            $this->resetOrderIntervalSlots();
+        }
+
+        foreach ($this->orderIntervalSlots as $index => &$slot) {
+            $start = $slot['start'];
+            $cursor = $slot['cursor'];
+
+            $available = (int) $start->diffInMinutes($cursor, false);
+
+            if ($available <= 0) {
+                unset($this->orderIntervalSlots[$index]);
+
+                continue;
+            }
+
+            $minutesAgo = max(1, min($desiredMinutesAgo, $available));
+
+            if ($status !== OrderStatus::PENDING && $available > 5 && $minutesAgo >= $available) {
+                $buffer = max(5, min(45, (int) floor($available * 0.2)));
+
+                if ($available > $buffer) {
+                    $minutesAgo = max(5, $available - $buffer);
+                } else {
+                    $minutesAgo = max(1, $available - 1);
+                }
+            }
+
+            $pendingAt = $cursor->subMinutes($minutesAgo);
+
+            if ($pendingAt->lessThanOrEqualTo($start)) {
+                $padding = max(1, min($available - 1, (int) floor($available * 0.3)));
+                $pendingAt = $start->addMinutes($padding);
+                $minutesAgo = max(1, $cursor->diffInMinutes($pendingAt));
+            }
+
+            $referenceAt = $cursor;
+            $gap = $this->orderTimelineGap($available, $minutesAgo);
+            $maxGap = max(1, $start->diffInMinutes($pendingAt, false));
+
+            if ($gap > $maxGap) {
+                $gap = $maxGap;
+            }
+
+            $newCursor = $pendingAt->subMinutes($gap);
+
+            if ($newCursor->lessThanOrEqualTo($start)) {
+                unset($this->orderIntervalSlots[$index]);
+            } else {
+                $slot['cursor'] = $newCursor;
+            }
+
+            $this->orderIntervalSlots = array_values($this->orderIntervalSlots);
+
+            return [
+                'reference_at' => $referenceAt,
+                'pending_at' => $pendingAt,
+                'available' => $available,
+            ];
+        }
+
+        $this->orderIntervalSlots = array_values($this->orderIntervalSlots);
+
+        return null;
+    }
+
+    private function orderTimelineGap(int $available, int $minutesAgo): int
+    {
+        $minutesAgo = max(1, $minutesAgo);
+        $available = max($minutesAgo, $available);
+
+        $minGap = max(1, min($minutesAgo, (int) ceil($minutesAgo * 0.25)));
+        $maxGapCandidate = max($minGap, min($minutesAgo, (int) floor($available * 0.25)));
+
+        if ($maxGapCandidate <= $minGap) {
+            return $minGap;
+        }
+
+        return random_int($minGap, $maxGapCandidate);
     }
 
     /**
@@ -2639,23 +2767,34 @@ class DemoSeeder extends Seeder
             $shelfLife = 24;
         }
 
-        switch ($status) {
+        $statusKey = strtoupper($status);
+
+        switch ($statusKey) {
             case 'SOON':
-                $targetExpiration = $now->addHours($this->hoursUntilExpirationForSoon($shelfLife));
+                $ratio = 0.08 + (0.12 * $this->perishableRandomFloat($perishable, 'soon-window'));
+                $hoursUntil = max(1, (int) round($shelfLife * $ratio));
+                $hoursUntil = min($hoursUntil, max(1, (int) ceil($shelfLife * 0.25)));
+                $targetExpiration = $now->addHours($hoursUntil);
                 break;
             case 'EXPIRED':
-                $targetExpiration = $now->subHours($this->hoursSinceExpirationForExpired($shelfLife));
+                $ratio = 0.18 + (0.32 * $this->perishableRandomFloat($perishable, 'expired-window'));
+                $hoursPast = max(1, (int) round($shelfLife * $ratio));
+                $hoursPast = min($hoursPast, max(24, (int) ceil($shelfLife * 0.8)));
+                $targetExpiration = $now->subHours($hoursPast);
                 break;
             default:
-                $targetExpiration = $now->addHours($this->hoursUntilExpirationForFresh($shelfLife));
+                $ratio = 0.35 + (0.45 * $this->perishableRandomFloat($perishable, 'fresh-window'));
+                $hoursUntil = max(1, (int) round($shelfLife * $ratio));
+                $hoursUntil = min($hoursUntil, max($shelfLife - 1, 1));
+                $targetExpiration = $now->addHours($hoursUntil);
                 break;
         }
 
-        if ($status === 'EXPIRED' && $targetExpiration->greaterThan($now)) {
+        if ($statusKey === 'EXPIRED' && $targetExpiration->greaterThan($now)) {
             $targetExpiration = $now->subHour();
         }
 
-        if ($status !== 'EXPIRED' && $targetExpiration->lessThanOrEqualTo($now)) {
+        if ($statusKey !== 'EXPIRED' && $targetExpiration->lessThanOrEqualTo($now)) {
             $targetExpiration = $now->addHour();
         }
 
@@ -2666,59 +2805,82 @@ class DemoSeeder extends Seeder
             $targetExpiration = $createdAt->addHours($shelfLife);
         }
 
+        $updateRatio = 0.2 + (0.45 * $this->perishableRandomFloat($perishable, $statusKey.'-update'));
+        $updateHours = max(0, (int) round($shelfLife * $updateRatio));
+        $updatedAt = $createdAt->addHours(min($shelfLife, $updateHours));
+        $latestUpdate = $targetExpiration->subMinutes(5);
+
+        if ($updatedAt->greaterThan($latestUpdate)) {
+            $updatedAt = $latestUpdate;
+        }
+
+        if ($updatedAt->greaterThan($now)) {
+            $minutesBack = max(1, (int) round($this->perishableRandomFloat($perishable, $statusKey.'-update-back') * 180));
+            $updatedAt = $now->subMinutes($minutesBack);
+        }
+
+        if ($updatedAt->lessThan($createdAt)) {
+            $updatedAt = $createdAt;
+        }
+
         $deletedAt = null;
 
-        if ($status === 'EXPIRED') {
-            $cleanupDelay = $this->hoursUntilCleanupForExpired($shelfLife);
-            $deletedAt = $targetExpiration->addHours($cleanupDelay);
+        if ($statusKey === 'EXPIRED' && $this->perishableRandomFloat($perishable, 'expired-visible') >= 0.35) {
+            $cleanupRatio = 0.05 + (0.2 * $this->perishableRandomFloat($perishable, 'expired-cleanup'));
+            $cleanupHours = max(1, (int) round($shelfLife * $cleanupRatio));
+            $deletedAt = $targetExpiration->addHours($cleanupHours);
 
-            if ($deletedAt->greaterThanOrEqualTo($now)) {
-                $deletedAt = $now->subMinutes(30);
+            $minSpacingMinutes = max(5, min(120, (int) ceil($shelfLife * 0.1)));
+            $earliestCleanup = $targetExpiration->addMinutes($minSpacingMinutes);
+            $latestCleanup = $now->subMinutes(2);
+
+            if ($latestCleanup->lessThanOrEqualTo($targetExpiration)) {
+                $latestCleanup = $targetExpiration->addMinutes($minSpacingMinutes);
+            }
+
+            if ($earliestCleanup->greaterThan($latestCleanup)) {
+                $earliestCleanup = $latestCleanup;
+            }
+
+            if ($deletedAt->lessThan($earliestCleanup)) {
+                $deletedAt = $earliestCleanup;
+            }
+
+            if ($deletedAt->greaterThan($latestCleanup)) {
+                $backMinutes = max(5, (int) round($this->perishableRandomFloat($perishable, 'expired-cleanup-back') * 240));
+                $candidate = $now->subMinutes($backMinutes);
+
+                if ($candidate->lessThan($earliestCleanup)) {
+                    $candidate = $earliestCleanup;
+                }
+
+                if ($candidate->greaterThan($latestCleanup)) {
+                    $candidate = $latestCleanup;
+                }
+
+                $deletedAt = $candidate;
             }
         }
 
         $perishable->forceFill([
             'created_at' => $createdAt,
-            'updated_at' => $createdAt,
+            'updated_at' => $updatedAt,
             'deleted_at' => $deletedAt,
             'is_read' => $markAsRead,
         ])->saveQuietly();
     }
 
-    private function hoursUntilExpirationForFresh(int $shelfLife): int
+    private function perishableRandomFloat(Perishable $perishable, string $context): float
     {
-        if ($shelfLife <= 1) {
-            return 1;
+        $seed = sprintf('%d|%d|%d|%s', $perishable->id, $perishable->ingredient_id, $perishable->location_id, $context);
+        $hash = crc32($seed);
+        $unsigned = (int) sprintf('%u', $hash);
+
+        if ($unsigned <= 0) {
+            return 0.0;
         }
 
-        $candidate = (int) round($shelfLife * 0.6);
-        $candidate = max(2, $candidate);
-        $candidate = min($candidate, max($shelfLife - 1, 1));
-
-        return max(1, $candidate);
-    }
-
-    private function hoursUntilExpirationForSoon(int $shelfLife): int
-    {
-        $candidate = (int) round(max(1, $shelfLife * 0.1));
-        $candidate = max(1, $candidate);
-        $candidate = min($candidate, min(12, max($shelfLife - 1, 1)));
-
-        return max(1, $candidate);
-    }
-
-    private function hoursSinceExpirationForExpired(int $shelfLife): int
-    {
-        $candidate = (int) round(max(1, $shelfLife * 0.15));
-
-        return max(1, min($candidate, 48));
-    }
-
-    private function hoursUntilCleanupForExpired(int $shelfLife): int
-    {
-        $candidate = (int) round(max(1, $shelfLife * 0.05));
-
-        return max(1, min($candidate, 6));
+        return min(0.999999, $unsigned / self::CRC32_MAX);
     }
 
     private function createIngredientMovement(
@@ -3329,6 +3491,8 @@ class DemoSeeder extends Seeder
 
         Order::query()->where('company_id', $company->id)->delete();
 
+        $this->resetOrderIntervalSlots();
+
         $menuMap = Menu::query()
             ->where('company_id', $company->id)
             ->get()
@@ -3466,32 +3630,40 @@ class DemoSeeder extends Seeder
     private function buildOrderTimeline(OrderStatus $status, array $timelineDefinition): array
     {
         $desiredMinutesAgo = max(5, (int) ($timelineDefinition['minutes_ago'] ?? 60));
-        $interval = $this->resolveOrderInterval($desiredMinutesAgo);
+        $allocation = $this->allocateOrderTimelineWindow($desiredMinutesAgo, $status);
 
-        if ($interval !== null) {
-            $available = max(1, (int) $interval['available']);
-            $minutesAgo = $available >= 5
-                ? max(5, min($desiredMinutesAgo, $available))
-                : min($desiredMinutesAgo, $available);
-            $minutesAgo = max(1, $minutesAgo);
+        if ($allocation !== null) {
+            $referenceAt = $allocation['reference_at'];
+            $pendingAt = $allocation['pending_at'];
+            $minutesAgo = max(1, $referenceAt->diffInMinutes($pendingAt));
+        } else {
+            $interval = $this->resolveOrderInterval($desiredMinutesAgo);
 
-            if ($status !== OrderStatus::PENDING && $available > 5 && $minutesAgo >= $available) {
-                $buffer = max(5, min(45, (int) floor($available * 0.2)));
+            if ($interval !== null) {
+                $available = max(1, (int) $interval['available']);
+                $minutesAgo = $available >= 5
+                    ? max(5, min($desiredMinutesAgo, $available))
+                    : min($desiredMinutesAgo, $available);
+                $minutesAgo = max(1, $minutesAgo);
 
-                if ($available > $buffer) {
-                    $minutesAgo = max(5, $available - $buffer);
-                } else {
-                    $minutesAgo = max(1, $available - 1);
+                if ($status !== OrderStatus::PENDING && $available > 5 && $minutesAgo >= $available) {
+                    $buffer = max(5, min(45, (int) floor($available * 0.2)));
+
+                    if ($available > $buffer) {
+                        $minutesAgo = max(5, $available - $buffer);
+                    } else {
+                        $minutesAgo = max(1, $available - 1);
+                    }
                 }
+
+                $referenceAt = $interval['anchor'];
+            } else {
+                $minutesAgo = $desiredMinutesAgo;
+                $referenceAt = CarbonImmutable::now();
             }
 
-            $referenceAt = $interval['anchor'];
-        } else {
-            $minutesAgo = $desiredMinutesAgo;
-            $referenceAt = CarbonImmutable::now();
+            $pendingAt = $referenceAt->subMinutes($minutesAgo);
         }
-
-        $pendingAt = $referenceAt->subMinutes($minutesAgo);
 
         $servedAt = null;
         $payedAt = null;
