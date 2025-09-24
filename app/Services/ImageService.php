@@ -125,11 +125,9 @@ class ImageService
             return $path;
         }
 
-        $localPath = storage_path('app/'.$path);
-        $contents = file_get_contents($localPath);
-        Storage::disk('s3')->put($path, $contents);
+        $absolutePath = storage_path('app/'.$path);
 
-        return $path;
+        return $this->storeLocalImage($absolutePath, $path);
     }
 
     public function exists(string $path): bool

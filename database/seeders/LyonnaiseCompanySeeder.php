@@ -32,6 +32,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 class LyonnaiseCompanySeeder extends Seeder
@@ -1576,22 +1578,101 @@ class LyonnaiseCompanySeeder extends Seeder
         };
 
         $url = self::IMAGE_MAP[$type][$name] ?? self::FALLBACK_IMAGE_URL;
-        // $this->command->getOutput()->writeln("Fetching image for {$type} '{$name}' from URL: {$url}");
 
-        try {
-            if ($url) {
-                $path = $this->imageService->storeFromUrl($url, $folder, self::IMAGE_MAX_BYTES);
-                // $this->command->getOutput()->writeln("  -> Stored at path: {$path}");
-            } else {
-                $path = $this->imageService->storePlaceholder();
-                // $this->command->getOutput()->writeln("  -> No URL provided, using placeholder image at path: {$path}");
+        $storePlaceholder = function (?Throwable $reason = null) use ($type, $name, $folder): string {
+            $path = $this->storeLocalPlaceholder($folder, $name);
+
+            if ($reason !== null && $this->command) {
+                $this->command->getOutput()->writeln(
+                    "  -> Failed to fetch image for {$type} '{$name}', using placeholder image at path: {$path}"
+                );
+                $this->command->getOutput()->writeln('     Error: '.$reason->getMessage());
             }
-        } catch (Throwable $e) {
-            $path = $this->imageService->storePlaceholder();
-            $this->command->getOutput()->writeln("  -> Failed to fetch image, using placeholder image at path: {$path}");
-            $this->command->getOutput()->writeln("     Error: {$e->getMessage()}");
+
+            return $path;
+        };
+
+        if ($url === null || $url === '') {
+            return $this->imageCache[$type][$name] = $storePlaceholder();
         }
 
-        return $this->imageCache[$type][$name] = $path;
+        if ($this->isLocalSeederPath($url)) {
+            try {
+                $path = $this->publishLocalSeederImage($url, $folder, $name);
+
+                return $this->imageCache[$type][$name] = $path;
+            } catch (Throwable $exception) {
+                return $this->imageCache[$type][$name] = $storePlaceholder($exception);
+            }
+        }
+
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return $this->imageCache[$type][$name] = $storePlaceholder();
+        }
+
+        try {
+            $path = $this->imageService->storeFromUrl($url, $folder, self::IMAGE_MAX_BYTES);
+
+            return $this->imageCache[$type][$name] = $path;
+        } catch (Throwable $exception) {
+            return $this->imageCache[$type][$name] = $storePlaceholder($exception);
+        }
+    }
+
+    private function isLocalSeederPath(string $path): bool
+    {
+        return str_starts_with($path, 'private/')
+            || str_starts_with($path, 'seeders/')
+            || str_starts_with($path, 'images/seeders/')
+            || str_starts_with($path, 'storage/app/');
+    }
+
+    private function publishLocalSeederImage(string $path, string $folder, string $name): string
+    {
+        $trimmed = ltrim($path, '/');
+        $relative = ltrim(preg_replace('#^storage/app/#', '', $trimmed), '/');
+
+        $candidates = [storage_path('app/'.$relative)];
+
+        if (! str_starts_with($relative, 'private/')) {
+            $candidates[] = storage_path('app/private/'.$relative);
+        }
+
+        $absolutePath = null;
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate) && is_readable($candidate)) {
+                $absolutePath = $candidate;
+
+                break;
+            }
+        }
+
+        if ($absolutePath === null) {
+            throw new RuntimeException('Impossible de lire le fichier image local : '.$path);
+        }
+
+        $extension = pathinfo($absolutePath, PATHINFO_EXTENSION) ?: 'jpg';
+        $slug = Str::slug($name) ?: sha1($name);
+        $destination = sprintf('%s/%s.%s', $folder, $slug, $extension);
+
+        return $this->imageService->storeLocalImage($absolutePath, $destination);
+    }
+
+    private function storeLocalPlaceholder(string $folder, string $name): string
+    {
+        $slug = Str::slug($name) ?: 'placeholder';
+        $destination = sprintf('%s/%s-placeholder.svg', $folder, $slug);
+        $source = storage_path('app/private/images/placeholder.svg');
+
+        try {
+            return $this->imageService->storeLocalImage($source, $destination);
+        } catch (Throwable $exception) {
+            if ($this->command) {
+                $this->command->warn('Impossible de publier le placeholder Lyonnaise : '.$exception->getMessage());
+            }
+
+            return $this->imageService->storePlaceholder();
+        }
     }
 }

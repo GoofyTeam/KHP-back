@@ -2500,23 +2500,15 @@ class DemoSeeder extends Seeder
         }
 
         $localPlaceholder = storage_path('app/'.self::DEFAULT_PLACEHOLDER_SOURCE);
-        $localAvailable = is_file($localPlaceholder) && is_readable($localPlaceholder);
 
-        if ($localAvailable) {
-            $contents = file_get_contents($localPlaceholder);
-
-            if ($contents === false) {
-                $this->command?->warn('Impossible de lire le placeholder local pour la démonstration.');
-            } else {
-                try {
-                    if (Storage::disk('s3')->put(self::DEFAULT_PLACEHOLDER_DESTINATION, $contents)) {
-                        return $this->placeholderImagePath = self::DEFAULT_PLACEHOLDER_DESTINATION;
-                    }
-
-                    $this->command?->warn('Impossible de stocker le placeholder de démonstration sur S3.');
-                } catch (Throwable $exception) {
-                    $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
-                }
+        if (is_file($localPlaceholder) && is_readable($localPlaceholder)) {
+            try {
+                return $this->placeholderImagePath = $this->images->storeLocalImage(
+                    $localPlaceholder,
+                    self::DEFAULT_PLACEHOLDER_DESTINATION,
+                );
+            } catch (Throwable $exception) {
+                $this->command?->warn('Impossible de publier le placeholder de démonstration : '.$exception->getMessage());
             }
         } else {
             $this->command?->warn('Placeholder local indisponible pour la démonstration.');
@@ -2548,16 +2540,11 @@ class DemoSeeder extends Seeder
                 continue;
             }
 
-            $contents = file_get_contents($localPath);
-
-            if ($contents === false) {
-                continue;
-            }
-
             try {
-                if (Storage::disk('s3')->put(self::MENU_PLACEHOLDER_DESTINATION, $contents)) {
-                    return $this->menuPlaceholderImagePath = self::MENU_PLACEHOLDER_DESTINATION;
-                }
+                return $this->menuPlaceholderImagePath = $this->images->storeLocalImage(
+                    $localPath,
+                    self::MENU_PLACEHOLDER_DESTINATION,
+                );
             } catch (Throwable $exception) {
                 $this->command?->warn('Impossible de stocker le placeholder menu à partir de '.$candidate.' : '.$exception->getMessage());
             }
