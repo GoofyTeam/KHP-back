@@ -6,16 +6,19 @@ use App\Models\Company;
 use App\Models\Ingredient;
 use App\Models\Loss;
 use App\Models\Preparation;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class LossSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
     /**
      * Génère des pertes factices pour chaque entreprise.
      */
     public function run(): void
     {
-        Company::all()->each(function (Company $company) {
+        $this->seedableCompanies()->each(function (Company $company) {
             $user = $company->users()->inRandomOrder()->first();
 
             $company->locations->each(function ($location) use ($company, $user) {

@@ -7,19 +7,34 @@ use App\Enums\StepMenuStatus;
 use App\Models\Menu;
 use App\Models\OrderStep;
 use App\Models\StepMenu;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 
 class StepMenuSeeder extends Seeder
 {
+    use FiltersSeedableCompanies;
+
+    private const SAMPLE_NOTES = [
+        'Allergie : retirer les noisettes.',
+        'Cuisson demandée : saignant.',
+        'Servir la sauce à part.',
+        'Sans lactose : utiliser du lait végétal.',
+        'Ajouter une assiette bien chaude.',
+    ];
+
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        $menusByCompany = Menu::query()->get()->groupBy('company_id');
+        $menusByCompany = Menu::query()
+            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
+            ->get()
+            ->groupBy('company_id');
 
         $steps = OrderStep::query()
+            ->whereHas('order.company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->with('order')
             ->withCount('stepMenus')
             ->get();
@@ -50,7 +65,7 @@ class StepMenuSeeder extends Seeder
                         'menu_id' => $menu->id,
                         'quantity' => random_int(1, 4),
                         'status' => $status,
-                        'note' => fake()->optional(0.3)->sentence(),
+                        'note' => $this->randomNote(),
                         'served_at' => $servedAt,
                     ]);
                 });
@@ -66,5 +81,14 @@ class StepMenuSeeder extends Seeder
         };
 
         return Arr::random($allowed);
+    }
+
+    private function randomNote(): ?string
+    {
+        if (random_int(1, 10) > 3) {
+            return null;
+        }
+
+        return Arr::random(self::SAMPLE_NOTES);
     }
 }
