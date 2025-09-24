@@ -14,7 +14,6 @@ class IngredientThresholdSeeder extends Seeder
     public function run(): void
     {
         $ingredients = Ingredient::query()
-            ->whereHas('company', fn ($query) => $query->whereNotIn('name', $this->excludedCompanyNames()))
             ->whereNull('threshold')
             ->inRandomOrder()
             ->get();
