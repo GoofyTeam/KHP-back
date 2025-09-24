@@ -1667,6 +1667,35 @@ class DemoSeeder extends Seeder
 
     private const PERISHABLE_STATUS_SEQUENCE = ['FRESH', 'FRESH', 'SOON', 'EXPIRED'];
 
+    private const PLACEHOLDER_NOTE_KEYWORDS = [
+        'lorem',
+        'ipsum',
+        'dolor',
+        'amet',
+        'consectetur',
+        'adipisci',
+        'perspiciatis',
+        'voluptatem',
+        'voluptatum',
+        'architecto',
+        'beatae',
+        'vitae',
+        'quasi',
+        'quia',
+        'nobis',
+        'ullam',
+        'laboriosam',
+        'repellat',
+        'praesentium',
+        'deleniti',
+        'expedita',
+        'magnam',
+        'aliquam',
+        'fugit',
+        'sapiente',
+        'fuga',
+    ];
+
     private ImageService $images;
 
     private OpenFoodFactsService $openFoodFacts;
@@ -2606,24 +2635,46 @@ class DemoSeeder extends Seeder
         $expiration = $this->perishableService->expiration($perishable);
         $shelfLife = max(1, (int) round($expiration->diffInHours($perishable->created_at)));
 
-        $createdAt = $now;
-        $deletedAt = null;
+        if ($shelfLife <= 0) {
+            $shelfLife = 24;
+        }
 
         switch ($status) {
             case 'SOON':
-                $remaining = max(1, min(12, $shelfLife - 1));
-                $age = max(1, $shelfLife - $remaining);
-                $createdAt = $now->subHours($age);
+                $targetExpiration = $now->addHours($this->hoursUntilExpirationForSoon($shelfLife));
                 break;
             case 'EXPIRED':
-                $overdue = max(1, min(24, (int) ceil($shelfLife * 0.15)));
-                $createdAt = $now->subHours($shelfLife + $overdue);
-                $deletedAt = $now->subHours(max(1, min($overdue, 6)));
+                $targetExpiration = $now->subHours($this->hoursSinceExpirationForExpired($shelfLife));
                 break;
             default:
-                $age = max(1, min($shelfLife - 1, (int) ceil($shelfLife * 0.3)));
-                $createdAt = $now->subHours($age);
+                $targetExpiration = $now->addHours($this->hoursUntilExpirationForFresh($shelfLife));
                 break;
+        }
+
+        if ($status === 'EXPIRED' && $targetExpiration->greaterThan($now)) {
+            $targetExpiration = $now->subHour();
+        }
+
+        if ($status !== 'EXPIRED' && $targetExpiration->lessThanOrEqualTo($now)) {
+            $targetExpiration = $now->addHour();
+        }
+
+        $createdAt = $targetExpiration->subHours($shelfLife);
+
+        if ($createdAt->greaterThan($now)) {
+            $createdAt = $now->subHour();
+            $targetExpiration = $createdAt->addHours($shelfLife);
+        }
+
+        $deletedAt = null;
+
+        if ($status === 'EXPIRED') {
+            $cleanupDelay = $this->hoursUntilCleanupForExpired($shelfLife);
+            $deletedAt = $targetExpiration->addHours($cleanupDelay);
+
+            if ($deletedAt->greaterThanOrEqualTo($now)) {
+                $deletedAt = $now->subMinutes(30);
+            }
         }
 
         $perishable->forceFill([
@@ -2632,6 +2683,42 @@ class DemoSeeder extends Seeder
             'deleted_at' => $deletedAt,
             'is_read' => $markAsRead,
         ])->saveQuietly();
+    }
+
+    private function hoursUntilExpirationForFresh(int $shelfLife): int
+    {
+        if ($shelfLife <= 1) {
+            return 1;
+        }
+
+        $candidate = (int) round($shelfLife * 0.6);
+        $candidate = max(2, $candidate);
+        $candidate = min($candidate, max($shelfLife - 1, 1));
+
+        return max(1, $candidate);
+    }
+
+    private function hoursUntilExpirationForSoon(int $shelfLife): int
+    {
+        $candidate = (int) round(max(1, $shelfLife * 0.1));
+        $candidate = max(1, $candidate);
+        $candidate = min($candidate, min(12, max($shelfLife - 1, 1)));
+
+        return max(1, $candidate);
+    }
+
+    private function hoursSinceExpirationForExpired(int $shelfLife): int
+    {
+        $candidate = (int) round(max(1, $shelfLife * 0.15));
+
+        return max(1, min($candidate, 48));
+    }
+
+    private function hoursUntilCleanupForExpired(int $shelfLife): int
+    {
+        $candidate = (int) round(max(1, $shelfLife * 0.05));
+
+        return max(1, min($candidate, 6));
     }
 
     private function createIngredientMovement(
@@ -3387,6 +3474,17 @@ class DemoSeeder extends Seeder
                 ? max(5, min($desiredMinutesAgo, $available))
                 : min($desiredMinutesAgo, $available);
             $minutesAgo = max(1, $minutesAgo);
+
+            if ($status !== OrderStatus::PENDING && $available > 5 && $minutesAgo >= $available) {
+                $buffer = max(5, min(45, (int) floor($available * 0.2)));
+
+                if ($available > $buffer) {
+                    $minutesAgo = max(5, $available - $buffer);
+                } else {
+                    $minutesAgo = max(1, $available - 1);
+                }
+            }
+
             $referenceAt = $interval['anchor'];
         } else {
             $minutesAgo = $desiredMinutesAgo;
@@ -3583,7 +3681,14 @@ class DemoSeeder extends Seeder
 
         $normalized = mb_strtolower($trimmed);
 
-        if (str_contains($normalized, 'lorem')) {
+        static $placeholderPattern = null;
+
+        if ($placeholderPattern === null) {
+            $escaped = array_map(static fn (string $keyword): string => preg_quote($keyword, '/'), self::PLACEHOLDER_NOTE_KEYWORDS);
+            $placeholderPattern = '/\\b('.implode('|', $escaped).')\\b/u';
+        }
+
+        if ($placeholderPattern !== null && preg_match($placeholderPattern, $normalized) === 1) {
             return null;
         }
 
