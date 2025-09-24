@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Company;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 
 class CategorySeeder extends Seeder
 {
@@ -66,36 +67,51 @@ class CategorySeeder extends Seeder
         ];
 
         $company = Company::where('name', 'GoofyTeam')->first();
-        $types = $company->locationTypes()->get()->keyBy('name');
 
-        foreach ($categories as $categoryName) {
-            $category = Category::create([
-                'name' => $categoryName,
-                'company_id' => $company->id,
-            ]);
-
-            $category->locationTypes()->attach([
-                $types['Réfrigérateur']->id => ['shelf_life_hours' => 48],
-                $types['Congélateur']->id => ['shelf_life_hours' => 168],
-            ]);
+        if ($company !== null) {
+            $this->seedCategoriesForCompany($company, $categories);
         }
 
         // Create categories for other companies
         $otherCompanies = Company::where('name', '!=', 'GoofyTeam')->get();
         foreach ($otherCompanies as $company) {
-            $types = $company->locationTypes()->get()->keyBy('name');
+            $this->seedCategoriesForCompany($company, $categories);
+        }
+    }
 
-            foreach ($categories as $categoryName) {
-                $category = Category::create([
-                    'name' => $categoryName,
-                    'company_id' => $company->id,
-                ]);
+    /**
+     * @param  list<string>  $categories
+     */
+    private function seedCategoriesForCompany(Company $company, array $categories): void
+    {
+        $types = $company->locationTypes()->get()->keyBy('name');
 
-                $category->locationTypes()->attach([
-                    $types['Réfrigérateur']->id => ['shelf_life_hours' => 48],
-                    $types['Congélateur']->id => ['shelf_life_hours' => 168],
-                ]);
-            }
+        foreach ($categories as $categoryName) {
+            $category = Category::firstOrCreate([
+                'name' => $categoryName,
+                'company_id' => $company->id,
+            ]);
+
+            $this->syncCategoryShelfLife($category, $types);
+        }
+    }
+
+    private function syncCategoryShelfLife(Category $category, Collection $types): void
+    {
+        $payload = [];
+
+        $refrigerator = $types->get('Réfrigérateur');
+        if ($refrigerator !== null) {
+            $payload[$refrigerator->id] = ['shelf_life_hours' => 48];
+        }
+
+        $freezer = $types->get('Congélateur');
+        if ($freezer !== null) {
+            $payload[$freezer->id] = ['shelf_life_hours' => 168];
+        }
+
+        if ($payload !== []) {
+            $category->locationTypes()->sync($payload, false);
         }
     }
 }
