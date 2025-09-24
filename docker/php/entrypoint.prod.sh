@@ -143,9 +143,10 @@ else
 fi
 
 #Temporary create fake data for development purposes (remove in production) (change app_env in secrets)
-php artisan migrate:fresh --seed
-php artisan db:seed --class=LyonnaiseCompanySeeder --no-interaction --no-ansi
+php artisan migrate:fresh
 php artisan db:seed --class=DemoSeeder --no-interaction --no-ansi
+php artisan db:seed --class=DatabaseSeeder --no-interaction --no-ansi
+php artisan db:seed --class=LyonnaiseCompanySeeder --no-interaction --no-ansi
 
 #=== START SUPERVISORD =========================================
 info "Starting supervisord..."
