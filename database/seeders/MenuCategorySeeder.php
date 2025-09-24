@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
 use App\Models\MenuCategory;
 use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;

@@ -7,8 +7,8 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Room;
 use App\Models\Table;
-use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Carbon\Carbon;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 

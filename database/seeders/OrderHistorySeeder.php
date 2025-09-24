@@ -10,8 +10,8 @@ use App\Models\Order;
 use App\Models\OrderStep;
 use App\Models\StepMenu;
 use App\Models\User;
-use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use App\Services\OrderHistoryService;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class OrderHistorySeeder extends Seeder

@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Ingredient;
 use App\Models\Preparation;
-use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Carbon\Carbon;
+use Database\Seeders\Concerns\FiltersSeedableCompanies;
 use Illuminate\Database\Seeder;
 
 class StockMovementSeeder extends Seeder
