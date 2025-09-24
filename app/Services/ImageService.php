@@ -6,6 +6,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
+use Throwable;
 
 class ImageService
 {
@@ -148,5 +150,36 @@ class ImageService
         }
 
         return false;
+    }
+
+    /**
+     * Publie une image locale (depuis storage/app) vers S3 avec un chemin déterministe.
+     */
+    public function storeLocalImage(string $absolutePath, string $destinationPath): string
+    {
+        if ($this->exists($destinationPath)) {
+            return $destinationPath;
+        }
+
+        if (! is_file($absolutePath) || ! is_readable($absolutePath)) {
+            throw new RuntimeException('Impossible de lire le fichier image local : '.$absolutePath);
+        }
+
+        $contents = file_get_contents($absolutePath);
+
+        if ($contents === false) {
+            throw new RuntimeException('Impossible de lire le fichier image local : '.$absolutePath);
+        }
+
+        try {
+            Storage::disk('s3')->put($destinationPath, $contents);
+        } catch (Throwable $exception) {
+            throw new RuntimeException(
+                'Impossible de stocker l\'image locale sur S3 : '.$destinationPath,
+                previous: $exception,
+            );
+        }
+
+        return $destinationPath;
     }
 }
