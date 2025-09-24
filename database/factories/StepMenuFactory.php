@@ -34,7 +34,7 @@ class StepMenuFactory extends Factory
             'menu_id' => Menu::factory()->for($company),
             'quantity' => $this->faker->numberBetween(1, 10),
             'status' => StepMenuStatus::IN_PREP,
-            'note' => $this->faker->optional()->sentence(),
+            'note' => null,
             'served_at' => null,
         ];
     }
